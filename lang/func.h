@@ -26,7 +26,7 @@
 #ifndef LANG_FUNC_LIMIT_ARITY
 #  define LANG_FUNC_LIMIT_ARITY 4
 #endif
-#define LANG_FUNC_LIMIT_INCR BOOST_PP_INCR(LANG_FUNC_LIMIT_ARITY)
+#define LANG_FUNC_LIMIT_ARITY_INC BOOST_PP_INC(LANG_FUNC_LIMIT_ARITY)
 
 namespace lang {
 
@@ -64,7 +64,7 @@ namespace lang_private {
     }                                                                   \
     Base base;                                                          \
   };
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_eager_def,~);
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INC,LANG_FUNC_eager_def,~);
 
 #define LANG_FUNC_eager_maker(z,n,u)                                    \
   template<LANG_FUNC_type_params(n)>                                    \
@@ -74,7 +74,7 @@ BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_eager_def,~);
     }                                                                   \
     func_def* def;                                                      \
   };
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_eager_maker,~);
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INC,LANG_FUNC_eager_maker,~);
 
 template<typename T>
 struct nested_list_of { };
@@ -103,9 +103,9 @@ struct nested_list_of<list_of<T> > { typedef T type; };
    (util::transform_it(input ## i->end(),&vertex_cast<                  \
                        typename nested_list_of<Input ## i>::type>)),    \
    (input ## i))
-#define LANG_FUNC_and(s,p,q) BOOST_PP_AND(p,q)
+#define LANG_FUNC_or(s,p,q) BOOST_PP_OR(p,q)
 #define LANG_FUNC_not_all_zeros(seq) \
-  BOOST_PP_SEQ_FOLD_LEFT(LANG_FUNC_and,1,seq)
+  BOOST_PP_SEQ_FOLD_LEFT(LANG_FUNC_or,0,seq)
 #define LANG_FUNC_list_specialization(naz,seq)                          \
   BOOST_PP_IF(naz,<Base,)                                               \
   BOOST_PP_COMMA_IF(naz)                                                \
@@ -144,27 +144,48 @@ struct nested_list_of<list_of<T> > { typedef T type; };
   template<LANG_FUNC_type_params(n)>                            \
   struct list_adapter ## n;                                     \
   LANG_FUNC_exp(n)
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INC,
                         LANG_FUNC_list_adapter,~);
 
 } //~namespace lang_private
 
-#define LANG_FUNC_make_eager(z,n,u)                                     \
-  template<LANG_FUNC_type_params(n)>                                    \
-  func_def* make_eager(const Base& base,BOOST_PP_ENUM_PARAMS(n,Input)) {\
-    return lang_private::eager_maker ## n<                              \
-    list_adapter<LANG_FUNC_params(n)>,BOOST_PP_ENUM_PARAMS(n,Input)>    \
-        (list_adapter<LANG_FUNC_params(n)>(base)).def;                  \
+#define LANG_FUNC_make_eager(z,n,u)                                       \
+  template<LANG_FUNC_type_params(n)>                                      \
+  func_def* make_eager(const Base& base,BOOST_PP_ENUM_PARAMS(n,Input)) {  \
+    return lang_private::eager_maker ## n<                                \
+    lang_private::list_adapter ## n<LANG_FUNC_params(n)>,                 \
+        BOOST_PP_ENUM_PARAMS(n,Input)>                                    \
+        (lang_private::list_adapter ## n<LANG_FUNC_params(n)>(base)).def; \
   }
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_make_eager,~);
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INC,LANG_FUNC_make_eager,~);
 
-#undef LANG_FUNC_params
-#undef LANG_FUNC_vtree_decl
-#undef LANG_FUNC_vtree_eval
-#undef LANG_FUNC_call_arg
-#undef LANG_FUNC_eager_def
+//clean up our mess
 #undef LANG_FUNC_eager_maker
+#undef LANG_FUNC_param_basis
+#undef LANG_FUNC_eager_maker
+#undef LANG_FUNC_make_overload
 #undef LANG_FUNC_make_eager
+#undef LANG_FUNC_list_adapter
+#undef LANG_FUNC_exp
+#undef LANG_FUNC_repeat_seq
+#undef LANG_FUNC_identity
+#undef LANG_FUNC_list_overload
+#undef LANG_FUNC_list_specialization
+#undef LANG_FUNC_not_all_zeros
+#undef LANG_FUNC_and
+#undef LANG_FUNC_list_emit_if3
+#undef LANG_FUNC_list_emit_if2
+#undef LANG_FUNC_list_emit_if1
+#undef LANG_FUNC_list_emit_if0
+#undef LANG_FUNC_eager_maker
+#undef LANG_FUNC_eager_def
+#undef LANG_FUNC_call_arg
+#undef LANG_FUNC_vtree_eval
+#undef LANG_FUNC_vtree_decl
+#undef LANG_FUNC_params
+#undef LANG_FUNC_type_params
+#undef LANG_FUNC_LIMIT_INC
+#undef LANG_FUNC_LIMIT_ARITY
 
 #if 0
 
