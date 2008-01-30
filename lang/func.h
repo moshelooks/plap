@@ -26,6 +26,7 @@
 #ifndef LANG_FUNC_LIMIT_ARITY
 #  define LANG_FUNC_LIMIT_ARITY 4
 #endif
+#define LANG_FUNC_LIMIT_INCR BOOST_PP_INCR(LANG_FUNC_LIMIT_ARITY)
 
 namespace lang {
 
@@ -63,7 +64,7 @@ namespace lang_private {
     }                                                                   \
     Base base;                                                          \
   };
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY,LANG_FUNC_eager_def,~);
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_eager_def,~);
 
 #define LANG_FUNC_eager_maker(z,n,u)                                    \
   template<LANG_FUNC_type_params(n)>                                    \
@@ -73,132 +74,90 @@ BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY,LANG_FUNC_eager_def,~);
     }                                                                   \
     func_def* def;                                                      \
   };
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY,LANG_FUNC_eager_maker,~);
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_eager_maker,~);
 
 template<typename T>
 struct nested_list_of { };
 template<typename T>
 struct nested_list_of<list_of<T> > { typedef T type; };
 
+//helper macros for LANG_FUNC_list_overload
+#define LANG_FUNC_list_emit_if0(z,u,i,elem)                             \
+  BOOST_PP_IF(elem,(list_of<Input ## i>),(Input ## i))
 #define LANG_FUNC_list_emit_if1(z,u,i,elem)                             \
   BOOST_PP_IF                                                           \
   (elem,                                                                \
-   (vlist::const_iterator BOOST_PP_COMMA() vlist::const_iterator),      \
-   (typename Input ## i))
-
+   (typename util::slist<Input ## i>::const_iterator)                   \
+   (typename util::slist<Input ## i>::const_iterator),                  \
+   (Input ## i))
 #define LANG_FUNC_list_emit_if2(z,u,i,elem)                             \
   BOOST_PP_IF                                                           \
   (elem,                                                                \
    (list_t input ## i),                                                 \
    (Input ## i input ## i))
+#define LANG_FUNC_list_emit_if3(z,u,i,elem)                             \
+  BOOST_PP_IF                                                           \
+  (elem,                                                                \
+   (util::transform_it(input ## i->begin(),&vertex_cast<                \
+                       typename nested_list_of<Input ## i>::type>))     \
+   (util::transform_it(input ## i->end(),&vertex_cast<                  \
+                       typename nested_list_of<Input ## i>::type>)),    \
+   (input ## i))
+#define LANG_FUNC_and(s,p,q) BOOST_PP_AND(p,q)
+#define LANG_FUNC_not_all_zeros(seq) \
+  BOOST_PP_SEQ_FOLD_LEFT(LANG_FUNC_and,1,seq)
+#define LANG_FUNC_list_specialization(naz,seq)                          \
+  BOOST_PP_IF(naz,<Base,)                                               \
+  BOOST_PP_COMMA_IF(naz)                                                \
+  BOOST_PP_SEQ_ENUM                                                     \
+  (BOOST_PP_IF(naz,BOOST_PP_SEQ_FOR_EACH_I                              \
+               (LANG_FUNC_list_emit_if0,~,seq),()))                     \
+  BOOST_PP_IF(naz,>,)
 
-#define LANG_FUNC_seq_adapt(z,seq)                                      \
-  typename boost::result_of<Base(                                       \
-fixme    BOOST_PP_SEQ_ENUM(                                                  \
-        BOOST_PP_SEQ_FOR_EACH_I(                                        \
-            LANG_FUNC_list_emit_if1,~,seq)))>::type
-
-#if 0
-  operator()(                                                           \
-    BOOST_PP_SEQ_ENUM(                                                  \
-        BOOST_PP_SEQ_FOR_EACH_I(                                        \
-            LANG_FUNC_list_emit_if2,~,list)))>::type
-#endif
-
-#define LANG_FUNC_identity(z,n,u) (u)
-#define LANG_FUNC_repeat_seq(v,n) BOOST_PP_REPEAT(n,LANG_FUNC_identity,v)
-
-#define LANG_FUNC_exp(n)                                               \
-  BOOST_PP_SEQ_FOR_EACH_PRODUCT(                                       \
-      LANG_FUNC_seq_adapt,LANG_FUNC_repeat_seq((1)(0),n))
-
-#define LANG_FUNC_list_adapter(z,n,u)                                   \
-  template<LANG_FUNC_type_params(n)>                                    \
-  struct list_adapter ##  n {                                           \
-    list_adapter ## n(const Base& fun) : base(fun) {}                   \
-    LANG_FUNC_exp(n)                                                    \
+//this is to be called on all binary seqs on length n
+#define LANG_FUNC_list_overload(z,seq)                                  \
+  template<LANG_FUNC_type_params(BOOST_PP_SEQ_SIZE(seq))>               \
+  struct BOOST_PP_CAT(list_adapter,BOOST_PP_SEQ_SIZE(seq))              \
+  LANG_FUNC_list_specialization(LANG_FUNC_not_all_zeros(seq),seq)       \
+  {                                                                     \
+    typename boost::result_of<Base(                                     \
+        BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_FOR_EACH_I(                      \
+                              LANG_FUNC_list_emit_if1,~,seq)))>         \
+    operator()(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_FOR_EACH_I(               \
+                                     LANG_FUNC_list_emit_if2,~,seq))) { \
+      return base(                                                      \
+          BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_FOR_EACH_I(                    \
+                                LANG_FUNC_list_emit_if3,~,seq)));       \
+    }                                                                   \
     Base base;                                                          \
   };
 
+//helper macros for LANG_FUNC_list_adapter
+#define LANG_FUNC_identity(z,n,u) (u)
+#define LANG_FUNC_repeat_seq(v,n) BOOST_PP_REPEAT(n,LANG_FUNC_identity,v)
+#define LANG_FUNC_exp(n)                                               \
+  BOOST_PP_SEQ_FOR_EACH_PRODUCT(                                       \
+      LANG_FUNC_list_overload,LANG_FUNC_repeat_seq((1)(0),n))
+
+//the emits the prototype, followed by 2^n overloads
+#define LANG_FUNC_list_adapter(z,n,u)                           \
+  template<LANG_FUNC_type_params(n)>                            \
+  struct list_adapter ## n;                                     \
+  LANG_FUNC_exp(n)
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,
+                        LANG_FUNC_list_adapter,~);
+
 } //~namespace lang_private
 
-LANG_FUNC_list_adapter(~,2,~);
-
-#if 0
-
-use filter for typename list
-
-needs to be parameterized by n and then exponetiated
-
-template<typename Base,typename Input0,typename Input1>
-struct list_adapter2;
-
-template<typename Base,typename Input0>
-struct list_adapter2<Input0,list_t> {
-  list_adapter2(const Base& b) : base(b) {}
-  
-  typename boost::result_of<Base(Input0,vlist::const_iterator,
-                                 vlist::const_iterator)>::type
-  operator()(Input0 i0,list_t i1) const {
-    
-                                 
-  
-                                 
-
-
-  template<typename Input0,typename Input1>
-  typename boost::result_of<Base(Input0,Input1)>::type
-  operator()(Input0 i0,Input1 i1) const { return base(i0,i1); }
-      
-  typename boost::result_of<Base(Input0,
-                                 vlist::const_iterator,
-                                 vlist::const_iterator)>::type
-  operator()(Input0 i0,list_t i1) const { 
-    return base(i0,
-                util::transform_it(i1->begin(),&vertex_cast<
-                                   typename nested_list_of<Cast1>::type>),
-                util::transform_it(i1->end(),&vertex_cast<
-                                   typename nested_list_of<Cast1>::type>));
-  }
-
-  Base base;
-};
-
-
-#define LANG_FUNC_make_eager(z,n,u)                                \
+#define LANG_FUNC_make_eager(z,n,u)                                     \
   template<LANG_FUNC_type_params(n)>                                    \
   func_def* make_eager(const Base& base,BOOST_PP_ENUM_PARAMS(n,Input)) {\
     return lang_private::eager_maker ## n<                              \
     list_adapter<LANG_FUNC_params(n)>,BOOST_PP_ENUM_PARAMS(n,Input)>    \
         (list_adapter<LANG_FUNC_params(n)>(base)).def;                  \
   }
+BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY_INCR,LANG_FUNC_make_eager,~);
 
-//#if 0
-         
-func_def* make_eager(const Base&);
-
-
-template<typename Input
-
-template<typename Base,typename Input0>
-func_def* make_eager(const Base&,Input0) {
-  return lang_private::eager_maker<list_adapter<Base,Input0>,
-      Input0>(list_adapter<Base,Input0>(base)).def;
-}
-
-template<typename Base,typename Input0,typename Input1>
-func_def* make_eager(const Base&,Input0,Input1) {}
-
-#if 0
-#define LANG_FUNC_make_eager(z,n,u)                                \
-  template<LANG_FUNC_type_params(n)>                                    \
-  func_def* make_eager(const Base& base) {                              \
-    return lang_private::eager_maker                                    \
-        <LANG_FUNC_params(n),list_adapter<LANG_FUNC_params(n)> >        \
-        (list_adapter<LANG_FUNC_params(n)>(base)).def;                  \
-  }
-BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY,LANG_FUNC_make_eager,~);
-#endif
 #undef LANG_FUNC_params
 #undef LANG_FUNC_vtree_decl
 #undef LANG_FUNC_vtree_eval
@@ -207,9 +166,52 @@ BOOST_PP_REPEAT_FROM_TO(1,LANG_FUNC_LIMIT_ARITY,LANG_FUNC_make_eager,~);
 #undef LANG_FUNC_eager_maker
 #undef LANG_FUNC_make_eager
 
-////////////
+#if 0
 
+use filter for typename list
 
+needs to be parameterized by n and then exponetiated
+
+#define LANG_FUNC_make_overload
+
+template<typename Base,typename Input0,typename Input1>
+struct list_adapter2<Base,Input0,list_of<Input1> > {
+  list_adapter2(const Base& b) : base(b) {}
+  
+  typename boost::result_of<Base(Input0,
+                                 vlist::const_iterator,
+                                 vlist::const_iterator)>::type
+  operator()(Input0 i0,list_t i1) const {
+    return base(i0,
+                util::transform_it(i1->begin(),&vertex_cast<
+                                   typename nested_list_of<Input1>::type>),
+                util::transform_it(i1->end(),&vertex_cast<
+                                   typename nested_list_of<Input1>::type>));
+  }
+  Base base;
+};
+
+/////////
+template<typename Base,typename Input0,typename Input1>       
+struct list_adapter2;
+
+template<typename Base,typename Input0,typename Input1>
+struct list_adapter2<Base,Input0,list_of<Input1> > {
+  list_adapter2(const Base& b) : base(b) {}
+  
+  typename boost::result_of<Base(Input0,
+                                 vlist::const_iterator,
+                                 vlist::const_iterator)>::type
+  operator()(Input0 i0,list_t i1) const {
+    return base(i0,
+                util::transform_it(i1->begin(),&vertex_cast<
+                                   typename nested_list_of<Input1>::type>),
+                util::transform_it(i1->end(),&vertex_cast<
+                                   typename nested_list_of<Input1>::type>));
+  }
+  Base base;
+};
+///////////////////
 
 #define LANG_FUNC_eager_maker \
 template<LANG_FUNC_params(n)>                                         \
