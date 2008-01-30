@@ -32,11 +32,10 @@ test_case(lang_plus) {
 
   func& f=env.insert_func("plus");
 
-  env.insert_def(f,make_eager<list_of<disc_t> >(
-                     bind(&accumulate<vlist::const_iterator,disc_t>,
-                          _1,_2,disc_t(0))));
-
-  make_eager(bla,list_of<disc_t>(),disc_t())
+  env.insert_def(f,make_eager(bind(&accumulate<slist<disc_t>::const_iterator,
+                                   disc_t>,
+                                   _1,_2,disc_t(0)),
+                              list_of<disc_t>()));
 
   put the func_def in the tree, not the func
 
