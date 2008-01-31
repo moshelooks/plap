@@ -14,6 +14,26 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+template<typename T>
+struct accumulate_adapter {
+  typedef T result_type;
+  template<typename It>
+  T operator()(It f,It l) const { return accumulate(f,l,T(0)); }
+};
+
+test_case(lang_plus) {
+  environment env;
+
+  func& f=env.create_func("plus");
+  def* d=make_eager_def(accumulate_adapter<disc_t>(),list_of<disc_t>());
+  env.bind(f,d);
+  
+  vtree src=tree_of(vertex(d))(1,2,3);
+  vtree dst(0);
+  (*d)(src,dst,env);
+  check_eq(dst,tree_of(vertex(6)));
+}
+
 #if 0
 template<typename T>
 struct accumulate_func {
@@ -27,15 +47,7 @@ struct foreach_func {
     _dst=list..
     return std::foreach
 
-test_case(lang_plus) {
-  environment env;
 
-  func& f=env.insert_func("plus");
-
-  env.insert_def(f,make_eager(bind(&accumulate<slist<disc_t>::const_iterator,
-                                   disc_t>,
-                                   _1,_2,disc_t(0)),
-                              list_of<disc_t>()));
 
   put the func_def in the tree, not the func
 

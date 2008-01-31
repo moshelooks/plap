@@ -22,6 +22,9 @@
 #include "foreach.h"
 #include "dorepeat.h"
 #include "environment.h"
+#include "vertex_aux.h"
+#include "types.h"
+#include "def.h"
 
 #include <iterator>
 #include <numeric>

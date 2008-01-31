@@ -20,27 +20,42 @@
 #include <tr1/unordered_map>
 #include <boost/noncopyable.hpp>
 #include "slist.h"
-#include "vertex.h"
+#include "vertex_aux.h"
+#include "types.h"
+#include "func.h"
+#include "def.h"
 
 namespace lang {
 
-struct func {};
-
 struct environment : public boost::noncopyable {
-  func& register_func(const std::string& name) { 
-    func& f=register_func();
-    _names.insert(make_pair(&f,name));
-    return f;
+  func& create_func(const std::string& name);
+  func& create_func();
+
+  //takes ownership of the definition
+  void bind(func& f,def* d);
+
+  template<typename T>
+  void eval(const_vsubtree tr,vsubtree dst) {
+    assert(dst.childless());
+    if (tr.childless())
+      dst.root()=tr.root();
+    else
+      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
   }
-  func& register_func() { 
-    _funcs.push_front(func());
-    return _funcs.front();
+
+  template<typename T>
+  void eval<list_of<T> >(const_vsubtree tr,vsubtree dst) {
+    assert(dst.childless());
+    if (tr.childless()) { //an actual list
+      list_t
+      dst.root()=tr.root();
+    else
+      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
   }
-  /*
-  void register_builtin(func& f,const builtin& b,type in,type out) {
-  } */ 
+}
+
   
-  void eval(const_vsubtree tr,vsubtree dst);
+  // void eval(const_vsubtree tr,vsubtree dst);
 
  protected:
   typedef std::tr1::unordered_map<func*,std::string> func_name_map;
@@ -48,6 +63,21 @@ struct environment : public boost::noncopyable {
 
   func_name_map _names;
   func_list _funcs; 
+};
+
+template<typename T>
+struct evaluator {
+  evaluator() {}
+  evaluator(environment& env) : _env(&env) {}
+
+  const T& operator()(const_vsubtree tr) {
+    vtree tmp(0);
+    _env->eval(tr,tmp);
+    assert(tmp.childless());
+    return vertex_cast<T>(tmp.root());
+  }
+ protected:
+  environment* _env;
 };
 
 } //~namespace lang

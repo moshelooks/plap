@@ -56,7 +56,7 @@ def build(bld):
 		if Params.g_options.profile:
 			obj.uselib=obj.uselib+' PROFILER'
 	
-	src='lang/environment.cc lang/vertex.cc'
+	src='lang/environment.cc lang/vertex_aux.cc'
 	build_program(src,'test_runner') #unit tests
 	if Params.g_options.test:
 		return #don't need to build anything else

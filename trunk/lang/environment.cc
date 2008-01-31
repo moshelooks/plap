@@ -14,17 +14,23 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "environment.h"
+#include "def.h"
 #include "func.h"
 
 namespace lang {
 
-void environment::eval(const_vsubtree tr,vsubtree dst) {
-  assert(dst.childless());
-  if (tr.childless())
-    dst.root()=tr.root();
-  else
-    (*vertex_cast<function_t>(tr.root()))(tr,dst,*this);
+func& environment::create_func(const std::string& name) { 
+  func& f=create_func();
+  _names.insert(make_pair(&f,name));
+  return f;
+}
+func& environment::create_func() { 
+  _funcs.push_front(func());
+  return _funcs.front();
+}
+
+void environment::bind(func& f,def* d) {
+
 }
 
 } //~namespace lang
