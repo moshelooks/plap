@@ -35,9 +35,8 @@
 #define LANG_DEF_params(n) \
   Base,BOOST_PP_ENUM_PARAMS(n,Input)
 #define LANG_DEF_vtree_decl(z,n,u) vtree tr ## n(0);
-#define LANG_DEF_vtree_eval(z,n,u) \
-  env.eval<Input ## n>(child++,tr ## n); assert(tr ## n.childless());
-#define LANG_DEF_call_arg(z,n,u) vertex_cast<Input ## n>(tr ## n.root())
+#define LANG_DEF_vtree_eval(z,n,u) env.eval<Input ## n>(child++,tr ## n)
+#define LANG_DEF_call_arg(z,n,u) value_caster<Input ## n>()(tr ## n)
 #define LANG_DEF_eager_def(z,n,u)                                       \
   template<LANG_DEF_type_params(n)>                                     \
   struct eager_def ## n : public def {                                  \
@@ -47,7 +46,6 @@
       BOOST_PP_REPEAT(n,LANG_DEF_vtree_decl,~);                         \
       const_vsub_child_it child=loc.begin_sub_child();                  \
       env.eval<Input0>(*child,tr0);                                     \
-      assert(tr0.childless());                                          \
       BOOST_PP_REPEAT_FROM_TO(1,n,LANG_DEF_vtree_eval,~);               \
       dst.root()=base(BOOST_PP_ENUM(n,LANG_DEF_call_arg,~));            \
     }                                                                   \
@@ -138,6 +136,16 @@
 
 //the actual code generation occurs here
 namespace lang {
+
+template<typename T>
+struct value_caster {
+  T operator()(vconst_subtree s) { return vertex_cast<T>(s.root()); }
+};
+
+template<typename T>
+struct value_caster<list_of<T> > {
+  vconst_subtree operator()(vconst_subtree s) { return s; }
+};
 
 namespace lang_private {
 
