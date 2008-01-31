@@ -32,7 +32,7 @@
 #ifndef PLAP_LANG_DEF_H__
 #define PLAP_LANG_DEF_H__
 
-#include "vertex.h"
+#include "vtree_fwd.h"
 
 namespace lang {
 

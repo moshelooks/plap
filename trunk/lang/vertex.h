@@ -17,8 +17,6 @@
 #ifndef PLAP_LANG_VERTEX_H__
 #define PLAP_LANG_VERTEX_H__
 
-#include "slist.h"
-
 //if assertions are enabled then vertices (individual nodes in program trees)
 //are implemented using boost::variant, which allows for runtime
 //type-checking. Otherwise, a union is used, which will fail nastily in the
@@ -30,22 +28,13 @@
 #  include <boost/variant.hpp>
 #endif //~ifdef NDEBUG
 
-//fwd declarations
-namespace util { 
-template<typename>
-struct tree;
-template<typename>
-struct subtree;
-template<typename>
-struct const_subtree;
-} //~namespace util
-
 namespace lang {
 
 struct world;
 struct def;
 //fixmestruct rewrite;
 
+struct list_t {}; //fixme
 typedef int       disc_t;
 typedef float     contin_t;
 typedef world*    world_t;
@@ -54,31 +43,23 @@ typedef def*      def_t;
 
 #ifdef PLAP_LANG_VERTEX_UNION
 union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
-  vertex(util::slist<util::tree<vertex> >* l_) : l(l_) {}
-  vertex(disc_t d_) : d(d_) {}
+  vertex(list_t l_)   : l(l_) {}
+  vertex(disc_t d_)   : d(d_) {}
   vertex(contin_t c_) : c(c_) {}
-  vertex(world_t w_) : w(w_) {}
-  vertex(def_t f_) : f(f_) {}
+  vertex(world_t w_)  : w(w_) {}
+  vertex(def_t f_)    : f(f_) {}
 
   vertex() {} //junk
 
-  util::slist<util::tree<vertex> >* l;
-  disc_t d; contin_t c; world_t w; def_t f; 
+  list_t l; disc_t d; contin_t c; world_t w; def_t f; 
 };
 #else //~ifndef PLAP_LANG_VERTEX_UNION
-typedef boost::make_recursive_variant<util::slist<
-                                        util::tree<
-                                          boost::recursive_variant_> >*,
-                                      disc_t,
-                                      contin_t,
-                                      world_t,
-                                      def_t>::type vertex;
+typedef boost::variant<list_t,
+                       disc_t,
+                       contin_t,
+                       world_t,
+                       def_t> vertex;
 #endif //~ifdef PLAP_LANG_VERTEX_UNION
-
-typedef util::slist<util::tree<vertex> > list_t;
-typedef util::tree<vertex>               vtree;
-typedef util::subtree<vertex>            vsubtree;
-typedef util::const_subtree<vertex>      const_vsubtree;
 
 } //~namespace lang
 
