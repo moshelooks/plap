@@ -27,8 +27,8 @@ std::string type_name(const vertex& v) {
   if (boost::get<disc_t>(&v))   return "disc_t";
   if (boost::get<contin_t>(&v)) return "contin_t";
   if (boost::get<world_t*>(&v)) return "world_t";
-  assert(boost::get<function_t*>(&v));
-  return "function_t";
+  assert(boost::get<def_t*>(&v));
+  return "def_t";
 }
 std::string type_value(const vertex& v) {
 #if 0
@@ -38,9 +38,9 @@ std::string type_value(const vertex& v) {
   } else if (const world_t* w=boost::get<world_t>(&v)) {
     assert(*w);
     return boost::lexical_cast<std::string>(**w);
-  } else if (const function_t* f=boost::get<function_t>(&v)) {
-    assert(*f);
-    return boost::lexical_cast<std::string>(**f);
+  } else if (const def_t* d=boost::get<def_t>(&v)) {
+    assert(*d);
+    return boost::lexical_cast<std::string>(**d);
   }
   assert(boost::get<disc_t>(&v) || boost::get<contin_t>(&v));
   return boost::lexical_cast<std::string>(v);

@@ -17,6 +17,8 @@
 #ifndef PLAP_LANG_VERTEX_H__
 #define PLAP_LANG_VERTEX_H__
 
+#include "slist.h"
+
 //if assertions are enabled then vertices (individual nodes in program trees)
 //are implemented using boost::variant, which allows for runtime
 //type-checking. Otherwise, a union is used, which will fail nastily in the
@@ -25,25 +27,29 @@
 #ifdef NDEBUG
 #  define PLAP_LANG_VERTEX_UNION
 #else //~ifndef NDEBUG
-#  include <string>
-#  include <iostream>
 #  include <boost/variant.hpp>
-#  include <boost/lexical_cast.hpp>
 #endif //~ifdef NDEBUG
 
-#include "slist.h"
-#include "tree.h"
+//fwd declarations
+namespace util { 
+template<typename>
+struct tree;
+template<typename>
+struct subtree;
+template<typename>
+struct const_subtree;
+} //~namespace util
 
 namespace lang {
 
 struct world;
-struct func_def;
+struct def;
 //fixmestruct rewrite;
 
 typedef int       disc_t;
 typedef float     contin_t;
 typedef world*    world_t;
-typedef func_def* function_t;
+typedef def*      def_t;
 //fixme typedef rewrite*  rewrite_t;
 
 #ifdef PLAP_LANG_VERTEX_UNION
@@ -52,12 +58,12 @@ union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
   vertex(disc_t d_) : d(d_) {}
   vertex(contin_t c_) : c(c_) {}
   vertex(world_t w_) : w(w_) {}
-  vertex(function_t f_) : f(f_) {}
+  vertex(def_t f_) : f(f_) {}
 
   vertex() {} //junk
 
   util::slist<util::tree<vertex> >* l;
-  disc_t d; contin_t c; world_t w; function_t f; 
+  disc_t d; contin_t c; world_t w; def_t f; 
 };
 #else //~ifndef PLAP_LANG_VERTEX_UNION
 typedef boost::make_recursive_variant<util::slist<
@@ -66,55 +72,14 @@ typedef boost::make_recursive_variant<util::slist<
                                       disc_t,
                                       contin_t,
                                       world_t,
-                                      function_t>::type vertex;
+                                      def_t>::type vertex;
 #endif //~ifdef PLAP_LANG_VERTEX_UNION
 
-typedef util::slist<util::tree<vertex> > vlist;
-typedef vlist* list_t;
-
-#ifdef PLAP_LANG_VERTEX_UNION
-
-template<typename T>
-T vertex_cast(const vertex& v);
-template<typename T>
-T& vertex_cast(vertex& v);
-
-template<>
-disc_t vertex_cast<disc_t>(const vertex& v) { return v.d; }
-template<>
-disc_t& vertex_cast<disc_t>(vertex& v) { return v.d; }
-
-#else //~ifndef PLAP_LANG_VERTEX_UNION
-
-namespace lang_private {
-std::string type_name(const vertex& v);
-std::string type_value(const vertex& v);
-} //~namespace lang_private
-
-#define VERTEX_CAST \
-  if (const T* t=boost::get<T>(&v)) {                                   \
-    return *t;                                                          \
-  } else {                                                              \
-    std::cerr << "expected a " << lang_private::type_name(T())          \
-              << ", got a " << lang_private::type_name(v)               \
-              << " (" << lang_private::type_value(v) << ")"             \
-              << std::endl;                                             \
-    exit(1);                                                            \
-  }
-template<typename T>
-T vertex_cast(const vertex& v) { VERTEX_CAST }
-template<typename T>
-T& vertex_cast(vertex& v) { VERTEX_CAST }
-#undef VERTEX_CAST
-
-#endif //~ifdef PLAP_LANG_VERTEX_UNION
-
+typedef util::slist<util::tree<vertex> > list_t;
 typedef util::tree<vertex>               vtree;
 typedef util::subtree<vertex>            vsubtree;
 typedef util::const_subtree<vertex>      const_vsubtree;
-typedef vtree::sub_child_iterator        vsub_child_it;
-typedef vtree::const_sub_child_iterator  const_vsub_child_it;
 
 } //~namespace lang
 
-#endif  // PLAP_LANG_LANG_H__
+#endif  // PLAP_LANG_VERTEX_H__

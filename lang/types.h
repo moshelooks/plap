@@ -19,17 +19,8 @@
 
 namespace lang {
 
-struct type {};
-struct bool_type : public type {};
-struct int_type : public type {};
-struct float_type : public type {};
-struct empty_list_type : public type {};
-
-template<typename Type> //Type must be a type
-struct list_type : public type { 
-  list_type() {}
-  list_type(empty_list_type) {} 
-};
+template<typename T>
+struct list_of {};
 
 } //~namespace lang
 
