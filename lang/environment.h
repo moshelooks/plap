@@ -43,6 +43,37 @@ struct environment : public boost::noncopyable {
   func_list _funcs; 
 };
 
+struct eval {
+  eval(environment& env) : _env(&env) {}
+  eval() {}
+
+  void operator()(const_vsubtree tr,vsubtree dst) {
+    assert(dst.childless());
+    if (tr.childless())
+      dst.root()=tr.root();
+    else
+      (*vertex_cast<def_t>(tr.root()))(tr,dst,*_env);
+  }
+};
+
+  const T& operator()(const_vsubtree tr) {
+    if (tr.childless()) {
+      return vertex_cast<T>(tr.root());
+    } else {
+      vtree tmp(0);
+      (*vertex_cast<def_t>(tr.root()))(tr,tmp,_env);
+    }
+
+    (*this)(tr,tmp);
+    assert(tmp.childless());
+    return vertex_cast<T>(tmp.root());
+  }
+ protected:
+  environment* _env;
+};
+
+
+
 template<typename T>
 struct eval {
   eval(environment& env) : _env(&env) {}
@@ -50,6 +81,38 @@ struct eval {
 
   void operator()(const_vsubtree tr,vsubtree dst) {
     assert(dst.childless());
+    if (tr.childless()) {
+      assert(vertex_cast<T>(tr.root()));
+      dst.root()=tr.root();
+    } else {
+      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
+    }
+  }
+
+  const T& operator()(const_vsubtree tr) {
+    if (tr.childless()) {
+      return vertex_cast<T>(tr.root());
+    } else {
+      vtree tmp(0);
+      (*vertex_cast<def_t>(tr.root()))(tr,tmp,_env);
+    }
+
+    (*this)(tr,tmp);
+    assert(tmp.childless());
+    return vertex_cast<T>(tmp.root());
+  }
+ protected:
+  environment* _env;
+};
+
+template<typename T>
+struct eval<list_of<T> > {
+  eval(environment& env) : _env(&env) {}
+  eval() {}
+
+  void operator()(const_vsubtree tr,vsubtree dst) {
+    assert(dst.childless());
+    assert(!tr.childless());
     if (tr.childless()) {
       assert(vertex_cast<T>(tr.root()));
       dst.root()=tr.root();

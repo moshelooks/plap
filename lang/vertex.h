@@ -34,7 +34,6 @@ struct world;
 struct def;
 //fixmestruct rewrite;
 
-struct list_t {}; //fixme
 typedef int       disc_t;
 typedef float     contin_t;
 typedef world*    world_t;
@@ -43,7 +42,6 @@ typedef def*      def_t;
 
 #ifdef PLAP_LANG_VERTEX_UNION
 union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
-  vertex(list_t l_)   : l(l_) {}
   vertex(disc_t d_)   : d(d_) {}
   vertex(contin_t c_) : c(c_) {}
   vertex(world_t w_)  : w(w_) {}
@@ -51,11 +49,10 @@ union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
 
   vertex() {} //junk
 
-  list_t l; disc_t d; contin_t c; world_t w; def_t f; 
+  disc_t d; contin_t c; world_t w; def_t f; 
 };
 #else //~ifndef PLAP_LANG_VERTEX_UNION
-typedef boost::variant<list_t,
-                       disc_t,
+typedef boost::variant<disc_t,
                        contin_t,
                        world_t,
                        def_t> vertex;
