@@ -21,10 +21,10 @@
 #include "tree_io.h"
 #include "foreach.h"
 #include "dorepeat.h"
+#include "vertex_cast.h"
 #include "environment.h"
-#include "vertex_aux.h"
 #include "types.h"
-#include "def.h"
+#include "eager_def.h"
 
 #include <iterator>
 #include <numeric>

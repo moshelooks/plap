@@ -25,16 +25,25 @@ test_case(lang_plus) {
   environment env;
 
   func& f=env.create_func("plus");
+
   def* d=make_eager_def(accumulate_adapter<disc_t>(),list_of<disc_t>());
   env.bind(f,d);
   
-  vtree src=tree_of(vertex(d))(1,2,3);
+  vtree src=tree_of(vertex(d))(tree_of(vertex(list_t()))(1,2,3);
   vtree dst(0);
   (*d)(src,dst,env);
   check_eq(dst,tree_of(vertex(6)));
 }
 
 #if 0
+
+template<typename T>
+struct transform_adapter {
+  template<typename It,typename Out>
+  void operator()(It f,It l,Out l
+
+todo - add make_eager_transform_def
+
 template<typename T>
 struct accumulate_func {
   template<typename Iterator>

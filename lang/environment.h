@@ -20,7 +20,8 @@
 #include <tr1/unordered_map>
 #include <boost/noncopyable.hpp>
 #include "slist.h"
-#include "vertex_aux.h"
+#include "vtree.h"
+#include "vertex_cast.h"
 #include "types.h"
 #include "func.h"
 #include "def.h"
@@ -34,6 +35,46 @@ struct environment : public boost::noncopyable {
   //takes ownership of the definition
   void bind(func& f,def* d);
 
+ protected:
+  typedef std::tr1::unordered_map<func*,std::string> func_name_map;
+  typedef util::slist<func> func_list;
+
+  func_name_map _names;
+  func_list _funcs; 
+};
+
+template<typename T>
+struct eval {
+  eval(environment& env) : _env(&env) {}
+  eval() {}
+
+  void operator()(const_vsubtree tr,vsubtree dst) {
+    assert(dst.childless());
+    if (tr.childless()) {
+      assert(vertex_cast<T>(tr.root()));
+      dst.root()=tr.root();
+    } else {
+      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
+    }
+  }
+
+  const T& operator()(const_vsubtree tr) {
+    if (tr.childless()) {
+      return vertex_cast<T>(tr.root());
+    } else {
+      vtree tmp(0);
+      (*vertex_cast<def_t>(tr.root()))(tr,tmp,_env);
+    }
+
+    (*this)(tr,tmp);
+    assert(tmp.childless());
+    return vertex_cast<T>(tmp.root());
+  }
+ protected:
+  environment* _env;
+};
+
+  /***
   template<typename T>
   void eval(const_vsubtree tr,vsubtree dst) {
     assert(dst.childless());
@@ -52,33 +93,11 @@ struct environment : public boost::noncopyable {
     else
       (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
   }
-}
-
+  ***/
   
   // void eval(const_vsubtree tr,vsubtree dst);
 
- protected:
-  typedef std::tr1::unordered_map<func*,std::string> func_name_map;
-  typedef util::slist<func> func_list;
 
-  func_name_map _names;
-  func_list _funcs; 
-};
-
-template<typename T>
-struct evaluator {
-  evaluator() {}
-  evaluator(environment& env) : _env(&env) {}
-
-  const T& operator()(const_vsubtree tr) {
-    vtree tmp(0);
-    _env->eval(tr,tmp);
-    assert(tmp.childless());
-    return vertex_cast<T>(tmp.root());
-  }
- protected:
-  environment* _env;
-};
 
 } //~namespace lang
 

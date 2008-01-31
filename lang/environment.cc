@@ -14,8 +14,7 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "def.h"
-#include "func.h"
+#include "environment.h"
 
 namespace lang {
 
