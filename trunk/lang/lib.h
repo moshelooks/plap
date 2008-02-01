@@ -14,13 +14,40 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_FUNC_H__
-#define PLAP_LANG_FUNC_H__
+#ifndef PLAP_LANG_LIB_H__
+#define PLAP_LANG_LIB_H__
+
+#include <algorithm>
+#include "type.h"
 
 namespace lang {
 
-struct func {};
+struct environment;
+
+template<typename T>
+struct lang_plus {
+  T operator()(list_of<T> l) const { 
+    return std::accumulate(l.begin(),l.end(),T(0)); 
+  }
+};
+
+struct lang_foreach {
+  void operator()(list_of<const_vsubtree> l,
+                  func_of<const_vsubtree(const_vsubtree)> f) const {
+    //std::for_each(l.begin(),l.end(),f);
+  }
+};
+
+struct lang_print {
+  disc_t operator()(list_of<const_vsubtree> l) const { 
+    //foreach (const_vsubtree s,l) std::cout << "yuk ";
+    return 0;
+  }
+};
+
+
+void initialize_lib(environment& env);
 
 } //~namespace lang
 
-#endif  // PLAP_LANG_FUNCTION_H__
+#endif  // PLAP_LANG_LIB_H__

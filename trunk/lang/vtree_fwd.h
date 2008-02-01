@@ -14,13 +14,25 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_FUNC_H__
-#define PLAP_LANG_FUNC_H__
+#ifndef PLAP_LANG_VTREE_FWD_H__
+#define PLAP_LANG_VTREE_FWD_H__
+
+#include "vertex.h"
+
+//fwd declarations
+namespace util { 
+template<typename>
+struct tree;
+template<typename>
+struct subtree;
+template<typename>
+struct const_subtree;
+} //~namespace util
 
 namespace lang {
-
-struct func {};
-
+typedef util::tree<vertex>               vtree;
+typedef util::subtree<vertex>            vsubtree;
+typedef util::const_subtree<vertex>      const_vsubtree;
 } //~namespace lang
 
-#endif  // PLAP_LANG_FUNCTION_H__
+#endif  // PLAP_LANG_VTREE_FWD_H__

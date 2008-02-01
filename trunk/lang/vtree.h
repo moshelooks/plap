@@ -14,13 +14,18 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_FUNC_H__
-#define PLAP_LANG_FUNC_H__
+#ifndef PLAP_LANG_VTREE_H__
+#define PLAP_LANG_VTREE_H__
+
+#include "tree.h"
+#include "vertex.h"
 
 namespace lang {
-
-struct func {};
-
+typedef util::tree<vertex>               vtree;
+typedef util::subtree<vertex>            vsubtree;
+typedef util::const_subtree<vertex>      const_vsubtree;
+typedef vtree::sub_child_iterator        vsub_child_it;
+typedef vtree::const_sub_child_iterator  const_vsub_child_it;
 } //~namespace lang
 
-#endif  // PLAP_LANG_FUNCTION_H__
+#endif  // PLAP_LANG_VTREE_H__

@@ -19,12 +19,13 @@
 
 //all includes needed by the tests should go here
 #include "tree_io.h"
+#include "tree_iterator.h"
 #include "foreach.h"
 #include "dorepeat.h"
-#include "vertex_cast.h"
-#include "environment.h"
-#include "types.h"
+#include "numeric.h"
+//#include "environment.h"
 #include "eager_def.h"
+#include "lib.h"
 
 #include <iterator>
 #include <numeric>
