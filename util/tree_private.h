@@ -292,7 +292,7 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
   const_pre_iterator end() const { return this->end_node(); }
   const_child_iterator begin_child() const { 
     if (const node_base* n=this->root_node()->end)
-      return n->next;
+      return n->end;
     return NULL;
   }
   const_child_iterator end_child() const { return this->root_node()->end; }
@@ -647,8 +647,8 @@ struct const_node_policy : public tr<T,Tree> {
 template<typename T,typename Tree>
 struct mutable_node_policy : public mutable_tr<T,Tree> {
   typedef T                  value_type;
-  typedef node_base*         node_base_pointer;
-  typedef node<T>*           node_pointer;
+  typedef node_base* const   node_base_pointer;
+  typedef node<T>* const     node_pointer;
 };
 
 template<typename NodePolicy>

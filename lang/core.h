@@ -14,13 +14,37 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_FUNC_H__
-#define PLAP_LANG_FUNC_H__
+#ifndef PLAP_LANG_CORE_H__
+#define PLAP_LANG_CORE_H__
+
+#include "algorithm.h"
+#include "cast.h"
+#include "def.h"
 
 namespace lang {
 
-struct func {};
+template<typename T>
+struct eval : public def {
+  void operator()(const_vsubtree s,vsubtree d) const {
+    assert(d.childless());
+    if (s.childless())
+      d.root()=s.root();
+    else
+    (*vertex_cast<def_t>(s.root()))(s,d);
+  }
+};
+
+template<typename T>
+struct cons : public def {
+  void operator()(const_vsubtree s,vsubtree d) const {
+    assert(d.childless());
+    d.root()=def_t(this);
+    d.append(d.begin(),s.arity(),vertex());
+    util::for_each(s.begin_sub_child(),s.end_sub_child(),
+                   d.begin_sub_child(),eval<T>());
+  }
+};
 
 } //~namespace lang
 
-#endif  // PLAP_LANG_FUNCTION_H__
+#endif  // PLAP_LANG_CORE_H__

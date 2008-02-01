@@ -110,6 +110,17 @@ test_case(tree_assignment) {
   check_eq(tr,tr3);
 }
 
+test_case(tree_arity) {
+  itree tr=tree_of(1)(2,3,tree_of(4)(5));
+  check_tree(tr,5,"1(2 3 4(5))");
+
+  check_eq(tr.arity(),3u);
+  check_eq(tr.front_sub().arity(),0u);
+  check_eq(tr[1].arity(),0u);
+  check_eq(tr[2].arity(),1u);
+  check_eq(tr[2][0].arity(),0u);
+}
+
 test_case(tree_append1) {
   itree tr(42);
   tr.append(tr.begin(),1);

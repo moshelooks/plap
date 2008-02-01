@@ -15,23 +15,25 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "vertex.h"
-//fixme#include "world.h"
-//fixme#include "function.h"
-
-namespace lang {
 
 #ifndef PLAP_LANG_VERTEX_UNION
+
+#include <boost/lexical_cast.hpp>
+//fixme#include "world.h"
+#include "def.h"
+
+namespace lang {
 namespace lang_private {
+
 std::string type_name(const vertex& v) {
-  if (boost::get<list_t>(&v))   return "list_t";
   if (boost::get<disc_t>(&v))   return "disc_t";
   if (boost::get<contin_t>(&v)) return "contin_t";
-  if (boost::get<world_t*>(&v)) return "world_t";
-  assert(boost::get<def_t*>(&v));
+  if (boost::get<world_t>(&v)) return "world_t";
+  assert(boost::get<def_t>(&v));
   return "def_t";
 }
 std::string type_value(const vertex& v) {
-#if 0
+#if 0 //fixme
   if (const list_t* l=boost::get<list_t>(&v)) {
     assert(*l);
     return boost::lexical_cast<std::string>(**l);
@@ -47,7 +49,9 @@ std::string type_value(const vertex& v) {
 #endif
   return "foobar";
 }
+
 } //~namespace lang_private
+} //~namespace lang
+
 #endif //~ifndef PLAP_LANG_VERTEX_UNION
 
-} //~namespace lang

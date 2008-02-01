@@ -77,6 +77,11 @@
 
 namespace util {
 
+// Note: a const_subtree encapsulates a mutable pointer to a constant subtree,
+// whereas a subtree encaspulates a constant pointer to a mutable subtree (and
+// acts as a reference). So assignment to a const_subtree makes it point at
+// something else, whereas assignment to a subtree changes the underlying tree.
+
 template<typename T>
 struct const_subtree
     : public util_private::subtr<util_private::const_node_policy
@@ -89,6 +94,13 @@ struct const_subtree
   const_subtree(const OtherTr& other) : super(other.root_node()) { 
     assert(!other.empty());
   }
+
+  template<typename OtherTr>
+  const_subtree& operator=(const OtherTr& rhs) {
+    assert(!rhs.empty());
+    this->_node=rhs.root_node();
+  }
+
  protected:
   template<typename,typename>
   friend struct util_private::sub_iter_base;
@@ -152,7 +164,7 @@ struct tree : public util_private::mutable_tr<T,tree<T> > {
   typedef T value_type;
 
   tree() : _end() {}
-  tree(const T& t) : _end(new util_private::node<T>(&_end,&_end,t)) { 
+  explicit tree(const T& t) : _end(new util_private::node<T>(&_end,&_end,t)) { 
     _end.prev=_end.next; 
   }
   template<typename OtherTr>
@@ -202,11 +214,14 @@ template<typename T>
 struct tree_placeholder : public tree<T> {
   tree_placeholder(const T& t) : tree<T>(t) {}
   template<typename OtherTr>
-  tree_placeholder(const OtherTr& t) : tree<T>(t) {}
+  explicit tree_placeholder(const OtherTr& t) : tree<T>(t) {}
 
  protected:
   typedef const tree_placeholder& ctp;
-  tree_placeholder& x(ctp c) { this->prepend(this->begin(),c); return *this; }
+  tree_placeholder& x(ctp c) { 
+    this->prepend(this->begin(),const_subtree<T>(c)); 
+    return *this; 
+  }
  public:
   tree_placeholder& operator()(ctp c1) { return x(c1); }
 

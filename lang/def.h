@@ -36,12 +36,9 @@
 
 namespace lang {
 
-struct environment;
-
 struct def {
   virtual ~def() {}
-  virtual void operator()(const_vsubtree loc,vsubtree dst,
-                          environment& env) const=0;
+  virtual void operator()(const_vsubtree loc,vsubtree dst) const=0;
 };
 
 } //~namespace lang

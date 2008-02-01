@@ -16,7 +16,7 @@
 
 #include "tree_io.h"
 #include "tree_iterator.h"
-#include "environment.h"
+//#include "environment.h"
 
 int main() { 
   using namespace util;

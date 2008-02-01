@@ -18,7 +18,7 @@
 #define PLAP_LANG_ENVIRONMENT_H__
 
 #include <tr1/unordered_map>
-#include <boost/noncopyable.hpp>
+#include <boost/noncopyable.hlspp>
 #include "slist.h"
 #include "vtree.h"
 #include "vertex_cast.h"
@@ -42,125 +42,6 @@ struct environment : public boost::noncopyable {
   func_name_map _names;
   func_list _funcs; 
 };
-
-struct eval {
-  eval(environment& env) : _env(&env) {}
-  eval() {}
-
-  void operator()(const_vsubtree tr,vsubtree dst) {
-    assert(dst.childless());
-    if (tr.childless())
-      dst.root()=tr.root();
-    else
-      (*vertex_cast<def_t>(tr.root()))(tr,dst,*_env);
-  }
-};
-
-  const T& operator()(const_vsubtree tr) {
-    if (tr.childless()) {
-      return vertex_cast<T>(tr.root());
-    } else {
-      vtree tmp(0);
-      (*vertex_cast<def_t>(tr.root()))(tr,tmp,_env);
-    }
-
-    (*this)(tr,tmp);
-    assert(tmp.childless());
-    return vertex_cast<T>(tmp.root());
-  }
- protected:
-  environment* _env;
-};
-
-
-
-template<typename T>
-struct eval {
-  eval(environment& env) : _env(&env) {}
-  eval() {}
-
-  void operator()(const_vsubtree tr,vsubtree dst) {
-    assert(dst.childless());
-    if (tr.childless()) {
-      assert(vertex_cast<T>(tr.root()));
-      dst.root()=tr.root();
-    } else {
-      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
-    }
-  }
-
-  const T& operator()(const_vsubtree tr) {
-    if (tr.childless()) {
-      return vertex_cast<T>(tr.root());
-    } else {
-      vtree tmp(0);
-      (*vertex_cast<def_t>(tr.root()))(tr,tmp,_env);
-    }
-
-    (*this)(tr,tmp);
-    assert(tmp.childless());
-    return vertex_cast<T>(tmp.root());
-  }
- protected:
-  environment* _env;
-};
-
-template<typename T>
-struct eval<list_of<T> > {
-  eval(environment& env) : _env(&env) {}
-  eval() {}
-
-  void operator()(const_vsubtree tr,vsubtree dst) {
-    assert(dst.childless());
-    assert(!tr.childless());
-    if (tr.childless()) {
-      assert(vertex_cast<T>(tr.root()));
-      dst.root()=tr.root();
-    } else {
-      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
-    }
-  }
-
-  const T& operator()(const_vsubtree tr) {
-    if (tr.childless()) {
-      return vertex_cast<T>(tr.root());
-    } else {
-      vtree tmp(0);
-      (*vertex_cast<def_t>(tr.root()))(tr,tmp,_env);
-    }
-
-    (*this)(tr,tmp);
-    assert(tmp.childless());
-    return vertex_cast<T>(tmp.root());
-  }
- protected:
-  environment* _env;
-};
-
-  /***
-  template<typename T>
-  void eval(const_vsubtree tr,vsubtree dst) {
-    assert(dst.childless());
-    if (tr.childless())
-      dst.root()=tr.root();
-    else
-      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
-  }
-
-  template<typename T>
-  void eval<list_of<T> >(const_vsubtree tr,vsubtree dst) {
-    assert(dst.childless());
-    if (tr.childless()) { //an actual list
-      list_t
-      dst.root()=tr.root();
-    else
-      (*vertex_cast<def_t>(tr.root()))(tr,dst,*this);
-  }
-  ***/
-  
-  // void eval(const_vsubtree tr,vsubtree dst);
-
-
 
 } //~namespace lang
 
