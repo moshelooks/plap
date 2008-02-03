@@ -25,26 +25,17 @@ namespace lang {
 struct environment;
 
 template<typename T>
-struct lang_plus {
-  T operator()(list_of<T> l) const { 
-    return std::accumulate(l.begin(),l.end(),T(0)); 
-  }
-};
+T lang_plus(list_of<T> l) { return std::accumulate(l.begin(),l.end(),T(0)); }
 
-struct lang_foreach {
-  void operator()(list_of<const_vsubtree> l,
-                  func_of<const_vsubtree(const_vsubtree)> f) const {
-    //std::for_each(l.begin(),l.end(),f);
-  }
-};
+inline void lang_foreach(list_of<const_vsubtree> l,
+                         func_of<const_vsubtree(const_vsubtree)> f) {
+  //std::for_each(l.begin(),l.end(),f);
+}
 
-struct lang_print {
-  disc_t operator()(list_of<const_vsubtree> l) const { 
-    //foreach (const_vsubtree s,l) std::cout << "yuk ";
-    return 0;
-  }
-};
-
+disc_t lang_print(list_of<const_vsubtree> l) { 
+  //foreach (const_vsubtree s,l) std::cout << "yuk ";
+  return 0;
+}
 
 void initialize_lib(environment& env);
 

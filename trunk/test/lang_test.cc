@@ -17,7 +17,7 @@
 test_case(lang_small_sum) {
   cons<disc_t> c;
   eval<disc_t> e;
-  def* d=make_eager_def<list_of<disc_t> >(lang_plus<disc_t>());
+  def* d=make_eager_def<list_of<disc_t> >(&lang_plus<disc_t>);
   vtree src=tree_of(vertex(d))(tree_of(vertex(&c))(vertex(disc_t(1)),
                                                    vertex(disc_t(2)),
                                                    vertex(disc_t(3))));
@@ -38,7 +38,7 @@ test_case(lang_big_sum) {
 
   cons<disc_t> c;
   eval<disc_t> e;
-  def* d=make_eager_def<list_of<disc_t> >(lang_plus<disc_t>());
+  def* d=make_eager_def<list_of<disc_t> >(&lang_plus<disc_t>);
   vtree src=tree_of(vertex(d))(tree_of(vertex(&c)));
   src.append(src[0].begin(),
              transform_it(count_it(disc_t(0)),tovertex()),
@@ -51,22 +51,24 @@ test_case(lang_big_sum) {
   check_eq(vertex_cast<disc_t>(dst.root()),result);
 }
 
+#if 0
+
 test_case(lang_foreach_print) {
   cons<disc_t> c;
   eval<disc_t> e;
   def* fe=make_eager_def
       <list_of<const_vsubtree>,
-      func_of<const_vsubtree(const_vsubtree)> >(lang_foreach());
-  def* pr=make_eager_def<list_of<const_vsubtree> >(lang_print());
-  vtree src=tree_of(vertex(fe))(tree_of(vertex(&c))(vertex(disc_t(1)),
+      func_of<const_vsubtree(const_vsubtree)> >(&lang_foreach);
+  def* pr=make_eager_def<list_of<const_vsubtree> >(&lang_print);
+  /*  vtree src=tree_of(vertex(fe))(tree_of(vertex(&c))(vertex(disc_t(1)),
                                                     vertex(disc_t(2)),
                                                     vertex(disc_t(3))),
                                 vertex(pr));
   vtree dst=vtree(vertex(disc_t(42)));
-  e(src,dst);
-  //  print(vertex_cast<disc_t>(dst.root()));
+  e(src,dst);*/
 }
-#if 0
+
+
 
   //check_eq(dst,tree_of(vertex(6)));
 
