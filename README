@@ -1,0 +1,6 @@
+Do 'waf configure', then 'waf' to build everything. To run unit tests, do 
+'waf --test', to enter the read-eval-print loop, do 'waf --repl'.
+
+Sent all comments/questions/suggestions to madscience@google.com
+
+Have fun!

@@ -16,25 +16,12 @@
 
 #include "tree_io.h"
 #include "tree_iterator.h"
-//#include "environment.h"
+#include "vertex.h"
 
 int main() { 
   using namespace util;
+  using namespace lang;
   using namespace std;
 
-  tree<int> tr;
-  tr.end();
-  tr.insert(tr.insert(tr.end(),42),41);
-
-  cout << tr.root() << endl;
-
-  const_subtree<int> sub(tr);
-
-  cout << "ok" << endl;
-
-  cout << sub << endl;
-  
-  cout << "XX" << endl;
-
-  cout << tr.root() << endl;
+  cout << "nothing here yet.." << endl;
 }
