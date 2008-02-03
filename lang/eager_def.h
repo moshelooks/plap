@@ -17,6 +17,11 @@
 #ifndef PLAP_LANG_EAGER_DEF_H__
 #define PLAP_LANG_EAGER_DEF_H__
 
+//there are two publically exposed interfaces here. The first, make_eager_def,
+//is for functions that return a single value. The second, make_eager_list_def,
+//is for functions the return lists of values, which should be implemented to
+//take an output iterator as their last argument.
+
 #include <boost/preprocessor.hpp>
 #include "core.h"
 #include "cast.h"
@@ -45,7 +50,7 @@
       const_vsub_child_it child=loc.begin_sub_child();                  \
       eval<Input0>()(*child,tr0);                                       \
       BOOST_PP_REPEAT_FROM_TO(1,n,LANG_DEF_vtree_eval,~);               \
-      dst=base(BOOST_PP_ENUM(n,LANG_DEF_call_arg,~));                   \
+      dst.root()=base(BOOST_PP_ENUM(n,LANG_DEF_call_arg,~));            \
     }                                                                   \
     Base base;                                                          \
   };

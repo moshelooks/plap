@@ -22,7 +22,6 @@
 #include "tree_iterator.h"
 #include "foreach.h"
 #include "dorepeat.h"
-#include "numeric.h"
 //#include "environment.h"
 #include "eager_def.h"
 #include "lib.h"
