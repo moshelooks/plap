@@ -24,7 +24,9 @@ def set_options(opt):
 	opt.add_option('--profile',action='store_true',default=False, 
 		       help='link to perftools cpu profiler')
 	opt.add_option('--test',action='store_true',default=False, 
-		       help='run unit tests after compilation')
+		       help='just build the unit tests, then run them')
+	opt.add_option('--repl',action='store_true',default=False, 
+		       help='just build the read-eval-print loop, then run it')
 	opt.tool_options('compiler_cxx')
 
 def configure(conf):
@@ -57,14 +59,16 @@ def build(bld):
 			obj.uselib=obj.uselib+' PROFILER'
 	
 	src='lang/cast.cc'
-	build_program(src,'test_runner') #unit tests
+	if Params.g_options.test or not Params.g_options.repl:
+		build_program(src,'test_runner') #unit tests
 	if Params.g_options.test:
 		return #don't need to build anything else
 	build_program(src,'repl') #read-eval-print loop
+	if Params.g_options.repl:
+		return
 
 def shutdown():
-	#option to run the unit tests
-	if Params.g_options.test:
+	if Params.g_options.test: 	#option to run the unit tests
 		if Params.g_verbose:
 			v="--log_level=all"
 		else:
@@ -74,3 +78,5 @@ def shutdown():
 			cmd="gcov test_runner -o default/main"
 			cmd+=" | grep 'File.*\.\./' -C 1"
 			subprocess.call(cmd,shell=True,cwd='build')
+	if Params.g_options.repl: 	#option to run the read-eval-print loop
+		subprocess.call(["build/default/repl"])
