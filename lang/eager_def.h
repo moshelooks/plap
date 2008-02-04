@@ -62,13 +62,13 @@
     return new lang_private::eager_def ## n<LANG_DEF_params(n)>(base);  \
   }
 
-namespace lang { //the actual code generation occurs here
+namespace plap { namespace lang { //the actual code generation occurs here
 namespace lang_private {
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,LANG_DEF_eager_def,~);
-} //~namespace lang_private
+}} //namespace plap::lang_private
 
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,LANG_DEF_make_eager,~);
-} //~namespace lang
+}} //namespace plap::lang
 
 //clean up our macro mess
 #undef LANG_DEF_make_eager
@@ -80,4 +80,4 @@ BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,LANG_DEF_make_eager,~);
 #undef LANG_DEF_type_params
 #undef LANG_DEF_LIMIT_INC
 
-#endif  // PLAP_LANG_EAGER_DEF_H__
+#endif //PLAP_LANG_EAGER_DEF_H__

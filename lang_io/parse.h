@@ -19,35 +19,42 @@
 
 #include "vtree_fwd.h"
 #include <string>
-#include <iostream>
+#include <istream>
+#include <stdexcept>
 
 struct boost::bad_lexical_cast;
-struct lang::environment;
 
-namespace lang {
+namespace plap { namespace lang_io {
 
 //error handling
 struct error_info { };
 struct bad_parse : public std::runtime_error {
-  bad_parse(const error_info& e) : info(e) {}
+  bad_parse(const error_info& e,const std::string& name) : info(e) { 
+    info.set_type("parse error");
+    info.set_name("bad "+name);
+  }
   error_info info;
 };
-#define LANG_PARSE_exception(name)                      \
-  struct bad_## name : public bad_parse {               \
-    bad_ ## name(const error_info& e) : bad_parse(e) {} \
+#define LANG_PARSE_exception(name)                            \
+  struct bad_## name : public bad_parse {                     \
+    bad_ ## name(const error_info& e,const std::string& inst) \
+    : bad_parse(e,std::string(#name)+"'"+inst+"'") {}         \
   };
-LANG_PARSE_exception(scalar_lookup);
-LANG_PARSE_exception(identifier_lookup);
+LANG_PARSE_exception(scalar);
+LANG_PARSE_exception(identifier);
 LANG_PARSE_exception(name);
 #undef LANG_PARSE_exception
 
 //does lexing and syntactic analysis
-std::istream stream_to_sexpr(std::istream& in,util::subtree<std::string>);
+typedef util::tree<std::string> sexpr;
+typedef util::subtree<std::string> sub_sexpr;
+std::istream stream_to_sexpr(std::istream& in,sub_sexpr);
 
 //does semantic analysis
+struct lang::environment;
 void sexpr_to_vtree(util::const_subtree<std::string> src,vsubtree dst,
                     const environment& env) 
-    thow(boost::bad_lexical_cast,bad_scalar_lookup,bad_identifier_lookup,
+    throw(boost::bad_lexical_cast,bad_scalar_lookup,bad_identifier_lookup,
          bad_name);
 
 //parses a leaf node (this is always unambiguous - i.e. can be done without any
@@ -56,6 +63,5 @@ vertex leaf_to_vertex(const std::string& str,const environment& env,
                       const bindings& scalars,const bindings& lets,
                       const errinfo& e);
 
-} //~namespace lang
-
-#endif  // PLAP_LANG_PARSE_H__
+}} //namespace plap::lang_io
+#endif //PLAP_LANG_PARSE_H__

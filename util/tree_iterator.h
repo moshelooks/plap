@@ -17,7 +17,7 @@
 #ifndef PLAP_UTIL_TREE_ITERATOR_H__
 #define PLAP_UTIL_TREE_ITERATOR_H__
 
-namespace util {
+namespace plap { namespace util {
 
 namespace util_private {
 
@@ -34,7 +34,7 @@ struct out_iter
   Out& dereference() { return *static_cast<Out*>(this); }
 };
 
-} //~namespace util_private
+}} //namespace plap::util_private
 
 template<typename Container>
 struct append_iterator
@@ -73,6 +73,6 @@ prepender(Container& c,typename Container::iterator i) {
   return prepend_iterator<Container>(c,i);
 }
 
-} //~namespace util
+}} //namespace plap::util
 
-#endif  // PLAP_UTIL_TREE_ITERATOR_H__
+#endif //PLAP_UTIL_TREE_ITERATOR_H__

@@ -31,7 +31,7 @@
 #include <boost/iterator/indirect_iterator.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
 
-namespace util {
+namespace plap { namespace util {
 
 template<typename Incrementable>
 inline boost::counting_iterator<Incrementable> 
@@ -89,6 +89,6 @@ repeat_it(const Value& v,std::size_t i=0) {
   return repetition_iterator<Value>(v,i);
 }
 
-} //namespace util
+}} //namespace plap::util
 
-#endif  // PLAP_UTIL_ITERATOR_SHORTHANDS_H__
+#endif //PLAP_UTIL_ITERATOR_SHORTHANDS_H__

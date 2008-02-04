@@ -22,11 +22,9 @@
 
 #include <ext/slist>
 
-namespace util {
+namespace plap { namespace util {
 
 using __gnu_cxx::slist;
 
-} //~namespace util;
-
-
-#endif  // PLAP_UTIL_SLIST_H__
+}} //namespace plap::util
+#endif //PLAP_UTIL_SLIST_H__

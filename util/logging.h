@@ -26,4 +26,4 @@
 #  include "logging_private.h"
 #endif
 
-#endif  // PLAP_UTIL_LOGGING_H__
+#endif //PLAP_UTIL_LOGGING_H__

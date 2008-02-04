@@ -14,21 +14,25 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "parse.h"
-#include "pretty.h"
+#include "repl.h"
 #include "environment.h"
 
 int main() { 
-  using namespace util;
-  using namespace lang;
   using namespace std;
-
-  environment env;
+  using namespace plap;
+  const string prompt="\033[22;32m> [\033[00m\]";
+  lang::environment env;
+  cout << "type ctrl+D to exit" << endl;
   while (cin.good()) {
-    cout << "\033[22;31m> ";
     try {
-      sexpr s("");
-      stream_to_sexpr(cin,s);
-      vtree expr(vertex());
-      sexpr_to_vtree(expr)
+      lang_io::repl(std::cin,std::cout,env,prompt);
+    } catch (util::runtime_error e) {
+      cerr << "\033[22;31m" << e.what() << "[\033[00m\]" << endl;
+    } catch (...) {
+      cerr << "\033[22;31munkown exception caught - failing...[\033[00m\]" 
+           << endl;
+      return 1;
+    }
+  }
+  return 0;
 }

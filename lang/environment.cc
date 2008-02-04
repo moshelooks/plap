@@ -16,8 +16,8 @@
 
 #include "environment.h"
 
-namespace lang {
-
+namespace plap { namespace lang {
+#if 0
 func& environment::create_func(const std::string& name) { 
   func& f=create_func();
   _names.insert(make_pair(&f,name));
@@ -31,5 +31,5 @@ func& environment::create_func() {
 void environment::bind(func& f,def* d) {
   
 }
-
-} //~namespace lang
+#endif
+}} //namespace plap::lang

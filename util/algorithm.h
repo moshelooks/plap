@@ -22,7 +22,7 @@
 #include <boost/bind.hpp>
 #include <ext/algorithm>
 
-namespace util {
+namespace plap { namespace util {
   //these needs to be changed for non-gcc
   using __gnu_cxx::copy_n;
   using __gnu_cxx::lexicographical_compare_3way;
@@ -150,6 +150,6 @@ namespace util {
     return out;
   }
 
-} //~namespace util
+}} //namespace plap::util
 
-#endif  // PLAP_UTIL_ALGORITHM_H__
+#endif //PLAP_UTIL_ALGORITHM_H__

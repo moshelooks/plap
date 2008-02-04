@@ -22,7 +22,7 @@
 //fixme#include "world.h"
 #include "def.h"
 
-namespace lang {
+namespace plap { namespace lang {
 namespace lang_private {
 
 std::string type_name(const vertex& v) {
@@ -50,8 +50,6 @@ std::string type_value(const vertex& v) {
   return "foobar";
 }
 
-} //~namespace lang_private
-} //~namespace lang
-
-#endif //~ifndef PLAP_LANG_VERTEX_UNION
-
+} //namespace plap::lang_private
+}} //namespace plap::lang
+#endif //ifndef PLAP_LANG_VERTEX_UNION

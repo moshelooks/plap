@@ -21,7 +21,7 @@
 #include "cast.h"
 #include "def.h"
 
-namespace lang {
+namespace plap { namespace lang {
 
 template<typename T>
 struct eval : public def {
@@ -45,6 +45,6 @@ struct cons : public def {
   }
 };
 
-} //~namespace lang
+}} //namespace plap::lang
 
-#endif  // PLAP_LANG_CORE_H__
+#endif //PLAP_LANG_CORE_H__

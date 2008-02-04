@@ -14,25 +14,29 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_VTREE_FWD_H__
-#define PLAP_LANG_VTREE_FWD_H__
+#include "repl.h"
+#include "environment.h"
+#include "pretty_print.h"
 
-#include "vertex.h"
+void repl(std::istream& in,std::ostream& out,lang::environment& env,
+          const std::string prompt="") {
+  while (in.good()) {
+    out << prompt;
+    out.flush();
 
-//fwd declarations
-namespace plap { namespace util { 
-template<typename>
-struct tree;
-template<typename>
-struct subtree;
-template<typename>
-struct const_subtree;
-}} //namespace plap::util
+    sexpr s("");
+    stream_to_sexpr(cin,s);
+    if (!in.good())
+      break;
+    out << endl;
 
-namespace plap { namespace lang {
-typedef util::tree<vertex>               vtree;
-typedef util::subtree<vertex>            vsubtree;
-typedef util::const_subtree<vertex>      const_vsubtree;
-}} //namespace plap::lang
-
-#endif //PLAP_LANG_VTREE_FWD_H__
+    vtree expr(vertex());
+    sexpr_to_vtree(s,expr,env);
+    
+    //evaluate it
+    vtree result(vertex());
+    eval(expr,result);
+    pretty_print(out,result);
+    out << endl;
+  }
+}
