@@ -29,8 +29,8 @@
 namespace lang {
 
 struct environment : public boost::noncopyable {
-  func& create_func(const std::string& name);
-  func& create_func();
+  func& create_func(const std::string& name,const type& t);
+  func& create_func(const type& t);
 
   //takes ownership of the definition
   void bind(func& f,def* d);
