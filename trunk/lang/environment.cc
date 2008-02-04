@@ -29,7 +29,7 @@ func& environment::create_func() {
 }
 
 void environment::bind(func& f,def* d) {
-
+  
 }
 
 } //~namespace lang
