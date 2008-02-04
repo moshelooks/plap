@@ -532,4 +532,4 @@ void boost::logging::logger::unformatted_trace(unsigned short     l,
     }
 }
 
-#endif  // !BOOST_LOGGING_HPP
+#endif //!BOOST_LOGGING_HPP

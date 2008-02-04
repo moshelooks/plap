@@ -14,25 +14,23 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_VTREE_FWD_H__
-#define PLAP_LANG_VTREE_FWD_H__
+#ifndef PLAP_LANG_IO_REPL_H__
+#define PLAP_LANG_IO_REPL_H__
 
-#include "vertex.h"
-
-//fwd declarations
-namespace plap { namespace util { 
-template<typename>
-struct tree;
-template<typename>
-struct subtree;
-template<typename>
-struct const_subtree;
-}} //namespace plap::util
+#include "parse.h"
+#include "exception.h"
+#include <ostream>
 
 namespace plap { namespace lang {
-typedef util::tree<vertex>               vtree;
-typedef util::subtree<vertex>            vsubtree;
-typedef util::const_subtree<vertex>      const_vsubtree;
+struct environment;
 }} //namespace plap::lang
 
-#endif //PLAP_LANG_VTREE_FWD_H__
+namespace plap { namespace lang_io {
+
+//reads from in and writes to out as long as in is good, 
+//throws on language errors
+void repl(std::istream& in,std::ostream& out,lang::environment& env,
+          const std::string prompt="") throw(util::runtime_exception);
+
+}} //namespace plap::lang_io
+#endif //PLAP_LANG_IO_REPL_H__

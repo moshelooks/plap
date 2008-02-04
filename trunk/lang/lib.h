@@ -20,10 +20,11 @@
 #ifndef PLAP_LANG_LIB_H__
 #define PLAP_LANG_LIB_H__
 
-#include <algorithm>
+#include <numeric>
+#include <iostream>//fixme
 #include "type.h"
 
-namespace lang {
+namespace plap { namespace lang {
 
 struct environment;
 void initialize_lib(environment& env);
@@ -43,6 +44,6 @@ disc_t lang_print(const_vsubtree v) {
   return 0;
 }
 
-} //~namespace lang
+}} //namespace plap::lang
 
-#endif  // PLAP_LANG_LIB_H__
+#endif //PLAP_LANG_LIB_H__

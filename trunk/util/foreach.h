@@ -47,7 +47,7 @@ struct range_const_iterator<std::size_t> {
   typedef counting_iterator<std::size_t> type; 
 };
 
-} //~namespace boost
+} //namespace boost
 
 
 #ifndef BOOST_FOREACH
@@ -55,4 +55,4 @@ struct range_const_iterator<std::size_t> {
 #endif
 #define foreach BOOST_FOREACH
 
-#endif  // PLAP_UTIL_FOREACH_H__
+#endif //PLAP_UTIL_FOREACH_H__

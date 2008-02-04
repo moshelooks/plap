@@ -23,9 +23,9 @@
 #ifndef PLAP_LANG_VERTEX_UNION
 #  include <string>
 #  include <iostream>
-#endif //~ifndef PLAP_LANG_VERTEX_UNION
+#endif //ifndef PLAP_LANG_VERTEX_UNION
 
-namespace lang {
+namespace plap { namespace lang {
 
 #ifdef PLAP_LANG_VERTEX_UNION
 
@@ -44,12 +44,12 @@ LANG_CAST_vertex_cast(world_t,w)
 LANG_CAST_vertex_cast(def_t,f)
 #undef LANG_CAST_vertex_cast
 
-#else //~ifndef PLAP_LANG_VERTEX_UNION
+#else //ifdef PLAP_LANG_VERTEX_UNION
 
 namespace lang_private {
 std::string type_name(const vertex& v);
 std::string type_value(const vertex& v);
-} //~namespace lang_private
+}} //namespace plap::lang_private
 
 #define LANG_vertex_cast(const_marker)                                  \
   template<typename T>                                                  \
@@ -68,7 +68,7 @@ LANG_vertex_cast(const)
 LANG_vertex_cast()
 #undef LANG_vertex_cast
 
-#endif //~ifdef PLAP_LANG_VERTEX_UNION
+#endif //ifdef PLAP_LANG_VERTEX_UNION ... else
 
 namespace lang_private {
 template<typename T>
@@ -92,7 +92,7 @@ struct literal_caster<func_of<T> > {
     return func_of<T>(s);
   }
 };
-} //~namespace lang_private
+}} //namespace plap::lang_private
 
 template<typename T>
 T literal_cast(const_vsubtree s) { 
@@ -102,6 +102,5 @@ T literal_cast(const_vsubtree s) {
 template<>
 const_vsubtree literal_cast<const_vsubtree>(const_vsubtree s) { return s; }
 
-} //~namespace lang
-
-#endif  // PLAP_LANG_CAST_H__
+}} //namespace plap::lang
+#endif //PLAP_LANG_CAST_H__

@@ -24,11 +24,11 @@
 //less memory (1-4 bytes less per program tree node)
 #ifdef NDEBUG
 #  define PLAP_LANG_VERTEX_UNION
-#else //~ifndef NDEBUG
+#else //ifndef NDEBUG
 #  include <boost/variant.hpp>
-#endif //~ifdef NDEBUG
+#endif //ifdef NDEBUG
 
-namespace lang {
+namespace plap { namespace lang {
 
 struct world;
 struct def;
@@ -51,13 +51,13 @@ union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
 
   disc_t d; contin_t c; world_t w; def_t f; 
 };
-#else //~ifndef PLAP_LANG_VERTEX_UNION
+#else //ifndef PLAP_LANG_VERTEX_UNION
 typedef boost::variant<disc_t,
                        contin_t,
                        world_t,
                        def_t> vertex;
-#endif //~ifdef PLAP_LANG_VERTEX_UNION
+#endif //ifdef PLAP_LANG_VERTEX_UNION
 
-} //~namespace lang
+}} //namespace plap::lang
 
-#endif  // PLAP_LANG_VERTEX_H__
+#endif //PLAP_LANG_VERTEX_H__

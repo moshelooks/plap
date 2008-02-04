@@ -20,7 +20,7 @@
 #include <iostream>
 #include "util/tree.h"
 
-namespace util {
+namespace plap { namespace util {
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out,const_subtree<T> tr) {
@@ -44,6 +44,6 @@ std::ostream& operator<<(std::ostream& out,const tree<T>& tr) {
   return out;
 }
 
-} //~namespace util
+}} //namespace plap::util
 
-#endif  // PLAP_UTIL_TREE_IO_H__
+#endif //PLAP_UTIL_TREE_IO_H__

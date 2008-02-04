@@ -18,7 +18,7 @@
 #include "tree_io.h"
 #include "environment.h"
 
-namespace lang {
+namespace plap { namespace lang {
 
 void to_string_tree(std::istream& in,util::subtree<std::string> dst) {
 
@@ -44,7 +44,7 @@ vertex leaf_to_vertex(const std::string& str,const environment& env,
     bindings::const_iterator i=scalars.find(str.substr(1));
     if (i==scalars.end()) {
       validate_identifier(str.substr(1),e);
-      throw bad_scalar_lookup(str,e);
+      throw bad_scalar(e,str);
     }
     return i->second;
   }
@@ -53,10 +53,10 @@ vertex leaf_to_vertex(const std::string& str,const environment& env,
     return i->second;
   i=env.func_bindings().find(str);
   if (i==env.func_bindings().end()) {
-    validate_identifier(str,e);
-    throw bad_idenfier_lookup(str,e);
+    validate_identifier(e,str);
+    throw bad_identfier(e,str);
   }
   return i->second;
 }
 
-} //~namespace lang
+}} //namespace plap::lang

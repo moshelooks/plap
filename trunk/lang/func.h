@@ -17,10 +17,9 @@
 #ifndef PLAP_LANG_FUNC_H__
 #define PLAP_LANG_FUNC_H__
 
-namespace lang {
+namespace plap { namespace lang {
 
 struct func {};
 
-} //~namespace lang
-
-#endif  // PLAP_LANG_FUNCTION_H__
+}} //namespace plap::lang
+#endif //PLAP_LANG_FUNCTION_H__

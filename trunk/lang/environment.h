@@ -18,21 +18,27 @@
 #define PLAP_LANG_ENVIRONMENT_H__
 
 #include <tr1/unordered_map>
-#include <boost/noncopyable.hlspp>
+#include <boost/noncopyable.hpp>
+#include <string>
 #include "slist.h"
-#include "vtree.h"
-#include "vertex_cast.h"
-#include "types.h"
 #include "func.h"
+/***fixme
+#include "vtree.h"
+#include "cast.h"
+***/
+#include "type.h"
 #include "def.h"
 
-namespace lang {
+namespace plap { namespace lang {
+
+struct type;
 
 struct environment : public boost::noncopyable {
-  func& create_func(const std::string& name,const type& t);
-  func& create_func(const type& t);
+  func& create_func(const std::string& name);//fixme,const type& t);
+  //func& create_func(const type& t);
 
   //takes ownership of the definition
+  //fixme
   void bind(func& f,def* d);
 
  protected:
@@ -43,6 +49,6 @@ struct environment : public boost::noncopyable {
   func_list _funcs; 
 };
 
-} //~namespace lang
+}} //namespace plap::lang
 
-#endif  // PLAP_LANG_ENVIRONMENT_H__
+#endif //PLAP_LANG_ENVIRONMENT_H__

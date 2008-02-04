@@ -17,7 +17,7 @@
 #include "lib.h"
 #include "environment.h"
 
-namespace lang {
+namespace plap { namespace lang {
 
 #define LANG_LIB_cf(name) func& name=env.create_func(#name);
 #define LANG_LIB_arithmetic_nary(name) {                                \
@@ -45,20 +45,20 @@ namespace lang {
 
 void initialize_lib(environment& env) {
   //arithmetic functions
-  LANG_LIB_arithmetic_nary("plus");
-  LANG_LIB_arithmetic_nary("times");
-  LANG_LIB_arithmetic_binary("minus");
-  LANG_LIB_arithmetic_binary("div");
+  LANG_LIB_arithmetic_nary(plus);
+  LANG_LIB_arithmetic_nary(times);
+  LANG_LIB_arithmetic_binary(minus);
+  LANG_LIB_arithmetic_binary(div);
 
   //comparison operators
-  LANG_LIB_comparison("equal");
-  LANG_LIB_comparison("less");
-  LANG_LIB_comparison("less_equal");
-  LANG_LIB_comparison("greater");
-  LANG_LIB_comparison("greater_equal");
+  LANG_LIB_comparison(equal);
+  LANG_LIB_comparison(less);
+  LANG_LIB_comparison(less_equal);
+  LANG_LIB_comparison(greater);
+  LANG_LIB_comparison(greater_equal);
 
   //
        
 }
 
-} //~namespace lang
+}} //namespace plap::lang

@@ -34,13 +34,13 @@
 
 #include "vtree_fwd.h"
 
-namespace lang {
+namespace plap { namespace lang {
 
 struct def {
   virtual ~def() {}
   virtual void operator()(const_vsubtree loc,vsubtree dst) const=0;
 };
 
-} //~namespace lang
+}} //namespace plap::lang
 
-#endif  // PLAP_LANG_DEF_H__
+#endif //PLAP_LANG_DEF_H__

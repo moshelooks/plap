@@ -14,25 +14,15 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_VTREE_FWD_H__
-#define PLAP_LANG_VTREE_FWD_H__
+#ifndef PLAP_LANG_IO_PRETTY_PRINT_H__
+#define PLAP_LANG_IO_PRETTY_PRINT_H__
 
-#include "vertex.h"
+#include <ostream>
+#include "vtree_fwd.h"
 
-//fwd declarations
-namespace plap { namespace util { 
-template<typename>
-struct tree;
-template<typename>
-struct subtree;
-template<typename>
-struct const_subtree;
-}} //namespace plap::util
+namespace plap { namespace lang_io {
 
-namespace plap { namespace lang {
-typedef util::tree<vertex>               vtree;
-typedef util::subtree<vertex>            vsubtree;
-typedef util::const_subtree<vertex>      const_vsubtree;
-}} //namespace plap::lang
+ostream& pretty_print(ostream& out,const_vsubtree s);
 
-#endif //PLAP_LANG_VTREE_FWD_H__
+}} //namespace plap::lang_io
+#endif //PLAP_LANG_IO_PRETTY_PRINT_H__

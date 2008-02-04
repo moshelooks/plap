@@ -19,7 +19,7 @@
 
 #include "vtree.h"
 
-namespace lang {
+namespace plap { namespace lang {
 
 //core types
 typedef contin_t number_t;
@@ -43,7 +43,7 @@ struct type : boost::equality_comparable<Type> {
  protected:
   const_vsubtree _s;
 };
-}//~namespace lang_private
+}//namespace lang_private
 
 template<typename T>
 struct list_of : public lang_private::type<list_of<T> > {
@@ -81,15 +81,19 @@ template<typename T,typename U>
 struct func_of<T(U)> : public lang_private::type<func_of<T(U)> > {
   func_of(const_vsubtree s) : lang_private::type<func_of<T(U)> >(s) {}
   T operator()(const U& u) {
+#if 0
      //break constness to add args
     vsubtree sub=*reinterpret_cast<vsubtree*>(&this->_s);
     sub.append(sub.begin(),u);
     (*vertex_cast<def_t>(sub.root()))(sub,tmp);
     sub.erase(sub.end_child()); //remove the args ****/
     return literal_cast<T>(tmp);
+#endif
+    assert(false);
+    return T();
   }
 };
 
-} //~namespace lang
+}} //namespace plap::lang
 
-#endif  // PLAP_LANG_TYPE_H__
+#endif //PLAP_LANG_TYPE_H__
