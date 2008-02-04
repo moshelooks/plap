@@ -21,6 +21,13 @@
 
 namespace lang {
 
+//core types
+typedef contin_t number_t;
+typedef char     char_t;
+typedef disc_t   ordinal_t;
+typedef disc_t   categorical_t;
+typedef bool     bool_t;
+
 //fwd declaration
 template<typename T>
 T literal_cast(const_vsubtree);

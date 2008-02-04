@@ -14,14 +14,21 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "tree_io.h"
-#include "tree_iterator.h"
-#include "vertex.h"
+#include "parse.h"
+#include "pretty.h"
+#include "environment.h"
 
 int main() { 
   using namespace util;
   using namespace lang;
   using namespace std;
 
-  cout << "nothing here yet.." << endl;
+  environment env;
+  while (cin.good()) {
+    cout << "\033[22;31m> ";
+    try {
+      sexpr s("");
+      stream_to_sexpr(cin,s);
+      vtree expr(vertex());
+      sexpr_to_vtree(expr)
 }
