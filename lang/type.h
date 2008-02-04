@@ -74,8 +74,6 @@ template<typename T,typename U>
 struct func_of<T(U)> : public lang_private::type<func_of<T(U)> > {
   func_of(const_vsubtree s) : lang_private::type<func_of<T(U)> >(s) {}
   T operator()(const U& u) {
-    vtree tmp;
-    /****
      //break constness to add args
     vsubtree sub=*reinterpret_cast<vsubtree*>(&this->_s);
     sub.append(sub.begin(),u);

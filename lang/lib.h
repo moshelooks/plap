@@ -14,6 +14,9 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+// All library functions should appear in initialize_lib, which is called to
+// add library functions to an environment.
+
 #ifndef PLAP_LANG_LIB_H__
 #define PLAP_LANG_LIB_H__
 
@@ -23,21 +26,22 @@
 namespace lang {
 
 struct environment;
+void initialize_lib(environment& env);
 
 template<typename T>
 T lang_plus(list_of<T> l) { return std::accumulate(l.begin(),l.end(),T(0)); }
 
-inline void lang_foreach(list_of<const_vsubtree> l,
+inline disc_t lang_foreach(list_of<const_vsubtree> l,
                          func_of<const_vsubtree(const_vsubtree)> f) {
-  //std::for_each(l.begin(),l.end(),f);
-}
-
-disc_t lang_print(list_of<const_vsubtree> l) { 
-  //foreach (const_vsubtree s,l) std::cout << "yuk ";
+  std::for_each(l.begin(),l.end(),f);
   return 0;
 }
 
-void initialize_lib(environment& env);
+disc_t lang_print(const_vsubtree v) { 
+  std::cout << "yuk ";
+  //foreach (const_vsubtree s,l) std::cout << "yuk ";
+  return 0;
+}
 
 } //~namespace lang
 

@@ -51,7 +51,7 @@ test_case(lang_big_sum) {
   check_eq(vertex_cast<disc_t>(dst.root()),result);
 }
 
-#if 0
+
 
 test_case(lang_foreach_print) {
   cons<disc_t> c;
@@ -59,16 +59,16 @@ test_case(lang_foreach_print) {
   def* fe=make_eager_def
       <list_of<const_vsubtree>,
       func_of<const_vsubtree(const_vsubtree)> >(&lang_foreach);
-  def* pr=make_eager_def<list_of<const_vsubtree> >(&lang_print);
-  /*  vtree src=tree_of(vertex(fe))(tree_of(vertex(&c))(vertex(disc_t(1)),
+   def* pr=make_eager_def<const_vsubtree >(&lang_print);
+   vtree src=tree_of(vertex(fe))(tree_of(vertex(&c))(vertex(disc_t(1)),
                                                     vertex(disc_t(2)),
                                                     vertex(disc_t(3))),
                                 vertex(pr));
   vtree dst=vtree(vertex(disc_t(42)));
-  e(src,dst);*/
+  e(src,dst);
 }
 
-
+#if 0
 
   //check_eq(dst,tree_of(vertex(6)));
 

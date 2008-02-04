@@ -38,7 +38,7 @@
 #define LANG_DEF_params(n) \
   BOOST_PP_ENUM_PARAMS(n,Input),Base
 #define LANG_DEF_vtree_decl(z,n,u) vtree tr ## n=vtree(vertex());
-#define LANG_DEF_vtree_eval(z,n,u) eval<Input ## n>()(child++,tr ## n);
+#define LANG_DEF_vtree_eval(z,n,u) eval<Input ## n>()(*child++,tr ## n);
 #define LANG_DEF_call_arg(z,n,u) literal_cast<Input ## n>(tr ## n)
 //generates an eager_def struct for some arity
 #define LANG_DEF_eager_def(z,n,u)                                       \
@@ -46,6 +46,7 @@
   struct eager_def ## n : public def {                                  \
     eager_def ## n(const Base& fun) : base(fun) {}                      \
     void operator()(const_vsubtree loc,vsubtree dst) const {            \
+      assert(loc.arity()==n);                                           \
       BOOST_PP_REPEAT(n,LANG_DEF_vtree_decl,~);                         \
       const_vsub_child_it child=loc.begin_sub_child();                  \
       eval<Input0>()(*child,tr0);                                       \

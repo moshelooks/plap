@@ -85,6 +85,13 @@ struct literal_caster<list_of<T> > {
     return list_of<T>(s);
   }
 };
+template<typename T>
+struct literal_caster<func_of<T> > {
+  func_of<T> operator()(const_vsubtree s) { 
+    assert(type_name(s.root())==type_name(def_t()));
+    return func_of<T>(s);
+  }
+};
 } //~namespace lang_private
 
 template<typename T>
