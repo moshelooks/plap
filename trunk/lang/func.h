@@ -19,7 +19,15 @@
 
 namespace plap { namespace lang {
 
-struct func {};
+typedef unsigned char arity_t;
+
+struct func {
+  func(arity_t a) : _arity(a) {}
+
+  arity_t arity() const { return _arity; }
+ protected:
+  arity_t _arity;
+};
 
 }} //namespace plap::lang
 #endif //PLAP_LANG_FUNCTION_H__
