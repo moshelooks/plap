@@ -1,15 +1,9 @@
 # Factorial
-fact 0 = 1
-fact $n = $n*(fact $n-1)
-# or
 fact $n = if $n=0 1 $n*(fact $n-1)
 # or
 fact $n = accumulate [1..$n] times
 
 # Fibonacci
-fib 0|1 = 1
-fib $n = (fib $n-2)+(fib $n-1)
-# or
 fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
 
 # Paul Graham's accumulator generator (though in general set should be avoided)
@@ -29,14 +23,20 @@ I $x = $x
 # Accessing Substrings
 ##
 
-nth $x:$y 0 = $x
-nth $x:$y n = nth $y n-1
+nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
 
-sub $list [] = []
-sub $list $x:$y = (nth $list $x):(sub $list $y)
+sub $list $indices = 
+  let 
+    helper $list $indices $offset =
+      if (empty $indices) [] 
+         if (hd $indices)=$offset 
+            (hd $list):(helper (tl $list) (tl $indices) $offset+1)
+	    helper (tl $list) $indices $offset
+    helper $list $indices 0
 
 subs $list $from $len = sub $list [$from...$from+$len]
 
+last $l = hd (if (empty $x) $x (last (t
 last $x:[] = $x
 last $x:$y = last $y
 

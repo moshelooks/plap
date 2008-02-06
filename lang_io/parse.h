@@ -19,11 +19,11 @@
 
 #include <string>
 #include <istream>
+#include <stdexcept>
 #include "vtree_fwd.h"
 #include "vertex.h"
 
-namespace std { struct runime_error; }
-namespace plap { namespace lang { struct environment; struct bindings; }}
+namespace plap { namespace lang { struct environment; }}
 
 namespace plap { namespace lang_io {
 

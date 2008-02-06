@@ -37,9 +37,12 @@ namespace plap { namespace lang {
 typedef func* func_t;
 
 struct environment : public boost::noncopyable {
-  func_t create_func() { _funcs.push_back(new func()); return &_funcs.back(); }
-  func_t create_func(const std::string& name) {
-    return _names.insert(make_pair(name,create_func())).first->second;
+  func_t create_func(arity_t a) { 
+    _funcs.push_back(new func(a)); 
+    return &_funcs.back(); 
+  }
+  func_t create_func(arity_t a,const std::string& name) {
+    return _names.insert(make_pair(name,create_func(a))).first->second;
   }
 
   func_t name2func(const std::string& name) const {

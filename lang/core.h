@@ -17,24 +17,23 @@
 #ifndef PLAP_LANG_CORE_H__
 #define PLAP_LANG_CORE_H__
 
-#include "algorithm.h"
-#include "cast.h"
-#include "def.h"
+//#include "algorithm.h"
+//#include "cast.h"
+//#include "def.h"
+#include "vertex.h"
 
 namespace plap { namespace lang {
-
 namespace id {
 extern func_t lambda;
 extern func_t apply;
 extern func_t list;
 extern func_t def;
 extern func_t let;
-
+extern func_t decl;
 extern disc_t unit;
 } //namespace id
 
-
-
+#if 0
 template<typename T>
 struct eval : public def {
   void operator()(const_vsubtree s,vsubtree d) const {
@@ -56,7 +55,7 @@ struct cons : public def {
                    d.begin_sub_child(),eval<T>());
   }
 };
-
+#endif
 }} //namespace plap::lang
 
 #endif //PLAP_LANG_CORE_H__

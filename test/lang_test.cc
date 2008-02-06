@@ -17,7 +17,7 @@
 test_case(lang_env_funcs) {
   environment env;
 
-  func_t foo=env.create_func("foo");
+  func_t foo=env.create_func(1,"foo");
 
   check_eq(env.name2func("foo"),foo);
 
@@ -26,7 +26,7 @@ test_case(lang_env_funcs) {
 
   check(!env.name2func("goo"));
 
-  func_t anon=env.create_func();
+  func_t anon=env.create_func(1);
   check(!env.func2name(anon));
 }
 
