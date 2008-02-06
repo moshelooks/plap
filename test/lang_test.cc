@@ -14,6 +14,25 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+test_case(lang_env_funcs) {
+  environment env;
+
+  func_t foo=env.create_func("foo");
+
+  check_eq(env.name2func("foo"),foo);
+
+  check(env.func2name(foo));
+  check_eq(*env.func2name(foo),"foo");
+
+  check(!env.name2func("goo"));
+
+  func_t anon=env.create_func();
+  check(!env.func2name(anon));
+}
+
+#if 0
+
+
 test_case(lang_small_sum) {
   cons<disc_t> c;
   eval<disc_t> e;
@@ -68,7 +87,6 @@ test_case(lang_foreach_print) {
   e(src,dst);
 }
 
-#if 0
 
   //check_eq(dst,tree_of(vertex(6)));
 

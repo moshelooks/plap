@@ -21,7 +21,7 @@
 #include "exception.h"
 #include <ostream>
 
-namespace plap { namespace lang {
+namespace plap { namespace lang_io {
 struct environment;
 }} //namespace plap::lang
 

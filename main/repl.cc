@@ -22,7 +22,7 @@ int main() {
   using namespace plap;
   const string prompt="\033[22;32m> [\033[00m\]";
   lang::environment env;
-  cout << "type ctrl+D to exit" << endl;
+  cout << "ctrl+D exits" << endl;
   while (cin.good()) {
     try {
       lang_io::repl(std::cin,std::cout,env,prompt);

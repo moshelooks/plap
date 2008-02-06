@@ -52,19 +52,22 @@ def build(bld):
 	def build_program(source,name):
 		obj=bld.create_obj('cpp','program')
 		obj.source=source+' main/'+name+'.cc'
-		obj.includes='lang test util'
+		obj.includes='lang lang_io test util'
 		obj.target=name
 		obj.uselib='OPT_'+Params.g_options.opt_level.upper()
 		if Params.g_options.profile:
 			obj.uselib=obj.uselib+' PROFILER'
 	
 	src='''
-	lang/cast.cc
-	lang/environment.cc
-	lang/lib.cc
-	lang_io/parse.cc
-	lang_io/repl.cc
+	util/tree_io.cc
         '''
+#	src='''
+#	lang/cast.cc
+#	lang/environment.cc
+#	lang/lib.cc
+#	lang_io/parse.cc
+#	lang_io/repl.cc
+#        '''
 	if Params.g_options.test or not Params.g_options.repl:
 		build_program(src,'test_runner') #unit tests
 	if Params.g_options.test:
