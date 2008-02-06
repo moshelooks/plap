@@ -17,51 +17,25 @@
 #ifndef PLAP_LANG_PARSE_H__
 #define PLAP_LANG_PARSE_H__
 
-#include "vtree_fwd.h"
 #include <string>
 #include <istream>
-#include <stdexcept>
+#include "vtree_fwd.h"
+#include "vertex.h"
 
-struct boost::bad_lexical_cast;
+namespace std { struct runime_error; }
+namespace plap { namespace lang { struct environment; struct bindings; }}
 
 namespace plap { namespace lang_io {
 
-//error handling
-struct error_info { };
-struct bad_parse : public std::runtime_error {
-  bad_parse(const error_info& e,const std::string& name) : info(e) { 
-    info.set_type("parse error");
-    info.set_name("bad "+name);
-  }
-  error_info info;
-};
-#define LANG_PARSE_exception(name)                            \
-  struct bad_## name : public bad_parse {                     \
-    bad_ ## name(const error_info& e,const std::string& inst) \
-    : bad_parse(e,std::string(#name)+"'"+inst+"'") {}         \
-  };
-LANG_PARSE_exception(scalar);
-LANG_PARSE_exception(identifier);
-LANG_PARSE_exception(name);
-#undef LANG_PARSE_exception
+typedef util::tree<std::string> sexpr;
+typedef util::const_subtree<std::string> const_sub_sexpr;
 
 //does lexing and syntactic analysis
-typedef util::tree<std::string> sexpr;
-typedef util::subtree<std::string> sub_sexpr;
-std::istream stream_to_sexpr(std::istream& in,sub_sexpr);
+std::istream& stream2sexpr(std::istream&,sexpr&);
 
 //does semantic analysis
-struct lang::environment;
-void sexpr_to_vtree(util::const_subtree<std::string> src,vsubtree dst,
-                    const environment& env) 
-    throw(boost::bad_lexical_cast,bad_scalar_lookup,bad_identifier_lookup,
-         bad_name);
-
-//parses a leaf node (this is always unambiguous - i.e. can be done without any
-//context other than the given environment+bindings)
-vertex leaf_to_vertex(const std::string& str,const environment& env,
-                      const bindings& scalars,const bindings& lets,
-                      const errinfo& e);
+void sexpr2vtree(const_sub_sexpr src,lang::vsubtree dst,lang::environment& env)
+    throw(std::runtime_error);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_PARSE_H__

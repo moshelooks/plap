@@ -123,72 +123,75 @@ test_case(tree_arity) {
 
 test_case(tree_append1) {
   itree tr(42);
-  tr.append(tr.begin(),1);
-  tr.append(tr.begin(),1);
+  tr.append(1);
+  tr.append(1);
   check_tree(tr,3,"42(1 1)");
 
   itree tr1;
-  tr1.append(tr1.append(tr1.insert(tr1.end(),1),2),3);
-  tr1.append(tr1.begin(),4);
+  tr1.insert(tr1.end(),1);
+  tr1.append(2);
+  tr1[0].append(3);
+  tr1.append(4);
   check_tree(tr1,4,"1(2(3) 4)");
 }
 
 test_case(tree_prepend1) {
   itree tr(-1);
-  tr.prepend(tr.begin(),42);
+  tr.prepend(42);
   check_tree(tr,2,"-1(42)");
 
   string front="-1(", back="42)";
   foreach(int i,11) {
     back=lexical_cast<string>(i)+" "+back;
-    tr.prepend(tr.begin(),i);
+    tr.prepend(i);
     check_tree(tr,i+3,front+back);
   }
 
   itree tr1(-1);
   front="-1",back="";
-  itree::pre_iterator it=tr1.begin();
+  itree::sub_pre_iterator it=tr1.begin_sub();
   foreach(int i,11) {
     front+="("+lexical_cast<string>(i);
     back=")"+back;
-    it=tr1.prepend(it,i);
+    it->prepend(i);
+    ++it;
     check_tree(tr1,i+2,front+back);
   }
 }
 
 test_case(tree_append2) {
   itree tr(42);
-  tr.append(tr.begin(),itree(tr)); //need to copy to avoid infinite regress
+  tr.append(itree(tr)); //need to copy to avoid infinite regress
   check_tree(tr,2,"42(42)");
 
-  tr.append(tr.begin(),itree(42));
+  tr.append(itree(42));
   check_tree(tr,3,"42(42 42)");
 
-  tr.append(tr.begin(),itree(tr));
+  tr.append(itree(tr));
   check_tree(tr,6,"42(42 42 42(42 42))");
 
-  tr.append(tr.begin(),itree(tr));
+  tr.append(itree(tr));
   check_tree(tr,12,"42(42 42 42(42 42) 42(42 42 42(42 42)))");
 
-  tr.append(tr.begin_child(),tr[2]);
+  tr[0].append(tr[2]);
   check_tree(tr,15,"42(42(42(42 42)) 42 42(42 42) 42(42 42 42(42 42)))");
 }
 
 test_case(tree_prepend2) {
   itree tr(42);
-  tr.prepend(tr.begin(),itree(tr));
+  tr.prepend(itree(tr));
   check_tree(tr,2,"42(42)");
 
-  tr.prepend(tr.begin(),itree(42));
+  tr.prepend(itree(42));
   check_tree(tr,3,"42(42 42)");
 
-  tr.prepend(tr.begin(),itree(tr));
+  tr.prepend(itree(tr));
   check_tree(tr,6,"42(42(42 42) 42 42)");
 
-  tr.prepend(tr.begin(),itree(tr));
+  tr.prepend(itree(tr));
   check_tree(tr,12,"42(42(42(42 42) 42 42) 42(42 42) 42 42)");
 
-  tr.prepend(tr.begin_child(),tr[1]);
+  tr[0].prepend(tr[1]);
   check_tree(tr,15,"42(42(42(42 42) 42(42 42) 42 42) 42(42 42) 42 42)");
 }
 
@@ -456,13 +459,14 @@ test_case(tree_insert2) {
 test_case(tree_append3) {
   itree tr(42);
   vector<int> toadd(count_it(1),count_it(101));
-  tr.append(tr.begin(),toadd.begin(),toadd.end());
+  tr.append(toadd.begin(),toadd.end());
   check_eq(tr.size(),101u);
   check_eq(tr.root(),42);
   check(equal(tr.begin_child(),tr.end_child(),toadd.begin()));
 
   itree tr1(42);
-  tr1.append(tr1.append(tr1.begin(),-1),10u,99);
+  tr1.append(-1);
+  tr1[0].append(10u,99);
   check_eq(tr1.size(),12u);
   itree::pre_iterator i=++++tr1.begin();
   itree::sub_pre_iterator j=++++tr1.begin_sub();
@@ -476,14 +480,14 @@ test_case(tree_append3) {
 test_case(tree_prepend3) {
   itree tr(42);
   vector<int> toadd(count_it(1),count_it(101));
-  tr.prepend(tr.begin(),toadd.begin(),toadd.end());
+  tr.prepend(toadd.begin(),toadd.end());
   check_eq(tr.size(),101u);
   check_eq(tr.root(),42);
   check(equal(tr.begin_child(),tr.end_child(),toadd.begin()));
 
   itree tr1(42);
-  tr1.prepend(tr1.begin(),-1);
-  tr1.prepend(tr1.begin(),10u,99);
+  tr1.prepend(-1);
+  tr1.prepend(10u,99);
   check_eq(tr1.size(),12u);
   itree::pre_iterator i=++tr1.begin();
   itree::sub_pre_iterator j=++tr1.begin_sub();
@@ -496,15 +500,15 @@ test_case(tree_prepend3) {
 
 test_case(tree_append4) {
   itree tr(42);
-  tr.append(tr.end_child(),0);
-  tr.append(tr.begin(),4,tree_of(1)(2,3));
+  tr.append(0);
+  tr.append(4,tree_of(1)(2,3));
   check_tree(tr,14,"42(0 1(2 3) 1(2 3) 1(2 3) 1(2 3))");
 }
 
 test_case(tree_prepend4) {
   itree tr(42);
-  tr.prepend(tr.end_child(),0);
-  tr.prepend(tr.begin(),4,tree_of(1)(2,3));
+  tr.prepend(0);
+  tr.prepend(4,tree_of(1)(2,3));
   check_tree(tr,14,"42(1(2 3) 1(2 3) 1(2 3) 1(2 3) 0)");
 }
 
@@ -513,10 +517,10 @@ test_case(tree_append5) {
   vector<itree> foo;
   foo+=tree_of(1)(2,3),tree_of(4),tree_of(5)(tree_of(6)(7));
   
-  tr.append(tr.begin(),foo.begin(),foo.end());
+  tr.append(foo.begin(),foo.end());
   check_tree(tr,10,"0(0 0 1(2 3) 4 5(6(7)))");
 
-  tr.append(tr[2].begin(),2,foo[0]);
+  tr[2].append(2,foo[0]);
   check_tree(tr,16,"0(0 0 1(2 3 1(2 3) 1(2 3)) 4 5(6(7)))");
 }
 
@@ -525,10 +529,10 @@ test_case(tree_prepend5) {
   vector<itree> foo;
   foo+=tree_of(1)(2,3),tree_of(4),tree_of(5)(tree_of(6)(7));
   
-  tr.prepend(tr.begin(),foo.begin(),foo.end());
+  tr.prepend(foo.begin(),foo.end());
   check_tree(tr,10,"0(1(2 3) 4 5(6(7)) 0 0)");
 
-  tr.prepend(tr[2].begin(),2,foo[0]);
+  tr[2].prepend(2,foo[0]);
   check_tree(tr,16,"0(1(2 3) 4 5(1(2 3) 1(2 3) 6(7)) 0 0)");
 }
 
@@ -540,7 +544,7 @@ test_case(tree_insert_above) {
   tr.insert_above(tr[0].begin(),40);
   check_tree(tr,3,"41(40(42))");
 
-  tr.append(tr[0].begin(),43);
+  tr[0].append(43);
   tr.insert_above(tr[0].begin_child(),39);
   check_tree(tr,5,"41(40(39(42) 43))");
 }
@@ -554,7 +558,7 @@ test_case(tree_insert_below) {
   tr.insert_below(tr.begin(),40);
   check_tree(tr,3,"42(40(41))");
 
-  tr.append(tr[0].begin(),43);
+  tr[0].append(43);
   tr.insert_below(tr[0].begin(),39);
   check_tree(tr,5,"42(40(39(41 43)))");
 }
@@ -653,8 +657,8 @@ test_case(tree_clear) {
   check_tree(tr,0,"");
   
   tr.insert(tr.end(),1);
-  tr.append(tr.begin(),20u,tree_of(1)(2,3,tree_of(4)(5)));
-  tr.append(tr[0].begin(),5u,itree(tr));
+  tr.append(20u,tree_of(1)(2,3,tree_of(4)(5)));
+  tr[0].append(5u,itree(tr));
   tr.clear();
   check_tree(tr,0,"");
 }
@@ -712,4 +716,36 @@ test_case(tree_splice2) {
   tr3.splice(tr3.end_child(),++tr1.begin_child(),--tr1.end_child());
   check_tree(tr1,4,"1(2 7(8))");
   check_tree(tr3,3,"5(3 6)");
+}
+
+test_case(tree_io) {
+  tree<string> tr=tree_of(string("1"))(tree_of(string("2"))(string("2.5"),
+                                                            string("2.8")),
+                                       string("3"),
+                                       tree_of(string("4"))(string("5"),
+                                                            string("6")));
+  string s="1(2(2.5 2.8) 3 4(5 6))";
+  check_tree(tr,8,s);
+  
+  tree<string> tr1;
+  stringstream ss;
+  ss << s;
+  ss >> tr1;
+
+  check_tree(tr1,8,s);
+  check_eq(tr,tr1);
+}
+
+test_case(tree_io_empty) {
+  tree<string> tr;
+  string s="";
+  check_tree(tr,0,s);
+
+  tree<string> tr1;
+  stringstream ss;
+  ss << s;
+  ss >> tr1;
+
+  check_tree(tr1,0,s);
+  check_eq(tr,tr1);
 }

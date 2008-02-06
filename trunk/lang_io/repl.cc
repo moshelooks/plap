@@ -24,11 +24,13 @@ void repl(std::istream& in,std::ostream& out,lang::environment& env,
     out << prompt;
     out.flush();
 
-    sexpr s("");
+    sexpr s;
     stream_to_sexpr(cin,s);
     if (!in.good())
       break;
     out << endl;
+
+    assert(!s.empty);
 
     vtree expr(vertex());
     sexpr_to_vtree(s,expr,env);

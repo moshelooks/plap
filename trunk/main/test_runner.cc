@@ -22,9 +22,10 @@
 #include "tree_iterator.h"
 #include "foreach.h"
 #include "dorepeat.h"
-//#include "environment.h"
-#include "eager_def.h"
-#include "lib.h"
+#include "environment.h"
+#include "parse.h"
+//#include "eager_def.h"
+//#include "lib.h"
 
 #include <iterator>
 #include <numeric>
@@ -37,8 +38,8 @@
 #define check BOOST_CHECK
 #define print(x) { cout << x << endl; }
 
-using namespace util;
-using namespace lang;
+using namespace plap::util;
+using namespace plap::lang;
 
 using namespace std;
 using namespace boost;

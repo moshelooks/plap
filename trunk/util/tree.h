@@ -438,46 +438,44 @@ struct mutable_tr : public tr<T,Tree> {
     this->insert_n(i._node,repeat_it(s),repeat_it(s,n));
   }
 
-  //append, prepend, insert_above, and insert_below require a dereferencable
-  //iterator i
-  template<typename Iterator>
-  Iterator append(Iterator i,const value_type& v) {
-    return this->insert_n(i._node->sentinel(),v);
+  //append and prepend add children to root, which must be dereferenceable
+  void append(const value_type& v) {
+    this->insert_n(this->root_node()->sentinel(),v);
   }
-  template<typename Iterator>
-  Iterator append(Iterator i,const_subtree<value_type> s) {
-    return this->insert_n(i._node->sentinel(),s);
+  void append(const_subtree<value_type> s) {
+    this->insert_n(this->root_node()->sentinel(),s);
   }
   template<typename InputIterator>
-  void append(iterator i,InputIterator f,InputIterator l) {
-    this->insert_n(i._node->sentinel(),f,l);    
+  void append(InputIterator f,InputIterator l) {
+    this->insert_n(this->root_node()->sentinel(),f,l);    
   }
-  void append(iterator i,size_type n,const value_type& v) {
-    this->insert_n(i._node->sentinel(),repeat_it(v),repeat_it(v,n));
+  void append(size_type n,const value_type& v) {
+    this->insert_n(this->root_node()->sentinel(),repeat_it(v),repeat_it(v,n));
   }
-  void append(iterator i,size_type n,const_subtree<value_type> s) {
-    this->insert_n(i._node->sentinel(),repeat_it(s),repeat_it(s,n));
+  void append(size_type n,const_subtree<value_type> s) {
+    this->insert_n(this->root_node()->sentinel(),repeat_it(s),repeat_it(s,n));
   }
 
-  template<typename Iterator>
-  Iterator prepend(Iterator i,const value_type& v) {
-    return this->insert_n(i._node->first_child(),v);
+  void prepend(const value_type& v) {
+    this->insert_n(this->root_node()->first_child(),v);
   }
-  template<typename Iterator>
-  Iterator prepend(Iterator i,const_subtree<value_type> s) {
-    return this->insert_n(i._node->first_child(),s);
+  void prepend(const_subtree<value_type> s) {
+    this->insert_n(this->root_node()->first_child(),s);
   }
   template<typename InputIterator>
-  void prepend(iterator i,InputIterator f,InputIterator l) {
-    this->insert_n(i._node->first_child(),f,l);    
+  void prepend(InputIterator f,InputIterator l) {
+    this->insert_n(this->root_node()->first_child(),f,l);    
   }
-  void prepend(iterator i,size_type n,const value_type& v) {
-    this->insert_n(i._node->first_child(),repeat_it(v),repeat_it(v,n));
+  void prepend(size_type n,const value_type& v) {
+    this->insert_n(this->root_node()->first_child(),
+                   repeat_it(v),repeat_it(v,n));
   }
-  void prepend(iterator i,size_type n,const_subtree<value_type> s) {
-    this->insert_n(i._node->first_child(),repeat_it(s),repeat_it(s,n));
+  void prepend(size_type n,const_subtree<value_type> s) {
+    this->insert_n(this->root_node()->first_child(),
+                   repeat_it(s),repeat_it(s,n));
   }
 
+  //insert_above, and insert_below require dereferenceable iterators
   template<typename Iterator>
   Iterator insert_above(Iterator i,const value_type& v) {
     node_base* p=i._node;
@@ -580,6 +578,13 @@ struct mutable_tr : public tr<T,Tree> {
   sub_post_iterator begin_sub_post() { return make_post(this->root_node()); }
   sub_post_iterator end_sub_post() { return this->end_node(); }
 
+  template<typename Iterator>
+  Iterator parent(Iterator i) const {
+    node_base* n=i._node;
+    while (n->dereferenceable())
+      n=n->next;
+    return Iterator(n->next);
+  }
 
   value_type& root() { return *this->begin(); }
   subtree<T> root_sub() { return *this->begin_sub(); } 
@@ -782,7 +787,7 @@ struct subtree
     assert(!rhs.empty());
     if (static_cast<const void*>(&rhs)!=static_cast<const void*>(this)) {
       this->root()=rhs.root();
-      append(this->begin(),rhs.begin_sub_child(),rhs.end_sub_child());
+      this->append(rhs.begin_sub_child(),rhs.end_sub_child());
     }
     return *this;
   }
@@ -833,9 +838,10 @@ struct tree : public util_private::mutable_tr<T,tree<T> > {
   tree& operator=(const tree& rhs) {
     if (&rhs!=this) {
       this->clear();
-      if (!rhs.empty())
-        this->append(this->insert(this->end(),rhs.root()),
-                     rhs.begin_sub_child(),rhs.end_sub_child());
+      if (!rhs.empty()) {
+        this->insert(this->end(),rhs.root());
+        this->append(rhs.begin_sub_child(),rhs.end_sub_child());
+      }
     }
     return *this;
   }
@@ -877,7 +883,7 @@ struct tree_placeholder : public tree<T> {
  protected:
   typedef const tree_placeholder& ctp;
   tree_placeholder& x(ctp c) { 
-    this->prepend(this->begin(),const_subtree<T>(c)); 
+    this->prepend(const_subtree<T>(c));
     return *this; 
   }
  public:

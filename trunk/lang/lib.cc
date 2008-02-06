@@ -16,6 +16,7 @@
 
 #include "lib.h"
 #include "environment.h"
+#include "eager_def.h"
 
 namespace plap { namespace lang {
 
@@ -40,7 +41,7 @@ namespace plap { namespace lang {
          int_t,int_t>(&lang_ ## name<disc_t>));                         \
     bind(name,make_eager_def<float_t,                                   \
          float_t>(&lang_ ## name<contin_t>));                           \
-  } 
+  }
     
 
 void initialize_lib(environment& env) {
@@ -58,7 +59,7 @@ void initialize_lib(environment& env) {
   LANG_LIB_comparison(greater_equal);
 
   //
-       
+  
 }
 
 }} //namespace plap::lang

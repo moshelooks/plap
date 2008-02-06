@@ -23,6 +23,18 @@
 
 namespace plap { namespace lang {
 
+namespace id {
+extern func_t lambda;
+extern func_t apply;
+extern func_t list;
+extern func_t def;
+extern func_t let;
+
+extern disc_t unit;
+} //namespace id
+
+
+
 template<typename T>
 struct eval : public def {
   void operator()(const_vsubtree s,vsubtree d) const {

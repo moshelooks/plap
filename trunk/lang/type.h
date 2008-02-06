@@ -21,6 +21,9 @@
 
 namespace plap { namespace lang {
 
+//a valid type is a core type or list_of<Type> or func_of<Type(Type,...,Type)>
+//or tuple_of<Type,...,Type> where all Type are valid types
+
 //core types
 typedef contin_t number_t;
 typedef char     char_t;
@@ -46,7 +49,7 @@ struct type : boost::equality_comparable<Type> {
 }//namespace lang_private
 
 template<typename T>
-struct list_of : public lang_private::type<list_of<T> > {
+struct list_of {
   typedef T                          value_type;
   typedef value_type*                pointer;
   typedef value_type&                reference;
@@ -58,7 +61,7 @@ struct list_of : public lang_private::type<list_of<T> > {
                                     const_vsub_child_it> const_iterator;
   typedef const_iterator iterator;
 
-  list_of(const_vsubtree s) : lang_private::type<list_of<T> >(s) {}
+  list_of(const_vsubtree s) : _s(s) {}
 
   const_iterator begin() const { 
     return util::transform_it(this->_s.begin_sub_child(),&literal_cast<T>);
@@ -72,13 +75,15 @@ struct list_of : public lang_private::type<list_of<T> > {
   
   const T& front() const { return literal_cast<T>(this->_s.front_sub()); }
   const T& back() const { return literal_cast<T>(this->_s.back_sub()); }
+ protected:
+  const_vsubtree _s;
 };
 
 template<typename T>
 struct func_of;
 
 template<typename T,typename U>
-struct func_of<T(U)> : public lang_private::type<func_of<T(U)> > {
+struct func_of<T(U)> {
   func_of(const_vsubtree s) : lang_private::type<func_of<T(U)> >(s) {}
   T operator()(const U& u) {
 #if 0

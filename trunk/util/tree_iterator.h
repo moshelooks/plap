@@ -34,7 +34,7 @@ struct out_iter
   Out& dereference() { return *static_cast<Out*>(this); }
 };
 
-}} //namespace plap::util_private
+} //namespace util_private
 
 template<typename Container>
 struct append_iterator
