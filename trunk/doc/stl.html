@@ -1,0 +1,69 @@
+<center><h1>A System for Learning and Reasoning about Programs:
+Algorithms and Data Structures</h1></center>
+
+Standard Library
+
+plus,minus,times,divides,
+and,or,not,
+lt,lte,gt,gte
+
+add a data structure for representing a tree and a set of variations, and for
+tagging.
+
+match int int unit -> foo;
+
+list 'a
+a->b
+
+list '_ 
+
+foo n := _ i := set i (i+n);
+
+let rec sort lst =
+   match lst with
+     [] -> []
+   | head :: tail -> insert head (sort tail)
+ and insert elt lst =
+   match lst with
+     [] -> [elt]
+   | head :: tail -> if elt<=head then elt :: lst else head :: insert elt tail
+
+
+sort lst :=
+  let insert elt lst :=
+    match lst with
+     [] -> [elt]
+   | head :: tail -> if elt<=head then elt :: lst else head :: insert elt tail
+  in match lst with
+      [] -> []
+    | head :: tail -> insert head (sort tail);
+
+foo [] := x;
+foo head::tail := y;
+
+<=>
+
+foo lst := match lst with [] -> x | head::tail -> y;
+
+sort 1::2
+
+(convert_to 'a 0)
+
+op _ op()
+
+************
+
+<h4><u>More Examples</u></h4>
+
+Now we can compute factorial without recursion:
+<pre>
+fact $n := accumulate (1,$n+1) times;
+</pre>
+and Fibonacci:
+<pre>
+fib $n :=
+let cache 0 | 1 := 1 in
+(for (2,$n+1) _ $i := set cache $i (cache $i-2)+(cache $i-1);
+ cache $n);
+</pre>
+

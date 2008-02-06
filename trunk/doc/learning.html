@@ -1,0 +1,145 @@
+<head><style type="text/css">
+tt {font-weight: bold; color: blue}
+pre {font-weight: bold; color: blue}
+</style></head>
+
+<center><h1>A System for Learning and Reasoning about Programs:
+Learning</h1></center>
+
+<blockquote> "[There is] a strong connection between linkage learning and
+proper probabilistic modeling. This is, however, only the tip of the iceberg
+inasmuch as effective optimization is concerned. The goal of linkage learning,
+while ambitious, is only a small part of the more general goal of
+representation learning. In representation learning, the actual optimization
+problem is transformed into a different space, and optimized in that new
+space. ... It is this author's belief that even such a search for
+transformations can be placed into the framework of complexity based modeling."
+- Harik</blockquote>
+
+
+basic learning primitives:
+
+<pre>
+normalize
+next-best
+score
+model
+</pre>
+
+when should a function be split in two?
+when its more compact or equally compact?
+when it needs its own tv/av?
+should compactness take storing of tv/av into account?
+
+function calls should arguably be as small as possible
+maybe always split up unless it makes things larger?
+how to do sequencing? persistence?
+
+
+<h4><u>Classes of learning problems</u></h4>
+
+The least descriptive class of learning problems we will consider is blackbox
+learning, where the system is given nothing but a solution type
+<tt>solution_t</tt>, an opaque scoring function <tt>f : solution_t ->
+float</tt> to maximize, and a bound on computational effort.<br><br>
+
+Under these circumstances, the ideal response (given unlimmited computational
+resources) would be to return a list of all members of <tt>solution_t</tt> that
+maximized
+
+<pre>
+learn : solution:type f:(solution -> float) bound:effort -> 
+</pre>
+
+Slightly better, we may have a bound <tt>b :
+float</tt> telling us what a sufficiently good score
+
+<h4><u>Representing continuous values</u></h4>
+
+<ul>
+  <li>angles</li> 90 and 180 are simple
+  <li>intervals</li>
+</ul>
+
+<h4><u>Problem Domains</u></h4>
+
+2D
+pov vs. godseye
+gravity vs. everything stays where its left
+
+multiscale primitives
+  edge detection
+  grouping
+  etc.
+  see harry foundalis bongard
+  think about which visual routines are evolvable
+
+<hr>
+
+Given data D, find a set of programs {p1,...,pN} that maximizes p(D|p1 or p2 or
+... or pN) and minimizes pairwise p(pi|pj) (i!=j)
+
+moses (codic cortex?) vs. object recognition
+
+alignment is the expense 
+restrict it based on
+1) pyramids
+2) types (soft type = cluster) - features (corner, blob)
+
+*****
+
+<pre>
+petaverse
+	corrective commands ("jump higher")
+
+examples for ant, blockworld, is there an analogue for bool/real?
+
+pln
+	forward chainer
+moses
+	initial generation
+	dependencies
+	
+	ponder fp
+		combinators
+		lambda/proc abstraction/fp
+	agent world
+		write spec
+	boa-opt
+	exemplar selection
+	representation-building
+	rtr
+	truncation-selection
+	lambda-mu elitist replacement?
+	
+	new idea for sampling - generate the n max likelihood instances first,
+	breaking ties randomly - "enumerative sampling"
+		will this create the "most fit according to surrogate"
+                instances?
+		what about overfitting issues - try different
+ 	        selection/replacement schemes
+
+		
+	truncation selection doesn't need a % parameter - just go according to
+	the n_select/popsize
+
+	
+	without enumerative sampling, maybe separate selection schemes for
+	model-learning and paramer-learning?
+
+	Maybe truncation followed by tournament selection?
+	
+	reduct updates
+		no boolean if
+		pairwise mixed
+		two sets of reduction rules for perception/action
+		algebra of distances
+		
+	update interpreter null_vertex
+	
+	moses doesn't select caching as appropriate
+	
+	xset("colormap",graycolormap(32))
+	
+	make it minimization, not maximization, make zero perfect?
+</pre>

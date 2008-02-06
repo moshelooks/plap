@@ -1,0 +1,113 @@
+<head><style type="text/css">
+tt {font-weight: bold; color: blue}
+pre {font-weight: bold; color: blue}
+</style></head>
+
+<center><h1>Probabilistic Learning of Programs: Managing Insufficient Knowledge
+and Resources</h1></center>
+
+<h4><u>Quantifying insufficient knowledge with truth values</u></h4>
+
+As a consequence of insufficient knowledge, we cannot assume that all mappings
+in the system are correct. Formally, declarations are considered as logical
+propositions, with truth values representing the system's degree of belief in
+the truth of the corresponding proposition. Furthermore, there may be
+conflicting partial evidence; one source of knowledge may indicate that <tt>foo
+42 := 5</tt>, while another source indicates that <tt>foo 42 := 9</tt>. Note
+that this sort of uncertainty is entirely <i>within</i> the formal language; we
+don't know the value of <tt>foo 42</tt>, but we are speaking of a certain,
+crisp <tt>foo</tt>, one that maps natural numbers to natural numbers (for
+example).<br><br>
+
+This sort of uncertainty may be quantified by attaching <i>truth values</i> to
+declarations. Truth values may be considered to occupy a (potentially
+n-dimensional) continuum from absolute falsehood (which we may continue to
+represent by the constant <tt>false</tt>) to absolute truth (<tt>true</tt>).
+Syntactically, we will now say:
+
+<pre>foo 42 := 5 ? some_truth_value;</pre>
+
+The former "crisp" declaration <tt>foo 42 := 5;</tt> is equivalent to
+specifying absolute truth. So while
+
+<pre>
+foo 42 := 5;
+foo 42 := 9;
+</pre>
+
+is a mistake,
+
+<pre>
+foo 42 := 5 ? uncertain_truth_value1;
+foo 42 := 9 ? uncertain_truth_value2;
+</pre>
+
+is perfectly acceptable, and indeed leads to a quite natural representation of
+many real-world scenarios (for example, a robot with two noisy sensors that
+give conflicting values for the same underlying variable).<br><br>
+
+Truth values must be pure expressions.
+
+<h4><u>Quantifying insufficient resources with costs</u></h4>
+
+As a consequence of insufficient resources, we cannot assume that the system
+will be able to maintain all declarations in memory, or will have enough time
+and/or space to evaluate all expressions using the most accurate methods. To
+intelligently prioritize which evaluation methods to apply requires us to
+estimate, for each dec
+
+two types
+of information on the level of declarations: (1) an estimate of the resources
+required to evaluate the (right-hand-side) expression; and (2) an estimate of
+the accuracy of the result. Similarly, to intelligently prioritize which
+information to keep in memory requires, per-declaration: (1) an estimate of the
+resources required to keep the declartionin memory; (2) an estimate of the
+importance of keeping the declaration for the computation of current and future
+result; and (3) an estimate of the accuracy of the result.
+
+
+<br><br>
+
+
+
+information to keep in memory
+may be presented with a
+set of tasks to perform together with a resource limit, and only sufficient
+resources to carry out a fraction of them. Utilities are attached to
+declarations to indicate the degree of belief in the proposition that expending
+resources on declaration will help the system achieve its goals.<br><br>
+
+Analogous to truth values, we will now say:
+
+<pre>
+foo bar := baz % uncertain_utility_value;
+</pre>
+
+To attach an uncertain utility value to a statement (with the default case
+assuming that a declaration will certainly help the system achieve its goals,
+and e.g. should never be removed from the system).
+
+
+<h4><u>Making Decisions</u></h4>
+
+
+<h4><u>Subjective Logic</u></h4>
+
+My tentative proposal is to use <a
+href="http://en.wikipedia.org/wiki/Subjective_logic">Subjective Logic</a> as
+the representational scheme for both truth values and utility values. Briefly,
+a
+
+relative atomicity may be assumed to be 0.5 for atomic propositions - for
+compound logical propositions this may be explicitly computed, e.g. if we have
+weak evidence that fred is either a liar or a thief or both, we can say
+
+prop_or (liar fred) (thief fred) ? (0.1 0 0.9 0.75)
+
+
+
+
+*****
+
+maybe there should be a continuum of fast-to-slow memory where less important
+things are stored lower down? Can this relate to processor usage?

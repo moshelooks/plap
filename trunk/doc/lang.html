@@ -1,0 +1,191 @@
+<head><style type="text/css">
+tt {font-weight: bold; color: blue}
+pre {font-weight: bold; color: blue}
+li {margin-bottom: 10px; margin-top: 10px}
+ul {margin-left: -10px}
+</style></head>
+<font size=3 face="verdana">
+
+
+<h4>Preliminaries</h4>
+
+<ul>
+
+  <li>Unless otherwise specified, a sequence of entities may be empty, and the
+  entities themselves are separated by whitespace.</li>
+  
+  <li>Whitespace is one or more spaces and/or tabs. Unless otherwise specified,
+  any ammount of whitespace may occur between any two consecutive
+  entities.</li>
+
+  <li>A name is an identifier or a scalar.<ul>
+
+    <li>An identifier is a nonempty sequences of digits, letters, and
+    underscores, not beginning with a digit, containing no whitespace.</li>
+
+    <li>A scalar is dollar sign (<tt>$</tt>) followed by an identifier, with no
+    intervening whitespace.</li>
+
+  </ul>
+
+  <li>Matched parentheses (<tt>(</tt> and <tt>)</tt>) may be placed around any
+  entity. Any entity that contains whitespace and is nested inside another
+  entity <i>must</i> be put in parentheses.</li>
+
+</ul>
+
+<h4>Core Syntax</h4>
+
+A program is a sequence of expressions, declarations, rewrites, and
+imports, each separated by one or more newlines.<ul>
+
+  <li>An expression is a name, a literal, a function application, a list
+  expression, or a let expression.<ul>
+
+    <li>A literal is a Boolean literal, integer literal, float literal,
+    character literal, list literal, or the unit literal.<ul>
+
+      <li>A Boolean literal is <tt>true</tt> or <tt>false</tt>.</li>
+
+      <li>An integer literal is a nonempty sequence of digits (<tt>0-9</tt>),
+      optionally preceded by a minus sign (<tt>-</tt>), containing no
+      whitespace.
+      
+      <br><i>Examples:</i> <tt>42</tt>, <tt>109</tt>, <tt>-00</tt></li>
+
+      <li>A float literal is a nonempty sequence of digits containing exactly
+      one period (<tt>.</tt>) in some position other than the last, optionally
+      preceded by a minus sign, containing no whitespace.
+
+      <br><i>Examples:</i> <tt>-3.14</tt>, <tt>2003.0</tt>, <tt>.5</tt></li>
+
+      <li>A character literal is any valid C character literal.
+
+      <br><i>Examples:</i> <tt>'a'</tt>, <tt>'\n'</tt>, <tt>'\\'</tt></li>
+
+      <li>A list literal is the empty list (<tt>[]</tt>), or a literal,
+      followed by a colon (<tt>:</tt>), followed by a list literal.
+
+      <br><i>Examples:</i> <tt>1:2:3:[]</tt>, <tt> ([]:[]):[]</tt>,
+      <tt>'a':'b':[]</tt></li>
+
+      <li>The unit literal is an empty pair of parentheses (<tt>()</tt>).</li>
+    
+    </ul></li>
+
+    <li>A function application is an identifier, followed by a nonempty
+    sequence of expressions.
+
+    <br><i>Examples:</i> <tt>foo 1 2 'x' (bar $x)</tt>, <tt>bla ()</tt>,
+    <tt>baz 3.4 [] 1:2:3:[]</tt></li>
+
+    <li>A list expression is the empty list (<tt>[]</tt>), or an expression,
+      followed by a colon (<tt>:</tt>), followed by a list expression.
+
+    <br><i>Examples:</i> <tt>foo:'1':$x:(bla ()):(blub $x):[]</tt>,
+    <tt>([]:[]):$foo:[]</tt></li>
+
+    <li>A let expression is the keyword <tt>let</tt>, followed by a nonempty
+    sequence of declarations and rewrites, followed by an expression (all of
+    the declarations and rewrites must be contained in parentheses).
+    
+    <br><i>Examples:</i> <tt>let (foo = 42) (bla 33:[])</tt>, <tt>let (x = foo
+    $s) (y = bla) ()</tt></li></li>
+
+  </ul>
+
+  <i>Examples:</i> <tt>foo (bar baz 42) 1:2:foo:[]</tt>, <tt>42</tt>,
+  <tt>foo foo:baz:[]:bop:$x:[] $z</tt></li>
+
+  <li>A declaration is an identifier, followed by a nonempty sequence of
+  arguments, followed by an equals sign (<tt>=</tt>), followed by an
+  expression.<ul>
+
+    <li>An argument is a pattern or an as-pattern.<ul>
+
+      <li>A pattern is a literal, a name, a list pattern, or a disjunctive
+      pattern.<ul>
+
+	<li>A list pattern is a pattern, followed by a colon (<tt>:</tt>),
+	followed by a pattern.</li>
+
+	<li>A disjunctive pattern is two patterns separated by a pipe
+	(<tt>|</tt>).</li>
+
+      </ul>
+
+      <i>Examples:</i> <tt>foo $x $y = $y $x</tt>, <tt>baz () := 42</tt> ,
+      <tt>foo $x = $x</tt>, <tt>foo $z = let (y = bla) (z ())</tt></li>
+
+      <li>An as-pattern is a scalar, follow by a strudel (<tt>@</tt>),
+      followed by a pattern.
+      
+      <br><i>Examples:</i> <tt>zz $y@0|1 = $y</tt>, <tt>foo $x = $x</tt>,
+      <tt>foo $z = let (y = bla) (z ())</tt></li>
+
+    </ul>
+
+  </ul>
+
+  <li>A rewrite is a name, followed by an expression or a pattern, followed by
+  a fat arrow (<tt>=></tt>), followed by an expression.
+
+  <br><i>Examples:</i><tt>(sin $x) where ($x<=-1.0 && $x>=1.0) => $x</tt></li>
+
+  $x|$y vs. 0|1 vs (0|1)+$x
+
+  address via where $x -> XXX
+
+  patterns inside expressions?
+  
+</ul>
+
+add data declarations data foo = a | b | c
+and constants
+
+<h4>Syntactic Sugar</h4>
+
+bla
+
+<h4>Bound and Unbound Names</h4>
+
+<h4>Types</h4>
+
+Every expression containing no unbound variables has a well-specified type. The
+type of an expression is defined recursively as follows:
+
+<ul>
+
+  <li>The type of Boolean literal is <tt>bool</tt>.</li>
+
+   <li>The type of an integer literal is <tt>int</tt>.</li>
+   
+   <li>The type of a float literal is <tt>float</tt>.</li>
+
+   <li>The type of a character literal is <tt>char</tt>.</li>
+
+   <li>The type of a list literal is <tt>list</tt>.</li>
+
+   <li>The type of the unit literal is <tt>unit</tt>.</li>
+
+   <li>The type of a function application is its return type for the sequence
+   of types of its arguments (see below).</tt>
+
+   <li>The type of a list expression is <tt>list</tt>.</li>
+
+   <li>The type of a let expression is the type of its expression argument,
+   given all of its declaration and rewrite arguments bound to their
+   names.</li>
+
+ </ul>
+   
+The return type for a 
+   s
+
+  XXX type of a function name
+
+
+ should ring be a prmitive concept?
+
+problem: when can more than one decl be used? types given explicitly or
+implied? If implied, how can we tell when they are disjoint?
