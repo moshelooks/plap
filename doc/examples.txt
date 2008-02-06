@@ -1,0 +1,148 @@
+# Factorial
+fact 0 = 1
+fact $n = $n*(fact $n-1)
+# or
+fact $n = if $n=0 1 $n*(fact $n-1)
+# or
+fact $n = accumulate [1..$n] times
+
+# Fibonacci
+fib 0|1 = 1
+fib $n = (fib $n-2)+(fib $n-1)
+# or
+fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
+
+# Paul Graham's accumulator generator (though in general set should be avoided)
+foo $n = \$i -> set $n ($n+$i)
+
+# Combinators
+S $x = \$y -> $\z -> ($x $y) ($x $z)
+K $x = \$y -> $x
+I $x = $x
+# Note that you can't do much with these, because every expression must have a
+  definite type (maybe)
+
+# The following is loosely based on http://merd.sourceforge.net/cookbook.html,
+# which is in turn based on examples from the Perl Cookbook
+
+##
+# Accessing Substrings
+##
+
+nth $x:$y 0 = $x
+nth $x:$y n = nth $y n-1
+
+sub $list [] = []
+sub $list $x:$y = (nth $list $x):(sub $list $y)
+
+subs $list $from $len = sub $list [$from...$from+$len]
+
+last $x:[] = $x
+last $x:$y = last $y
+
+length [] = 0
+length $x:$y = 1+(length $y)
+
+lasts $list@$x:$y $n = if (length $list)<=$n $list (lasts $y $n-1)
+
+s = "This is what you have"
+first = nth s 0                         # "T"
+start = sub s [5...7]                    # "is"
+rest  = sub s [13...(length s)]         # "you have"
+lastl = last s                          # "e"
+end   = lasts s 4                       # "have"
+piece = subs s 8 5                      # "you"
+
+##
+# Converting Between ASCII Characters and Values
+##
+
+map "HAL" \$x -> char (int $x)+1            # "IBM"
+
+##
+# Processing a String One Character at a Time
+##
+
+uniq [] = []
+uniq $x:[] = $x
+uniq $x:$y:$z = if $x==$y (uniq $y:$z) $x:(uniq $y:$z)
+
+filter $pred [] = []
+filter $p $x:$xs = if ($p $x) $x:(filter $p $xs) (filter $p $xs)
+
+sort [] = []
+sort $x:$xs = (sort (filter (lt $x) $xs))~[$x]~(sort (filter (gte $x $xs)))
+
+println "unique chars are: "~(uniq (sort "an apple a day"))
+
+##
+# Reversing a String by Word or Character
+##
+
+reverse [] = []
+reverse $x:$xs = [(reverse $xs),$x]
+
+words $x =
+  let words_helper $words $word [] = $word:$words
+      words_helper $words $word $x:$xs = 
+        if $x==' ' 
+          words_helper $word:$words [] $xs
+	  words_helper $words $word~[$x] $xs
+  words_helper [] [] $x
+
+println (reverse s)                           # reverse letters
+println (join " " (reverse (words s)))        # reverse words
+
+long_palindromes $words = 
+  filter \$s -> $s == (reverse $s) && (length $s)>4
+
+##
+# Operating on a Series of Integers
+##
+
+print "Infancy is: "
+map [0..2] \$e -> print (to_str $e)~" "
+println ""
+print "Infancy is: "
+print (fold [0..2] "" \$x $y-> (to_str $x)~" "~$y)
+println ""
+
+##
+#  Generating Random Numbers
+##
+
+randnums = rand [25..75]                 # rand is in [25,75]
+password = power 8 "" \$x -> rand chars
+
+# 4.7. Finding Elements in One (Sorted) List but Not Another
+difference $a [] = $a
+difference [] $b = []
+difference $a $b = 
+  cond 
+    hd $a<hd $b -> [$a]~difference (tl $a) $b
+    hd $b<hd $a -> [$a]~difference $a (tl $b)
+    difference (tl $a) (tl $b)
+
+# Finding the Most Common Anything (requires tuples)
+max $a $b $cmp = if ($cmp $a $b) $b $a
+max_elem [$x] _ = $x 
+max_elem $x:$xs $cmp = max $x (max_elem $xs $cmp) $cmp
+most_common $l =
+  let most_common_helper $x:$xs = 
+    let group $n $x [] = [($n+1,$x)]
+        group $n $x $x:$xs = group ($n+1) $x $xs
+        group $n $y $x:$xs = ($n,$y):(group 0 $x $xs)
+      group 0 $x $xs
+  max_elem (most_common_helper (sort $l)) \($x,_) ($y,_) -> $x<$y
+
+# Representing Relationships Between Data
+father "Cain" "Adam".
+father "Abel" "Adam".
+father "Seth" "Adam".
+father "Enoch" "Cain".
+
+foreach (satisfying_set \$x $y -> father $x $y)
+        $\x $y -> println "The father of "~$x~" is "~$y~"."
+
+foreach (satisfying_set \$x $y -> father $y $x)
+        $\x $y -> println $x~" begat "~$y~"."

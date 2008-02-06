@@ -1,0 +1,167 @@
+<head><style type="text/css">
+tt {font-weight: bold; color: blue}
+pre {font-weight: bold; color: blue}
+</style></head>
+
+<center><h1>A System for Learning and Reasoning about Programs:
+Reasoning</h1></center>
+
+<blockquote>"Intellectual activity consists mainly of various kinds of search."
+- Turing</blockquote>
+
+First lets consider a function call expression 
+
+<pre>
+f x1 x2 ... xn
+</pre>
+
+where x1 ... xn are literals.  Given no uncertainty, unification will select
+the unique most-specific matching declaration to call, or fail if no
+declaration matches.<br><br>
+
+Now, lets consider the same sort of function call expression, where there is no
+certain declaration that matches, but a set of uncertain declarations that
+match. In this case, a <i>distribution</i> (note: not a distribution in the
+mathematical sense, because their may be second-order uncertainty) of values
+will be returned, weighted by the relative weights of the matching
+declarations. For example, given
+<pre>
+f 1 2 := 'a' ? (1, 0);
+f $x $y := 'b' ? (3, 1);
+</pre>
+
+the expression
+<pre>
+f 1 2
+</pre>
+
+will evaluate to:
+
+<pre>
+{'a' ? (1, 0), 'b' ? (3, 1)}
+</pre>
+
+Based on resource constraints, the system has the freedom to keep such results
+as distributions or to collapse them to single values at any point. For example
+<pre>
+[f 1 2, f 1 2]
+</pre>
+
+without collapsing, evaluates to
+<pre>
+{['a', 'a' ? (1, 0) && (1, 0)],
+ ['a', 'b' ? (1, 0) && (3, 1)],
+ ['b', 'a' ? (3, 1) && (1, 0)],
+ ['b', 'b' ? (3, 1) && (3, 1)]}
+</pre>
+etc.
+
+A function call expression with potential side-effects must be collapsed
+immediately, otherwise the side-effects will not take place in the correct
+order.<br><br>
+
+Note that if a distribution is kept, identical values will need to be merged,
+and their evidence pooled (how to do so will require estimating their
+independence.<br><br>
+
+There are a number of stratagems possible for collapsing a distribution. One
+that is always available is to take the value with the highest expectation
+(i.e. the most likely). In some cases it may be possible to merge values
+together, depending on the value type and the system's prior knowledge. For
+example, if <tt>f 1 = 3.4 ? (1, 0)</tt>, and <tt>f 1 = 3.8 ? (1, 0)</tt>, and
+<tt>f</tt> is known or suspected to be sufficiently smooth, collapsing to
+<tt>3.6</tt> may be appropriate. Or if instead <tt>f 1 = 3.4 ? (1, 0)<tt> and
+<tt>f 1 = 3.8 ? (0, 1)</tt> (i.e., there is <i>negative</i> evidence for the
+propostion that <tt>f 1 = 3.8</tt>, then perhaps <tt>3.2</tt> might be a better
+estimate. Note that we need to at least make an assumption about the degree of
+correlation between <tt>f</tt>'s inputs and outputs in order to perform this
+calculation - otherwise we will be better off simply taking most likely known
+value.<br><br>
+
+Note that it is also possible to "merge" two or more fully general programs via
+a process of alignment, and take a weighted average (in terms of
+edit-distance). How plausible this is depends on the space (see my dissertation
+for some emperical results on Boolean formula spaces, and some speculations
+regarding more general spaces. Another important factor to consider is that
+computing edit distance is computationally costly.<br><br>
+
+How to set the certainty value? Assuming all of the estimates are independent
+(best-case), uncertainty will decrease with sqrt(N) (in this case N=2). In the
+worst case then we will expect to do no better than the best estimate (max),
+*or should this be min or avg?* *do we need second-order here??*
+
+
+
+****
+
+to "do the right thing" we need to be able to estimate for two beliefs A and B
+p(true-A>true-B) - i.e. what is the probability that the true value for A will
+be greater than the true value for B
+
+if this is high then we can forgoe future computation
+
+similarly if A and B are unlikely to be far appart then we are unlikely to gain
+much by continuing the computation
+
+****
+
+should we consider e.g. "foo (bar x)" where foo and bar are anytime and we must
+apportion effort amongst them?
+
+****
+
+
+f 1 $x := 42;
+f $x 2 := 3;
+
+
+Unification in the case of ce
+
+foo 42 6 ~= ()
+
+
+inh $x $y.
+
+inh foo bar 
+
+print "f 4 = " ~ to_string (f 4);
+
+
+<h4><u>Dynamics Generalize Evaluation</u></h4>
+
+Dynamics determine when and how procedures are evaluated when faced with
+insufficient knowledge and resources. They can be naturally seen as a
+generalization of the evaluation procedure presented <a
+href="lang.html#semantics">earlier</a>, beyond the traditional case of
+sufficient knowledge and resources.
+
+
+rules for utility-sharing
+
+
+
+execution time
+execution space
+program prior probability
+program size separate, or wrapped into prior prob?
+
+
+NM
+
+basic nodes
+  concept
+  predicate
+  schema
+  percept
+  number
+
+basic links
+  inh (ext and int)
+  sim
+  impl
+  equiv
+  hebbian (cooperative goal-achievement)
+  eval
+  
+relations
+  satset pred concept

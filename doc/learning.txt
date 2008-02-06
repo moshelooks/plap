@@ -1,0 +1,94 @@
+# symbolic regression - x+x^2+x^3+x^4 from 20 random values in [-1.0,1.0)
+f^1
+let 
+  generate $x = (f $x = (accumulate [1..5] \$y -> (power $x $y)))
+  repeat 20 (generate (rand -1.0 1.0))
+
+generalize f
+
+# boolean list even-parity
+evpar [] = true
+evpar [true] = false
+evpar [false] = true
+evpar [true true false] = true
+evpar [false true false] = false
+
+generalize evpar
+
+# artificial ant - the import creates the primitive type antworld and the
+# functions: 
+# * ant_right      : antworld -> unit
+# * ant_left       : antworld -> unit
+# * ant_move       : antworld -> unit
+# * ant_food_ahead : antworld -> unit
+# * ant_score      : matrix[bool] int[0,..] (antworld -> unit) -> int
+import ants
+
+symbol ant_pos
+equivalent ant_right (rotation ant_pos pi/2.0).
+equivalent ant_left (rotation ant_pos -pi/2.0).
+context antworld (equivalent ex_post_equivalent equivalent).
+
+santafe_trail = load_bool_matix "santafe_trail.txt"
+santafe_timeout = 600
+
+maximize \$program -> ant_score santafe_trail santafe_timeout $program
+
+# sort
+sort [] = []
+sort [5,2,1] = [1,2,5]
+sort ["orange","apple","pear"] = ["apple","orange","pear"]
+sort [7,1,6,5,4] = [1,4,5,6,7]
+
+generalize sort
+
+# blocks - the import creates the primitive type blocksworld and the
+# functions: 
+# * stack0       : blocksworld -> list
+# * stack1       : blocksworld -> list
+# * stack2       : blocksworld -> list
+# * stack3       : blocksworld -> list
+# * done         : blocksworld -> unit
+# * grab         : blocksworld int[1,3] -> unit
+# * drop         : blocksworld int[1,3] -> unit
+# * blocks_score : list (blocksworld -> unit) -> int
+import blocks
+
+drop_idempotence 
+  do (drop $w $x) (drop $w $y) -> drop $w $x
+done_termination
+  do (done $w) $x -> done $w
+grab_drop_inversion
+  do (grab $w $x) (drop $w $x) -> drop $w $x
+
+let
+  randlist 0 = []
+  randlist $len = (rand 'a' 'b' 'c'):(randlist $len-1)
+  incremental_maximize \$program $len -> blocks_score (randlist $len) $program
+
+#one solution to blocksworld is:
+solve_blocksworld $w =
+  cond
+    (stack0 $w = stack1 $w) -> done $w
+    stack1 $w != power tl stack0 (length (stack0 $w))-(length (stack1 $w)) ->
+      do (grab $w 1) (drop $w 3)
+    do (grab $w 2) (drop $w 1) (grab $w 3) (drop $w 2)
+
+# A vs B
+
+A [false,false,true ,false,false;
+   false,true ,false,true ,false;
+   false,true ,true ,true ,false;
+   false,true ,false,true ,false;
+   false,true ,false,true ,false].
+
+B [true ,true ,true ,false,false;
+   true ,false,false,true ,false;
+   true ,true ,true ,false,false;
+   true ,false,false,true ,false;
+   true ,true ,true ,false,false].
+
+let
+  all_As = satisfying_set \$x -> (A $x)
+  all_Bs = satisfying_set \$x -> (B $x)
+  classify all_As all_Bs

@@ -1,0 +1,19 @@
+Data Types for Artificial General Intelligence
+
+Most programming languages attribute data types to sequences of bits and
+positions in memory to indicate what the data are intended to represent. What
+sort of type system is appropriate for a programming system designed to operate
+under the assumption of insufficient knowledge and resources, carrying out
+program induction?
+
+To answer this question, let's break down the various things types are used
+for:
+
+1) To reduce fundamental failures such as segmentation faults.
+2) Data abstraction (i.e. maintaining invariants)
+3) Data annotation
+4) performance
+
+ to
+avoid certain classes of bugs (both at compile time and at run time), to ai
+

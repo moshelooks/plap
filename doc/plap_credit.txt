@@ -1,0 +1,44 @@
+Doing Empirical Credit-Assignment Across Functions
+
+The general credit assignment problem is given some positive (negative) outcome
+that results from the combined actions of subagents x1,...,xn, how to apportion
+the credit (blame)? It could be that x1 is primarily responsible for the
+result, and deserves the lion's share of the credit. Alternatively, x1's
+activity might be incidental, and entirely irrelevant to the outcome (this is
+known as the problem of hitch-hikers in evolutionary computation).
+
+Here I consider a special case of the credit-assignment problem. Let's assume a
+program learning system, that can learn approximations for some (unknown)
+program p based on labeled data and/or reinforcement. Program learning systems
+such as MOSES and Genetic Programming consider the individual program nodes as
+the "subagents" for credit assignment (see Angelne 1994 for an elaboration of
+this idea, and Baum 2000 for an analysis of why common approaches to credit
+assignment fail and how to fix this). But what if our estimators for p
+additionally depend on (i.e. call) previously learned functions g1,...,gN?
+
+During the initial learning process, I believe that considering g1,...,gN as
+mutable entities (that can themselves be improved upon in the course of
+learning p) would result in a combinatorial explosion and render learning
+intractable (it might be possible to work around this by exploiting prior
+knowledge, but that's another story). Assume instead the following: 
+
+1) We already have a small number of learned programs that approximate p well
+2) These programs involve calls to some of g1,...,gN
+3) We are given new information such as that the true result of p for some
+input x is y, for some previously unknown x.
+
+Now, given that g1,...,gN are themselves learned, we can assume that each of
+them consists of an ensemble of estimators, tagged with likelihoods (as are our
+estimators for p). Clearly, with no additional information, our best "point
+estimate" for p(x) is obtained by taking the maximum likelihood estimator of p,
+and calling it on input x, with all subfunction calls to g1,...,gN going to
+their most likely estimators, and so on recursively (if e.g. gi calls
+subfunctions). 
+
+*******
+
+P. J. Angeline. Genetic programming and emergent intelligence. In
+K. E. Kinnear, Jr., editor, Advances in Genetic Programming. MIT Press, 1994.
+
+E. B. Baum and I. Durdanovic. Evolution of cooperative problem solving in an 
+artificial economy. Neural Computation, 2000
