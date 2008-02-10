@@ -1,0 +1,22 @@
+What's Missing?
+
+Deliberately:
+
+* Namespaces/Modules
+* Pattern Matching (ala "f $x:[] = [], f $x:$y = f $y")
+* 
+
+superficial and of use only to the human programmer
+
+For now:
+
+lets
+lambdas
+nested definitions
+
+how to handle def at parsetime and runtime???
+
+todo: add definition of a constant (x = bla)
+
+to make rules for paren-insertion consistent, should augment parser with
+cl-style "a b (c d)" -> a(b c(d))"

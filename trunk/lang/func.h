@@ -17,16 +17,34 @@
 #ifndef PLAP_LANG_FUNC_H__
 #define PLAP_LANG_FUNC_H__
 
+#include "vtree.h"
+
 namespace plap { namespace lang {
 
-typedef unsigned char arity_t;
+struct func_base {
+  virtual ~func_base() {}
 
-struct func {
+  virtual arity_t arity() const=0;
+  virtual void operator()(const_vsubtree loc,vsubtree dst) const=0;
+};
+
+template<arity_t Arity>
+struct narg_func : public func_base {
+  arity_t arity() const { return Arity; }
+};
+
+struct func : public func_base {
   func(arity_t a) : _arity(a) {}
 
   arity_t arity() const { return _arity; }
+  void operator()(const_vsubtree loc,vsubtree dst) const {}
+  
+  friend struct environment;
  protected:
   arity_t _arity;
+  vtree _body;
+
+  void set_body(vsubtree body) { _body.splice(_body.end(),body); }
 };
 
 }} //namespace plap::lang

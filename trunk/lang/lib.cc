@@ -16,7 +16,7 @@
 
 #include "lib.h"
 #include "environment.h"
-#include "eager_def.h"
+//fixme#include "eager_def.h"
 
 namespace plap { namespace lang {
 
@@ -45,6 +45,8 @@ namespace plap { namespace lang {
     
 
 void initialize_lib(environment& env) {
+#if 0 
+fixme
   //arithmetic functions
   LANG_LIB_arithmetic_nary(plus);
   LANG_LIB_arithmetic_nary(times);
@@ -59,7 +61,7 @@ void initialize_lib(environment& env) {
   LANG_LIB_comparison(greater_equal);
 
   //
-  
+#endif  
 }
 
 }} //namespace plap::lang

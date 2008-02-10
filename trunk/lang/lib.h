@@ -34,7 +34,7 @@ T lang_plus(list_of<T> l) { return std::accumulate(l.begin(),l.end(),T(0)); }
 
 inline disc_t lang_foreach(list_of<const_vsubtree> l,
                          func_of<const_vsubtree(const_vsubtree)> f) {
-  std::for_each(l.begin(),l.end(),f);
+  //fixmestd::for_each(l.begin(),l.end(),f);
   return 0;
 }
 

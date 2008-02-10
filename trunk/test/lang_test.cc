@@ -14,10 +14,10 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-test_case(lang_env_funcs) {
+test_case(lang_env_declare_func) {
   environment env;
 
-  func_t foo=env.create_func(1,"foo");
+  func_t foo=env.declare_func(1,"foo");
 
   check_eq(env.name2func("foo"),foo);
 
@@ -25,9 +25,78 @@ test_case(lang_env_funcs) {
   check_eq(*env.func2name(foo),"foo");
 
   check(!env.name2func("goo"));
+}
 
-  func_t anon=env.create_func(1);
-  check(!env.func2name(anon));
+test_case(lang_parse_expr) {
+  environment env;
+  func_t foo=env.declare_func(3,"foo");
+
+  string target_str="foo(1 2)";
+  vtree target=tree_of(vertex(foo))(vertex(disc_t(1)),vertex(disc_t(2)));
+
+  sexpr s=sexpr(std::string("")); 
+  stringstream ss;
+  ss << target_str;
+  stream2sexpr(ss,s);
+  check_tree(s,3,target_str);
+
+  vtree dst=vtree(vertex());
+  //this should fail since foo has arity 3
+  check_throw(sexpr2vtree(s,dst,env),runtime_error);
+  dst.prune();
+  s.append(std::string("3"));
+  //should work now
+  sexpr2vtree(s,dst,env);
+
+  check_eq(dst.size(),4u);
+  check_eq(vertex_cast<func_t>(dst.root()),foo);
+  check_eq(vertex_cast<number_t>(dst[0].root()),1);
+  check_eq(vertex_cast<number_t>(dst[1].root()),2);
+  check_eq(vertex_cast<number_t>(dst[2].root()),3);
+}
+
+test_case(lang_declare_func) {
+  //fixme
+}
+
+test_case(lang_define_func) {
+  environment env;
+  string str="def(foo list($x $y) $x)";
+
+  vtree dst=vtree(vertex());
+  string2vtree(str,dst,env);
+
+  vtree target=tree_of(vertex(disc_t(0))); //should be unit
+  check_eq(dst,target);
+
+  check(env.name2func("foo"));
+  environment::argname_seq an=env.argnames(env.name2func("foo"));
+  check_eq(an.size(),2u);
+  check_eq(an[0],"x");
+  check_eq(an[1],"y");
+
+  string call="foo(1 2)";
+  string2vtree(call,dst,env);
+  vtree target2=tree_of(vertex(env.name2func("foo")))(vertex(disc_t(1)),
+                                                      vertex(disc_t(2)));
+  check_eq(dst,target2);
+
+  vtree result=vtree(vertex());
+  //fixmeenv.eval(dst,result);
+  check_eq(result,tree_of(vertex(disc_t(1))));
+}
+
+test_case(lang_let) {
+  environment env;
+  string str="let(list(decl(foo list($x $y) $x)) foo(1 2))";
+  vtree dst=vtree(vertex());
+  string2vtree(str,dst,env);
+
+  check_eq(dst,tree_of(vertex(disc_t(1))));
+}  
+
+test_case(lang_parse) {
+
 }
 
 #if 0

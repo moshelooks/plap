@@ -22,27 +22,46 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/static_assert.hpp>
+#include <tr1/unordered_map>
 #include <string>
 #include "func.h"
-/***fixme
-#include "vtree.h"
-#include "cast.h"
-***/
-//#include "type.h"
-//#include "def.h"
 
 namespace plap { namespace lang {
 
-//struct type;
-typedef func* func_t;
+struct environment;
+void initialize_lib(environment&);
 
 struct environment : public boost::noncopyable {
-  func_t create_func(arity_t a) { 
+  typedef std::vector<std::string> argname_seq;
+
+  environment() { init(); initialize_lib(*this); }
+
+  func_t declare_func(arity_t a,const std::string& name) {
     _funcs.push_back(new func(a)); 
-    return &_funcs.back(); 
+    return _names.insert(make_pair(name,&_funcs.back())).first->second;
   }
-  func_t create_func(arity_t a,const std::string& name) {
-    return _names.insert(make_pair(name,create_func(a))).first->second;
+
+  //these all splice out body - so if you want to keep it, make a copy
+  template<typename Iterator>
+  func_t define_func(Iterator f,Iterator l,vsubtree body,
+                     const std::string& name) { 
+    return define_func(f,l,body,declare_func(std::distance(f,l),name));
+  }
+  template<typename Iterator>
+  func_t define_func(Iterator f,Iterator l,vsubtree body) { 
+    return define_func(f,l,body,new func(std::distance(f,l)));
+  }
+  template<typename Iterator>
+  func_t define_func(Iterator f,Iterator l,vsubtree body,func_t decl) { 
+    assert(_argnames.find(decl)==_argnames.end());
+    assert(dynamic_cast<func*>(decl));
+    std::transform(f,l,std::back_inserter(
+                       _argnames.insert(
+                           make_pair(decl,argname_seq())).first->second),
+                   boost::bind(&std::string::substr,_1,1,std::string::npos));
+    dynamic_cast<func*>(decl)->set_body(body);
+    return decl;
   }
 
   func_t name2func(const std::string& name) const {
@@ -56,6 +75,13 @@ struct environment : public boost::noncopyable {
     return i==boost::multi_index::get<right>(_names).end() ? NULL : &i->first;
   }
 
+  const argname_seq& argnames(func_t f) const {
+    static const argname_seq empty;
+    //argname_index::const_iterator i=_argnames.find(f);
+    //if (i!=_argnames.end())
+    //return i->second;
+      return empty;
+  }
 
   //fixme,const type& t);
   //func& create_func(const type& t);
@@ -71,7 +97,7 @@ struct environment : public boost::noncopyable {
   typedef boost::ptr_vector<func> func_vector;
   struct left {};
   struct right {};
-  typedef std::pair<std::string,func*> name_t;
+  typedef std::pair<std::string,func_t> name_t;
   typedef boost::multi_index_container
   <name_t,
    boost::multi_index::indexed_by<
@@ -80,10 +106,15 @@ struct environment : public boost::noncopyable {
        boost::multi_index::member<name_t,std::string,&name_t::first> >,
      boost::multi_index::hashed_unique<
        boost::multi_index::tag<right>,
-       boost::multi_index::member<name_t,func*,&name_t::second> > > >
+       boost::multi_index::member<name_t,func_t,&name_t::second> > > >
   name_index;
+  typedef std::tr1::unordered_map<func_t,argname_seq> argname_index;
+
   func_vector _funcs;
   name_index _names;
+  argname_index _argnames;
+
+  void init();
 };
 
 }} //namespace plap::lang

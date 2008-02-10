@@ -26,19 +26,22 @@
 #  define PLAP_LANG_VERTEX_UNION
 #else //ifndef NDEBUG
 #  include <boost/variant.hpp>
+#  include <ostream>
 #endif //ifdef NDEBUG
 
 namespace plap { namespace lang {
 
 struct world;
-struct func;
+struct func_base;
 //fixmestruct rewrite;
 
-typedef int       disc_t;
-typedef float     contin_t;
-typedef world*    world_t;
-typedef func*     func_t;
+typedef int        disc_t;
+typedef float      contin_t;
+typedef world*     world_t;
+typedef func_base* func_t;
 //fixme typedef rewrite*  rewrite_t;
+
+typedef unsigned char arity_t;
 
 #ifdef PLAP_LANG_VERTEX_UNION
 union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
@@ -52,12 +55,26 @@ union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
   disc_t d; contin_t c; world_t w; func_t f; 
 };
 #else //ifndef PLAP_LANG_VERTEX_UNION
+struct arg { 
+  explicit arg(arity_t a) : idx(a) {} 
+  arity_t idx; 
+  bool operator==(const arg& rhs) const { return idx==rhs.idx; }
+};
 typedef boost::variant<disc_t,
                        contin_t,
                        world_t,
-                       func_t> vertex;
+                       func_t,
+                       arg> vertex;
 #endif //ifdef PLAP_LANG_VERTEX_UNION
 
 }} //namespace plap::lang
-
+#ifndef PLAP_LANG_VERTEX_UNION
+//very nasty...
+namespace boost { namespace detail { namespace variant {
+inline std::ostream& operator<<(std::ostream& out,
+                                const plap::lang::arg& a) {
+  return out << "#" << a.idx; 
+}
+}}}
+#endif //ifndef PLAP_LANG_VERTEX_UNION
 #endif //PLAP_LANG_VERTEX_H__

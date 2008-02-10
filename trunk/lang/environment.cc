@@ -15,6 +15,7 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "environment.h"
+#include "core.h"
 
 namespace plap { namespace lang {
 #if 0
@@ -32,4 +33,9 @@ void environment::bind(func& f,def* d) {
   
 }
 #endif
+
+void environment::init() {
+
+}
+
 }} //namespace plap::lang

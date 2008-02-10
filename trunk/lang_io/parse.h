@@ -19,6 +19,7 @@
 
 #include <string>
 #include <istream>
+#include <ostream>
 #include <stdexcept>
 #include "vtree_fwd.h"
 #include "vertex.h"
@@ -28,14 +29,25 @@ namespace plap { namespace lang { struct environment; }}
 namespace plap { namespace lang_io {
 
 typedef util::tree<std::string> sexpr;
-typedef util::const_subtree<std::string> const_sub_sexpr;
+typedef util::subtree<std::string> subsexpr;
+typedef util::const_subtree<std::string> const_subsexpr;
+
+//converts indentation to parentheses
+void indent_parse(std::istream& in,std::ostream& out);
 
 //does lexing and syntactic analysis
-std::istream& stream2sexpr(std::istream&,sexpr&);
+void stream2sexpr(std::istream& in,sexpr& dst);
 
 //does semantic analysis
-void sexpr2vtree(const_sub_sexpr src,lang::vsubtree dst,lang::environment& env)
+void sexpr2vtree(const_subsexpr src,lang::vsubtree dst,lang::environment& env)
     throw(std::runtime_error);
+
+//does both together (more efficient)
+void stream2vtree(std::istream& in,lang::vsubtree dst,lang::environment& env)
+    throw(std::runtime_error);
+
+void string2vtree(const std::string& str,lang::vsubtree dst,
+                  lang::environment& env) throw(std::runtime_error);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_PARSE_H__
