@@ -14,16 +14,30 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "repl.h"
+//#include "repl.h"
 #include "environment.h"
+#include "parse.h"
+#include "tree_io.h"
+#include <iostream>
+#include <sstream>
 
 int main() { 
   using namespace std;
   using namespace plap;
-  const string prompt="\033[22;32m> [\033[00m\]";
-  lang::environment env;
+  using namespace lang_io;
+  using namespace util;
+  const string prompt="\033[22;32m> [\033[00m";
+  //lang::environment env;
   cout << "ctrl+D exits" << endl;
+  cout << sexpr_format;
   while (cin.good()) {
+    stringstream ss;
+    tree<string> tr;
+    cin >> tr;
+    cout << endl << tr << endl;
+    //indent_parse(cin,ss);
+    //cout << endl << "got '" << ss.str() << "'" << endl;
+    /***
     try {
       lang_io::repl(std::cin,std::cout,env,prompt);
     } catch (util::runtime_error e) {
@@ -33,6 +47,7 @@ int main() {
            << endl;
       return 1;
     }
+    ***/
   }
   return 0;
 }

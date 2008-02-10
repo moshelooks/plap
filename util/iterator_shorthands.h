@@ -89,6 +89,43 @@ repeat_it(const Value& v,std::size_t i=0) {
   return repetition_iterator<Value>(v,i);
 }
 
+template<typename First,typename Second>
+struct pair_iterator
+    : public boost::iterator_facade<pair_iterator<First,Second>,
+                                    std::pair<
+                                      typename std::iterator_traits<
+                                        First>::value_type,
+                                      typename std::iterator_traits<
+                                        Second>::value_type>,
+                                    boost::random_access_traversal_tag,
+                                    std::pair<
+                                      typename std::iterator_traits<
+                                        First>::value_type,
+                                      typename std::iterator_traits<
+                                        Second>::value_type> > {
+  typedef std::pair<typename std::iterator_traits<First>::value_type,
+                    typename std::iterator_traits<Second>::value_type> pair;
+  pair_iterator(First f,Second s) : _f(f),_s(s) {}
+ protected:
+  First _f;
+  Second _s;
+
+  friend class boost::iterator_core_access;
+  pair dereference() const { return make_pair(*_f,*_s); }
+  bool equal(const pair_iterator& rhs) const { 
+    return (this->_f==rhs._f || this->_s==rhs._s); 
+  }
+  void advance(std::ptrdiff_t d) { _f+=d; _s+=d; }
+  void increment() { ++_f; ++_s; }
+  void decrement() { --_f; --_s; }
+  std::ptrdiff_t distance_to(const pair_iterator& rhs) const { 
+    return std::min(rhs._f-this->_f,rhs._s-this->_s);
+  }
+};
+template<typename First,typename Second>
+inline pair_iterator<First,Second>
+pair_it(First f,Second s) { return pair_iterator<First,Second>(f,s); }
+
 }} //namespace plap::util
 
 #endif //PLAP_UTIL_ITERATOR_SHORTHANDS_H__

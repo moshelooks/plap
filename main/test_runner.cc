@@ -24,6 +24,7 @@
 #include "dorepeat.h"
 #include "environment.h"
 #include "parse.h"
+#include "cast.h"
 //#include "eager_def.h"
 //#include "lib.h"
 
@@ -34,16 +35,25 @@
 #include <boost/bind.hpp>
 
 #define test_case BOOST_AUTO_TEST_CASE
-#define check_eq BOOST_CHECK_EQUAL
 #define check BOOST_CHECK
+#define check_eq BOOST_CHECK_EQUAL
+#define check_throw BOOST_CHECK_THROW
+#define check_tree(tr,sz,name)              \
+{                                           \
+  check_eq(tr.empty(),(sz==0));             \
+  check_eq(tr.size(),(unsigned int)sz);     \
+  check_eq(tr.childless(),(sz<=1));         \
+  check_eq(lexical_cast<string>(tr),name);  \
+}
 #define print(x) { cout << x << endl; }
 
 using namespace plap::util;
 using namespace plap::lang;
+using namespace plap::lang_io;
 
 using namespace std;
 using namespace boost;
 using namespace boost::assign;
 
 #include "tree_test.cc"
-#include "lang_test.cc"
+//#include "lang_test.cc"

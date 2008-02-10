@@ -25,13 +25,12 @@ template<typename Container,typename Out>
 struct out_iter
     : public boost::iterator_facade<Out,Out,std::output_iterator_tag> {
 
-  out_iter(Container& c,typename Container::iterator i) : _c(&c),_i(i) {}
+  out_iter(Container& c) : _c(&c) {}
  protected:
   Container* _c;
-  typename Container::iterator _i;
 
   friend class boost::iterator_core_access;
-  Out& dereference() { return *static_cast<Out*>(this); }
+  const Out& dereference() const { return *static_cast<const Out*>(this); }
 };
 
 } //namespace util_private
@@ -40,11 +39,11 @@ template<typename Container>
 struct append_iterator
     : public util_private::out_iter<Container,append_iterator<Container> > {
 
-  append_iterator(Container& c,typename Container::iterator i)
-      : util_private::out_iter<Container,append_iterator<Container> >(c,i) {}
+  append_iterator(Container& c)
+      : util_private::out_iter<Container,append_iterator<Container> >(c) {}
 
   append_iterator& operator=(typename Container::const_reference v) {
-    this->_c->append(this->_i,v);
+    this->_c->append(v);
     return *this;
   }
 };
@@ -52,25 +51,25 @@ template<typename Container>
 struct prepend_iterator
     : public util_private::out_iter<Container,prepend_iterator<Container> > {
 
-  prepend_iterator(Container& c,typename Container::iterator i)
-      : util_private::out_iter<Container,prepend_iterator<Container> >(c,i) {}
+  prepend_iterator(Container& c)
+      : util_private::out_iter<Container,prepend_iterator<Container> >(c) {}
 
   prepend_iterator& operator=(typename Container::const_reference v) {
-    this->_c->prepend(this->_i,v);
+    this->_c->prepend(v);
     return *this;
   }
 };
 
 template<typename Container>
 append_iterator<Container>
-appender(Container& c,typename Container::iterator i) { 
-  return append_iterator<Container>(c,i);
+appender(Container& c) { 
+  return append_iterator<Container>(c);
 }
 
 template<typename Container>
 prepend_iterator<Container>
-prepender(Container& c,typename Container::iterator i) { 
-  return prepend_iterator<Container>(c,i);
+prepender(Container& c) {
+  return prepend_iterator<Container>(c);
 }
 
 }} //namespace plap::util

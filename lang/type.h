@@ -36,11 +36,13 @@ template<typename T>
 T literal_cast(const_vsubtree);
 template<typename T>
 T vertex_cast(const vertex&);
+template<typename T>
+T& vertex_cast(vertex&);
 
 namespace lang_private {
 template<typename Type>
 struct type : boost::equality_comparable<Type> {
-  type(const_vsubtree s) : _s(s) { assert(vertex_cast<def_t>(s.root())); }
+  type(const_vsubtree s) : _s(s) { assert(vertex_cast<func_t>(s.root())); }
   bool operator==(const Type& rhs) const { return _s==rhs._s; }
   Type operator=(const Type& rhs) { _s=rhs._s; }
  protected:
@@ -100,5 +102,4 @@ struct func_of<T(U)> {
 };
 
 }} //namespace plap::lang
-
 #endif //PLAP_LANG_TYPE_H__

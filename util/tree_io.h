@@ -40,7 +40,7 @@ std::ostream& operator<<(std::ostream& out,const_subtree<T> tr) {
     return out << tr.root();
 
   if (util_private::sexpr_io)
-    out << "(" << tr.root();
+    out << "(" << tr.root() << " ";
   else
     out << tr.root() << "(";
   for (typename const_subtree<T>::const_sub_child_iterator 

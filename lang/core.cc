@@ -24,9 +24,7 @@ func_t list;
 func_t def;
 func_t let;
 func_t decl;
-disc_t unit;
+disc_t unit=0;
 } //namespace id
-
-
 
 }} //namespace plap::lang

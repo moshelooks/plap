@@ -62,11 +62,11 @@ def build(bld):
 	util/tree_io.cc
 	lang_io/parse.cc
 	lang/core.cc
+	lang/cast.cc
+	lang/environment.cc
+	lang/lib.cc
         '''
 #	src='''
-#	lang/cast.cc
-#	lang/environment.cc
-#	lang/lib.cc
 #	lang_io/repl.cc
 #        '''
 	if Params.g_options.test or not Params.g_options.repl:

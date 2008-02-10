@@ -25,14 +25,6 @@
 //is written as|
 // 1(2(3 4) 5) |
 
-#define check_tree(tr,sz,name)              \
-{                                           \
-  check_eq(tr.empty(),(sz==0));             \
-  check_eq(tr.size(),(unsigned int)sz);     \
-  check_eq(tr.childless(),(sz<=1));         \
-  check_eq(lexical_cast<string>(tr),name);  \
-}
-
 typedef tree<int> itree;
 typedef subtree<int> isubtree;
 
@@ -748,4 +740,40 @@ test_case(tree_io_empty) {
 
   check_tree(tr1,0,s);
   check_eq(tr,tr1);
+}
+
+test_case(tree_out_modifiers) {
+  itree tr=tree_of(1)(tree_of(5)(tree_of(6)(7,8)),
+                      tree_of(9)(tree_of(10)(11),12),
+                      tree_of(2)(3,4,42));
+  cout << sexpr_format;
+  check_tree(tr,13,"(1 (5 (6 7 8)) (9 (10 11) 12) (2 3 4 42))");
+  cout << funcall_format;
+  check_tree(tr,13,"1(5(6(7 8)) 9(10(11) 12) 2(3 4 42))");
+}
+
+test_case(tree_input_modifiers) {
+  tree<string> tr=tree_of(string("1"))(tree_of(string("2"))(string("2.5"),
+                                                            string("2.8")),
+                                       string("3"),
+                                       tree_of(string("4"))(string("5"),
+                                                            string("6")));
+
+  string s="(1 (2 2.5 2.8) 3 (4 5 6))";
+  cout << sexpr_format;
+  check_tree(tr,8,s);
+  
+  tree<string> tr1;
+  stringstream ss;
+  ss << s;
+  ss >> tr1;
+
+  check_tree(tr1,8,s);
+  check_eq(tr,tr1);
+
+  string s1="((1) (2) (3))";
+  stringstream ss1;
+  ss1 << s1;
+  ss1 >> tr1;
+  check_tree(tr1,3,"(1 2 3)");
 }

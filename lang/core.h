@@ -33,9 +33,18 @@ extern func_t decl;
 extern disc_t unit;
 } //namespace id
 
+//def(name list(arg1 arg2 ...) body)
 #if 0
+struct def : public narg_func<3> {
+  void operator()(const_vsubtree s,vsubtree d) const {
+    
+  }
+};
+#endif
+
+/**
 template<typename T>
-struct eval : public def {
+struct eval : public func_base {
   void operator()(const_vsubtree s,vsubtree d) const {
     assert(d.childless());
     if (s.childless())
@@ -44,6 +53,7 @@ struct eval : public def {
     (*vertex_cast<def_t>(s.root()))(s,d);
   }
 };
+
 
 template<typename T>
 struct cons : public def {
@@ -55,7 +65,7 @@ struct cons : public def {
                    d.begin_sub_child(),eval<T>());
   }
 };
-#endif
+**/
 }} //namespace plap::lang
 
 #endif //PLAP_LANG_CORE_H__

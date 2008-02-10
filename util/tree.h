@@ -81,6 +81,7 @@
 #include <boost/next_prior.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/operators.hpp>
+#include <boost/bind.hpp>
 #include "iterator_shorthands.h"
 
 namespace plap { namespace util {
@@ -304,13 +305,14 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
   typedef value_iter_base<T,const node<T>*,
                           const_node_iter_base> const_value_iter;
  public:
-  typedef const_node_iter_base const_iterator;
   typedef iter<pre_iter_base<const_value_iter> > const_pre_iterator;
   typedef iter<pre_iter_base<const_sub_iter> > const_sub_pre_iterator;
   typedef iter<child_iter_base<const_value_iter> > const_child_iterator;
   typedef iter<child_iter_base<const_sub_iter> > const_sub_child_iterator;
   typedef iter<post_iter_base<const_value_iter> > const_post_iterator;
   typedef iter<post_iter_base<const_sub_iter> > const_sub_post_iterator;
+
+  typedef const_pre_iterator const_iterator;
 
   template<typename OtherTr>
   bool operator==(const OtherTr& rhs) const { 
@@ -386,6 +388,13 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
   const_subtree<T> back_sub() const { return this->root_node()->end->prev; }
 
   bool childless() const { return this->root_node()->childless(); }
+  //a tree is flat iff it consists of a root node with childless children
+  bool flat() const { 
+    return (!this->childless() && 
+            std::find_if(this->begin_sub_child(),this->end_sub_child(),
+                         !boost::bind(&const_subtree<T>::childless,_1)
+                         )==this->end_sub_child());
+  }
 
   //functionality that gets delegated to the subclass
   bool empty() const { return static_cast<const Tree*>(this)->empty(); }
@@ -408,13 +417,14 @@ struct mutable_tr : public tr<T,Tree> {
   typedef value_iter_base<T,node<T>*,node_iter_base> value_iter;
   typedef tr<T,Tree> super;
  public:
-  typedef node_iter_base iterator;
   typedef iter<pre_iter_base<value_iter> > pre_iterator;
   typedef iter<pre_iter_base<sub_iter> > sub_pre_iterator;
   typedef iter<child_iter_base<value_iter> > child_iterator;
   typedef iter<child_iter_base<sub_iter> > sub_child_iterator;
   typedef iter<post_iter_base<value_iter> > post_iterator;
   typedef iter<post_iter_base<sub_iter> > sub_post_iterator;
+
+  typedef pre_iterator iterator;
 
   typedef typename super::size_type size_type;
 
@@ -428,13 +438,13 @@ struct mutable_tr : public tr<T,Tree> {
     return this->insert_n(i._node,s);
   }
   template<typename InputIterator>
-  void insert(iterator i,InputIterator f,InputIterator l) {
+  void insert(node_iter_base i,InputIterator f,InputIterator l) {
     this->insert_n(i._node,f,l);
   }
-  void insert(iterator i,size_type n,const value_type& v) {
+  void insert(node_iter_base i,size_type n,const value_type& v) {
     this->insert_n(i._node,repeat_it(v),repeat_it(v,n));
   }
-  void insert(iterator i,size_type n,const_subtree<value_type> s) {
+  void insert(node_iter_base i,size_type n,const_subtree<value_type> s) {
     this->insert_n(i._node,repeat_it(s),repeat_it(s,n));
   }
 
@@ -613,7 +623,7 @@ struct mutable_tr : public tr<T,Tree> {
   }
   template<typename Iterator>
   void splice(Iterator i,tree<T>& tr) { splice(i,tr.root_sub()); }
-  void splice(iterator i,sub_child_iterator fi,sub_child_iterator li) {
+  void splice(node_iter_base i,sub_child_iterator fi,sub_child_iterator li) {
     if (fi==li)
       return;
 
