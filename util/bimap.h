@@ -34,10 +34,10 @@ struct bimap {
   typedef boost::multi_index_container
   <pair_t,
    boost::multi_index::indexed_by<
-     boost::multi_index::hashed_unique<
+     boost::multi_index::hashed_non_unique<
        boost::multi_index::tag<LeftTag>,
        boost::multi_index::member<pair_t,Left,&pair_t::first> >,
-     boost::multi_index::hashed_unique<
+     boost::multi_index::hashed_non_unique<
        boost::multi_index::tag<RightTag>,
        boost::multi_index::member<pair_t,Right,&pair_t::second> > > > type;
 };

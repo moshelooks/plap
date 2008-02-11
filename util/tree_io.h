@@ -36,19 +36,17 @@ struct op_name {};
 struct op_symbol {};
 
 typedef bimap<std::string,std::string,op_name,op_symbol>::type infix_map;
-extern const std::vector<infix_map> imap;
-inline const std::string& name2symbol(const std::string& s,std::size_t a) {
-  if (a>=imap.size())
-    return s;
+extern const infix_map imap;
+inline const std::string& name2symbol(const std::string& s) {
   infix_map::index<op_name>::type::const_iterator i=
-        boost::multi_index::get<op_name>(imap[a]).find(s);
-    return i==boost::multi_index::get<op_name>(imap[a]).end() ? s : i->second;
-  }
-  inline const std::string& symbol2name(const std::string& s,std::size_t a) {
-    infix_map::index<op_symbol>::type::const_iterator i=
-        boost::multi_index::get<op_symbol>(imap[a]).find(s);
-    return i==boost::multi_index::get<op_symbol>(imap[a]).end() ? s : i->first;
-  }
+      boost::multi_index::get<op_name>(imap).find(s);
+  return i==boost::multi_index::get<op_name>(imap).end() ? s : i->second;
+}
+inline const std::string& symbol2name(const std::string& s) {
+  infix_map::index<op_symbol>::type::const_iterator i=
+      boost::multi_index::get<op_symbol>(imap).find(s);
+  return i==boost::multi_index::get<op_symbol>(imap).end() ? s : i->first;
+}
 } //namespace util_private
 using util_private::name2symbol;
 using util_private::symbol2name;
