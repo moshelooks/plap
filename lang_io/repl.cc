@@ -15,23 +15,30 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "repl.h"
+#include "parse.h"
 #include "environment.h"
-#include "pretty_print.h"
+#include "tree_io.h"
+//fixme#include "pretty_print.h"
+
+namespace plap { namespace lang_io {
 
 void repl(std::istream& in,std::ostream& out,lang::environment& env,
-          const std::string prompt="") {
+          const std::string& prompt) throw(std::runtime_error) {
+  out << util::sexpr_format;
   while (in.good()) {
-    out << prompt;
-    out.flush();
+    out << prompt << std::endl;
 
     sexpr s;
-    stream_to_sexpr(cin,s);
+    stream2sexpr(in,s);
     if (!in.good())
       break;
-    out << endl;
+    out << std::endl;
 
-    assert(!s.empty);
+    assert(!s.empty());
 
+    out << "goes to " << s << std::endl;
+
+    /*
     vtree expr(vertex());
     sexpr_to_vtree(s,expr,env);
     
@@ -40,5 +47,8 @@ void repl(std::istream& in,std::ostream& out,lang::environment& env,
     eval(expr,result);
     pretty_print(out,result);
     out << endl;
+    */
   }
 }
+
+}} //namespace plap::lang

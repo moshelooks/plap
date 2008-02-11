@@ -17,11 +17,12 @@
 #ifndef PLAP_LANG_IO_REPL_H__
 #define PLAP_LANG_IO_REPL_H__
 
-#include "parse.h"
-#include "exception.h"
+#include <string>
+#include <istream>
 #include <ostream>
+#include <stdexcept>
 
-namespace plap { namespace lang_io {
+namespace plap { namespace lang {
 struct environment;
 }} //namespace plap::lang
 
@@ -30,7 +31,7 @@ namespace plap { namespace lang_io {
 //reads from in and writes to out as long as in is good, 
 //throws on language errors
 void repl(std::istream& in,std::ostream& out,lang::environment& env,
-          const std::string prompt="") throw(util::runtime_exception);
+          const std::string& prompt) throw(std::runtime_error);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_REPL_H__

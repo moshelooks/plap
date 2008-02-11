@@ -18,8 +18,10 @@
 #include <map>
 #include <stack>
 #include <boost/lexical_cast.hpp>
+#include <iostream>
 #include <sstream>
 #include "iterator_shorthands.h"
+#include "dorepeat.h"
 #include "algorithm.h"
 #include "foreach.h"
 #include "tree_io.h"
@@ -251,35 +253,66 @@ struct semantic_analyzer {
   }
 };
 
-
+namespace {
 const char whitespace[]=" \t";
-const char lparen='(';
-const char rparen=')';
 bool is_whitespace(char c) { return (c==' ' || c=='\t'); }
-string::size_type count_whitespace(const string& s) {
+string::size_type count_indent(const string& s) {
   return s.find_first_not_of(whitespace);
 }
 bool all_whitespace(const string& s) {
-  return count_whitespace(s)==string::npos;
+  return count_indent(s)==string::npos;
 }
 bool has_whitespace(const string& s,string::size_type from) {
   return s.find_first_of(whitespace,from)!=string::npos;
 }
 void chomp_trailing_whitespace(string& s) {
-  s.erase(s.find_last_not_of(whitespace));
+  s.erase(s.find_last_not_of(whitespace)+1);
+}
+
+void zap_comments(string& s) {
+  string::size_type from=s.find_first_of('#');
+  if (from!=string::npos && (from==0 || s[from-1]!='\\'))
+    s.erase(from);
 }
 
 void process_line(std::istream& in,string& s) {
   s.clear();
-  while (in.good()) {
+  do {
     std::getline(in,s);
+    zap_comments(s);
     if (!all_whitespace(s))
       break;
-  }
+  } while (in.good());
   chomp_trailing_whitespace(s);
 }
+} //namespace
 
 void indent_parse(std::istream& in,std::ostream& out) {
+  std::stack<string::size_type> indents;
+  string s;
+  do {
+    process_line(in,s);
+    if (s.empty())
+      break;
+
+    string::size_type indent=count_indent(s);
+    if (!indents.empty() && indent<=indents.top()) {
+      for (out << ')';!indents.empty() && indent<indents.top();indents.pop())
+        out << ')';
+      if (indents.empty() || indent!=indents.top())
+        throw_bad_indent(s);
+    } else {
+      indents.push(indent);
+    }
+    out << '(' << s;
+  } while (in.good() && is_whitespace(in.peek()));
+  while (!indents.empty()) {
+    out << ')';
+    indents.pop();
+  }
+}
+        
+  
   /**
   string lastline,s;
   string::size_type indent=0;
@@ -313,14 +346,14 @@ finalize:
   if (!oldindents.empty())
     throw_bad_indent(s);
   **/
-}
+
 
 void stream2sexpr(std::istream& in,sexpr& dst) {
   stringstream ss;
   indent_parse(in,ss);
-  ss >> dst;
+  string2sexpr(ss.str(),dst);
 }
-
+/*
 void sexpr2vtree(const_subsexpr src,vsubtree dst,environment& env)
     throw(std::runtime_error) {
   sexpr tmp(src);
@@ -328,10 +361,10 @@ void sexpr2vtree(const_subsexpr src,vsubtree dst,environment& env)
   se.process_sexpr(tmp,dst);
 }
 
-void stream2vtree(std::istream& in,lang::vsubtree dst,lang::environment& env)
-    throw(std::runtime_error) {
+void stream2vtree(std::istream& in,lang::vsubtree dst,lang::environment& env,
+                  bool interactive) throw(std::runtime_error) {
   sexpr s=sexpr(string());
-  stream2sexpr(in,s);
+  stream2sexpr(in,s,interactive);
   semantic_analyzer se(env,s);  
   se.process_sexpr(s,dst);
 }
@@ -342,5 +375,5 @@ void string2vtree(const string& str,lang::vsubtree dst,
   ss << str;
   stream2vtree(ss,dst,env);
 }
-
+*/
 }} //namespace plap::lang
