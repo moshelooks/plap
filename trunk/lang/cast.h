@@ -17,6 +17,7 @@
 #ifndef PLAP_LANG_CAST_H__
 #define PLAP_LANG_CAST_H__
 
+#include <boost/static_assert.hpp>
 #include "vtree.h"
 #include "type.h"
 

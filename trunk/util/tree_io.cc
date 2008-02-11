@@ -14,12 +14,13 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-//#define BOOST_SPIRIT_DEBUG
+#define BOOST_SPIRIT_DEBUG
 
 #include "tree_io.h"
 #include <algorithm>
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/tree/ast.hpp>
+#include <boost/assign/list_of.hpp>
 #include "algorithm.h"
 #include "tree_iterator.h"
 
@@ -33,6 +34,32 @@ const tree_io_modifier funcall_format=tree_io_modifier();
 
 namespace util_private {
 bool sexpr_io=false;
+const std::vector<infix_map> imap=boost::assign::list_of<infix_map>
+    (boost::assign::map_list_of //nullary operators
+     ("empty_list","[]"))
+    (boost::assign::map_list_of //unary operators
+     ("not","!")
+     ("negative","-")
+     ("lambda","\\"))
+
+    (boost::assign::map_list_of //binary operators
+     ("plus","+")
+     ("minus","-")
+     ("times","*")
+     ("div","/")
+
+     ("equal","==")
+     ("less","<")
+     ("less_equal","<=")
+     ("greater",">")
+     ("greater_equal",">=")
+
+     ("and","&&")
+     ("or","||")
+
+     ("arrow","->"))
+    (boost::assign::map_list_of //ternary operators
+     ("def","="));
 } //namespace util_private
 
 std::ostream& operator<<(std::ostream& out,const tree_io_modifier& m) {
@@ -48,22 +75,51 @@ namespace {
 using namespace boost::spirit;
 using std::string;
 
-void spirit2sexpr(const tree_node<node_val_data<> >& s,subtree<string> d) {
-  d.root()=string(s.value.begin(),s.value.end());
-  d.append(s.children.size(),string(""));
-  for_each(s.children.begin(),s.children.end(),
-           d.begin_sub_child(),&spirit2sexpr);
+void to_sexpr(const tree_node<node_val_data<> >& s,subtree<string> d) {
+  std::size_t a=s.children.size();
+  d.root()=symbol2name(string(s.value.begin(),s.value.end()),a);
+  d.append(a,string());
+  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&to_sexpr);
 }
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
-      sexpr = inner_node_d[ch_p('(') >> (seq|sexpr) >> ch_p(')')];
-      seq = root_node_d[term] >> *(sexpr|term);
-      term = token_node_d[lexeme_d[+(anychar_p-ch_p('(')-ch_p(')')-space_p)]] |
+      prime=sexpr | term;
+      or_expr=prime >> *(root_node_d[str_p("||")] >> prime);
+      and_expr=or_expr >> *(root_node_d[str_p("&&")] >> or_expr);
+      eq_expr=and_expr >> *(root_node_d[str_p("==")|"!="] >> and_expr);
+      cmp_expr=eq_expr >> *(root_node_d[str_p("<=")|"<"|">"|">="] >> eq_expr);
+      add_expr=cmp_expr >> *(root_node_d[ch_p('+')|'-'] >> cmp_expr);
+      mlt_expr=add_expr >> *(root_node_d[ch_p('*')|'/'] >> add_expr);
+      unary_expr=!root_node_d[ch_p('!')|ch_p('-')] >> mlt_expr;
+      
+      seq=unary_expr;//(root_node_d[term] >> *(sexpr|unary_expr));
+
+      sexpr=inner_node_d[ch_p('(') >> (seq|sexpr) >> ch_p(')')];
+      //term=token_node_d[lexeme_d[+(anychar_p-ch_p('(')-ch_p(')')-space_p)]] |
+      //  inner_node_d[ch_p('(') >> term >> ch_p(')')]
+
+      term = token_node_d[lexeme_d[+(anychar_p-
+                                     '|'-'&'-'='-'!'-'<'-'+'-'-'-'*'-'/'-
+                                     '('-')'-space_p)]] |
           inner_node_d[ch_p('(') >> term >> ch_p(')')];
+
+
+      BOOST_SPIRIT_DEBUG_RULE(sexpr);
+      BOOST_SPIRIT_DEBUG_RULE(seq);
+      BOOST_SPIRIT_DEBUG_RULE(term);
+      BOOST_SPIRIT_DEBUG_RULE(prime);
+      BOOST_SPIRIT_DEBUG_RULE(or_expr);
+      BOOST_SPIRIT_DEBUG_RULE(and_expr);
+      BOOST_SPIRIT_DEBUG_RULE(eq_expr);
+      BOOST_SPIRIT_DEBUG_RULE(cmp_expr);
+      BOOST_SPIRIT_DEBUG_RULE(add_expr);
+      BOOST_SPIRIT_DEBUG_RULE(mlt_expr);
+      BOOST_SPIRIT_DEBUG_RULE(unary_expr);
     }
-    rule<Scanner> sexpr,seq,term;
+    rule<Scanner> sexpr,seq,term,prime,or_expr,and_expr,eq_expr,cmp_expr,
+      add_expr,mlt_expr,unary_expr;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
@@ -115,14 +171,21 @@ std::istream& operator>>(std::istream& in,
     return in;
   dst.clear();
 
-  cout << "XX doing "  << str << endl;
-
   if (util_private::sexpr_io) {
     dst.insert(dst.begin(),std::string());
     tree_parse_info<> t=ast_parse(str.c_str(),sexpr_grammar(),space_p);
+
+    cout << t.match << " " << t.full << " " << t.trees.size() << endl;
+    for (unsigned int i=0;i<t.trees.size();++i) {
+      tree<string> tmp=dst;
+      to_sexpr(t.trees.front(),tmp);
+      cout << tmp.size() << " | '" << tmp << "'" << endl;
+    }
+    cout << "XX" << endl;
+
     if (!t.match || !t.full || t.trees.size()!=1)
       throw std::runtime_error("bad tree structure parsing '"+str+"'");
-    spirit2sexpr(t.trees.front(),dst);
+    to_sexpr(t.trees.front(),dst);
   } else {
     tr=&dst;
     at=dst.begin();

@@ -17,14 +17,11 @@
 #ifndef PLAP_LANG_ENVIRONMENT_H__
 #define PLAP_LANG_ENVIRONMENT_H__
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/hashed_index.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/static_assert.hpp>
 #include <tr1/unordered_map>
 #include <string>
+#include "bimap.h"
 #include "func.h"
 
 namespace plap { namespace lang {
@@ -97,17 +94,8 @@ struct environment : public boost::noncopyable {
   typedef boost::ptr_vector<func> func_vector;
   struct left {};
   struct right {};
-  typedef std::pair<std::string,func_t> name_t;
-  typedef boost::multi_index_container
-  <name_t,
-   boost::multi_index::indexed_by<
-     boost::multi_index::hashed_unique<
-       boost::multi_index::tag<left>,
-       boost::multi_index::member<name_t,std::string,&name_t::first> >,
-     boost::multi_index::hashed_unique<
-       boost::multi_index::tag<right>,
-       boost::multi_index::member<name_t,func_t,&name_t::second> > > >
-  name_index;
+  typedef util::bimap<std::string,func_t,left,right>::type name_index;
+
   typedef std::tr1::unordered_map<func_t,argname_seq> argname_index;
 
   func_vector _funcs;
