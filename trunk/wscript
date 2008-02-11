@@ -65,10 +65,8 @@ def build(bld):
 	lang/cast.cc
 	lang/environment.cc
 	lang/lib.cc
+	lang_io/repl.cc
         '''
-#	src='''
-#	lang_io/repl.cc
-#        '''
 	if Params.g_options.test or not Params.g_options.repl:
 		build_program(src,'test_runner') #unit tests
 	if Params.g_options.test:

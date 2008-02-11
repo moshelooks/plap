@@ -79,7 +79,10 @@ std::ostream& operator<<(std::ostream& out,const tree<T>& tr) {
 }
 
 std::istream& operator>>(std::istream&,
-                         tree<std::string>&) throw (std::runtime_error);
+                         tree<std::string>&) throw(std::runtime_error);
+
+void string2sexpr(const std::string&,tree<std::string>&) 
+    throw(std::runtime_error);
 
 }} //namespace plap::util
 

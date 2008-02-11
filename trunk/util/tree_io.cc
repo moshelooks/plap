@@ -14,8 +14,6 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-//#define BOOST_SPIRIT_DEBUG
-
 #include "tree_io.h"
 #include <algorithm>
 #include <boost/spirit/core.hpp>
@@ -23,9 +21,6 @@
 #include <boost/assign/list_of.hpp>
 #include "algorithm.h"
 #include "tree_iterator.h"
-
-#include <iostream>
-using namespace std;//fixme
 
 namespace plap { namespace util {
 
@@ -83,21 +78,9 @@ using namespace boost::spirit;
 using std::string;
 
 void to_sexpr(const tree_node<node_val_data<> >& s,subtree<string> d) {
-  std::size_t a=s.children.size();
-  tree_node<node_val_data<> >::children_t::const_iterator from=
-      s.children.begin();
-  std::vector<char>::const_iterator nm_f=s.value.begin(),nm_l=s.value.end();
-  /*if (nm_f==nm_l) {
-    if (s.children.empty())
-      throw std::runtime_error("Can't resolve empty leaf in parse");
-    --a;
-    nm_f=s.children.begin()->value.begin();
-    nm_l=s.children.begin()->value.end();
-    ++from;
-    }*/
-  d.root()=symbol2name(string(nm_f,nm_l));
-  d.append(a,string());
-  for_each(from,s.children.end(),d.begin_sub_child(),&to_sexpr);
+  d.root()=symbol2name(string(s.value.begin(),s.value.end()));
+  d.append(s.children.size(),string());
+  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&to_sexpr);
 }
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
@@ -128,20 +111,6 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
                                         space_p)]]
               | inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]");
       terms   = root_node_d[eps_p] >> *term;
-
-      /**
-      BOOST_SPIRIT_DEBUG_RULE(sexpr);
-      BOOST_SPIRIT_DEBUG_RULE(seq);
-      BOOST_SPIRIT_DEBUG_RULE(term);
-      BOOST_SPIRIT_DEBUG_RULE(prime);
-      BOOST_SPIRIT_DEBUG_RULE(or_x);
-      BOOST_SPIRIT_DEBUG_RULE(and_x);
-      BOOST_SPIRIT_DEBUG_RULE(eq_x);
-      BOOST_SPIRIT_DEBUG_RULE(cmp_x);
-      BOOST_SPIRIT_DEBUG_RULE(add_x);
-      BOOST_SPIRIT_DEBUG_RULE(mlt_x);
-      BOOST_SPIRIT_DEBUG_RULE(unary_x);
-      **/
     }
     rule<Scanner> sexpr,list_x,def_x,lambda_x,arrow_x;
     rule<Scanner> or_x,and_x,cons_x,eq_x,cmp_x,add_x,mlt_x,neg_x;
@@ -190,37 +159,32 @@ void read_balanced(std::istream& in,string& str) {
 } //~namespace
 
 std::istream& operator>>(std::istream& in,
-                         tree<std::string>& dst) throw (std::runtime_error) {
+                         tree<std::string>& dst) throw(std::runtime_error) {
   std::string str;
   read_balanced(in,str);
-  if (str.empty())
-    return in;
-  dst.clear();
+  string2sexpr(str,dst);
+  return in;
+}
 
+void string2sexpr(const std::string& str,tree<std::string>& dst)
+    throw(std::runtime_error) {
+  if (str.empty())
+    return;
   if (util_private::sexpr_io) {
-    dst.insert(dst.begin(),std::string());
+    dst=tree<std::string>(std::string());
     const char* begin=str.c_str();
     tree_parse_info<> t=ast_parse(begin,begin+str.length(),
                                   sexpr_grammar(),space_p);
-
-    cout << t.match << " " << t.full << " " << t.trees.size() << endl;
-    for (unsigned int i=0;i<t.trees.size();++i) {
-      tree<string> tmp=dst;
-      to_sexpr(t.trees.front(),tmp);
-      cout << tmp.size() << " | '" << tmp << "'" << endl;
-    }
-    cout << "XX" << endl;
 
     if (!t.match || !t.full || t.trees.size()!=1)
       throw std::runtime_error("bad tree structure parsing '"+str+"'");
     to_sexpr(t.trees.front(),dst);
   } else {
+    dst.clear();
     tr=&dst;
     at=dst.begin();
     parse(str.c_str(),funcall_grammar(),space_p);
   }
-
-  return in;
 }
 
 }} //namespace plap::util

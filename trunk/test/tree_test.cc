@@ -791,4 +791,3 @@ test_case(tree_infix) {
 
   check_parse("([]:[]:a b+d)","(cons (cons list list) (plus (a b) d))");
 }
-
