@@ -81,7 +81,8 @@ void to_sexpr(const tree_node<node_val_data<> >& s,subtree<string> d) {
       s.children.begin();
   std::vector<char>::const_iterator nm_f=s.value.begin(),nm_l=s.value.end();
 
-  if (nm_f==nm_l) {
+  //if (nm_f==nm_l) {
+  if (a==0) {
     if (s.children.empty())
       throw std::runtime_error("Can't resolve empty leaf in parse");
     --a;
@@ -100,21 +101,15 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
     definition(const sexpr_grammar&) {
       prime=sexpr | term;
 
-      //seq=unary_expr;//(root_node_d[term] >> *(sexpr|unary_expr));
-
-      or_expr=prime >> *(root_node_d[str_p("||")] >> prime);
-      and_expr=or_expr >> *(root_node_d[str_p("&&")] >> or_expr);
-      eq_expr=and_expr >> *(root_node_d[str_p("==")|"!="] >> and_expr);
-      cmp_expr=eq_expr >> *(root_node_d[str_p("<=")|"<"|">"|">="] >> eq_expr);
-      add_expr=cmp_expr >> *(root_node_d[ch_p('+')|'-'] >> cmp_expr);
-      mlt_expr=add_expr >> *(root_node_d[ch_p('*')|'/'] >> add_expr);
-      unary_expr=!root_node_d[ch_p('!')|ch_p('-')] >> mlt_expr;
-      
-      //seq = root_node_d[term] >> *;
+      or_expr=prime >> *(str_p("||") >> prime);
+      and_expr=or_expr >> *(str_p("&&") >> or_expr);
+      eq_expr=and_expr >> *(str_p("==")|"!=" >> and_expr);
+      cmp_expr=eq_expr >> *(str_p("<=")|"<"|">"|">=" >> eq_expr);
+      add_expr=cmp_expr >> *(ch_p('+')|'-' >> cmp_expr);
+      mlt_expr=add_expr >> *(ch_p('*')|'/' >> add_expr);
+      unary_expr=!ch_p('!')|ch_p('-') >> mlt_expr;
 
       sexpr=inner_node_d[ch_p('(') >> *unary_expr >> ch_p(')')];
-      //term=token_node_d[lexeme_d[+(anychar_p-ch_p('(')-ch_p(')')-space_p)]] |
-      //  inner_node_d[ch_p('(') >> term >> ch_p(')')]
 
       term = token_node_d[lexeme_d[+(anychar_p-
                                      '|'-'&'-'='-'!'-'<'-'+'-'-'-'*'-'/'-
