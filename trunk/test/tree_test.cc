@@ -777,5 +777,6 @@ test_case(tree_infix) {
   check_parse("(1+23*4)","(plus 1 (times 23 4))");
   check_parse("(a<b && c<d+e)","(and (less a b) (greater c (plus d e)))");
 
+  
 }
 
