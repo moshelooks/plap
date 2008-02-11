@@ -710,6 +710,22 @@ test_case(tree_splice2) {
   check_tree(tr3,3,"5(3 6)");
 }
 
+#define check_parse(src,goal)                      \
+  { stringstream ss;                               \
+    tree<string> tmpXXX;                           \
+    ss << src;                                     \
+    ss >> tmpXXX;                                  \
+    check_eq(lexical_cast<string>(tmpXXX),goal);   \
+  }
+#define check_parse2(src,goal,goal_tr)             \
+  { stringstream ss;                               \
+    tree<string> tmpXXX;                           \
+    ss << src;                                     \
+    ss >> tmpXXX;                                  \
+    check_eq(lexical_cast<string>(tmpXXX),goal);   \
+    check_eq(tmpXXX,goal_tr);                      \
+  }
+
 test_case(tree_io) {
   tree<string> tr=tree_of(string("1"))(tree_of(string("2"))(string("2.5"),
                                                             string("2.8")),
@@ -718,14 +734,8 @@ test_case(tree_io) {
                                                             string("6")));
   string s="1(2(2.5 2.8) 3 4(5 6))";
   check_tree(tr,8,s);
-  
-  tree<string> tr1;
-  stringstream ss;
-  ss << s;
-  ss >> tr1;
 
-  check_tree(tr1,8,s);
-  check_eq(tr,tr1);
+  check_parse2(s,s,tr);
 }
 
 test_case(tree_io_empty) {
@@ -733,13 +743,7 @@ test_case(tree_io_empty) {
   string s="";
   check_tree(tr,0,s);
 
-  tree<string> tr1;
-  stringstream ss;
-  ss << s;
-  ss >> tr1;
-
-  check_tree(tr1,0,s);
-  check_eq(tr,tr1);
+  check_parse2(s,s,tr);
 }
 
 test_case(tree_out_modifiers) {
@@ -763,17 +767,15 @@ test_case(tree_input_modifiers) {
   cout << sexpr_format;
   check_tree(tr,8,s);
   
-  tree<string> tr1;
-  stringstream ss;
-  ss << s;
-  ss >> tr1;
+  check_parse2(s,s,tr);
 
-  check_tree(tr1,8,s);
-  check_eq(tr,tr1);
-
-  string s1="((1) (2) (3))";
-  stringstream ss1;
-  ss1 << s1;
-  ss1 >> tr1;
-  check_tree(tr1,3,"(1 2 3)");
+  check_parse("((1) (2) (3))","(1 2 3)");
 }
+
+test_case(tree_infix) {
+  check_parse("(foo bar+bar baz)","(foo (plus bar bar) baz)");
+  check_parse("(1+23*4)","(plus 1 (times 23 4))");
+  check_parse("(a<b && c<d+e)","(and (less a b) (greater c (plus d e)))");
+
+}
+
