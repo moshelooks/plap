@@ -77,15 +77,31 @@ using std::string;
 
 void to_sexpr(const tree_node<node_val_data<> >& s,subtree<string> d) {
   std::size_t a=s.children.size();
-  d.root()=symbol2name(string(s.value.begin(),s.value.end()),a);
+  tree_node<node_val_data<> >::children_t::const_iterator from=
+      s.children.begin();
+  std::vector<char>::const_iterator nm_f=s.value.begin(),nm_l=s.value.end();
+
+  if (nm_f==nm_l) {
+    if (s.children.empty())
+      throw std::runtime_error("Can't resolve empty leaf in parse");
+    --a;
+    nm_f=s.children.begin()->value.begin();
+    nm_l=s.children.begin()->value.end();
+    ++from;
+  }
+
+  d.root()=symbol2name(string(nm_f,nm_l),a);
   d.append(a,string());
-  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&to_sexpr);
+  for_each(from,s.children.end(),d.begin_sub_child(),&to_sexpr);
 }
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
       prime=sexpr | term;
+
+      //seq=unary_expr;//(root_node_d[term] >> *(sexpr|unary_expr));
+
       or_expr=prime >> *(root_node_d[str_p("||")] >> prime);
       and_expr=or_expr >> *(root_node_d[str_p("&&")] >> or_expr);
       eq_expr=and_expr >> *(root_node_d[str_p("==")|"!="] >> and_expr);
@@ -94,9 +110,9 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       mlt_expr=add_expr >> *(root_node_d[ch_p('*')|'/'] >> add_expr);
       unary_expr=!root_node_d[ch_p('!')|ch_p('-')] >> mlt_expr;
       
-      seq=unary_expr;//(root_node_d[term] >> *(sexpr|unary_expr));
+      //seq = root_node_d[term] >> *;
 
-      sexpr=inner_node_d[ch_p('(') >> (seq|sexpr) >> ch_p(')')];
+      sexpr=inner_node_d[ch_p('(') >> *unary_expr >> ch_p(')')];
       //term=token_node_d[lexeme_d[+(anychar_p-ch_p('(')-ch_p(')')-space_p)]] |
       //  inner_node_d[ch_p('(') >> term >> ch_p(')')]
 
@@ -173,7 +189,9 @@ std::istream& operator>>(std::istream& in,
 
   if (util_private::sexpr_io) {
     dst.insert(dst.begin(),std::string());
-    tree_parse_info<> t=ast_parse(str.c_str(),sexpr_grammar(),space_p);
+    const char* begin=str.c_str();
+    tree_parse_info<> t=ast_parse(begin,begin+str.length(),
+                                  sexpr_grammar(),space_p);
 
     cout << t.match << " " << t.full << " " << t.trees.size() << endl;
     for (unsigned int i=0;i<t.trees.size();++i) {
