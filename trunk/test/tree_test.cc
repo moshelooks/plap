@@ -773,7 +773,7 @@ test_case(tree_input_modifiers) {
 }
 
 test_case(tree_infix) {
-  check_parse("(foo bar + bar baz)","(plus (foo bar) (bar baz))");
+  check_parse("(foo bar + bar baz)","(foo (plus bar bar) baz)");
   check_parse("(1+23*4)","(plus 1 (times 23 4))");
   check_parse("(a<b && c>d+e)","(and (less a b) (greater c (plus d e)))");
 
@@ -790,4 +790,10 @@ test_case(tree_infix) {
   check_parse("(a b:c d)","(cons (a b) (c d))");
 
   check_parse("([]:[]:a b+d)","(cons (cons list list) (plus (a b) d))");
+
+  check_parse("(a+b)","(plus a b)");
+  check_parse("(a==b)","(equal a b)");
+  check_parse("(!a)","(not a)");
+  check_parse("(-a)","(negative a)");
+  check_parse("(a-b/c)","(minus a (div b c))");
 }
