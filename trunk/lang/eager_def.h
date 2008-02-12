@@ -45,7 +45,7 @@
   template<LANG_DEF_type_params(n)>                                     \
   struct eager_def ## n : public def {                                  \
     eager_def ## n(const Base& fun) : base(fun) {}                      \
-    void operator()(const_vsubtree loc,vsubtree dst) const {            \
+    void operator()(const_subvtree loc,subvtree dst) const {            \
       assert(loc.arity()==n);                                           \
       BOOST_PP_REPEAT(n,LANG_DEF_vtree_decl,~);                         \
       const_vsub_child_it child=loc.begin_sub_child();                  \

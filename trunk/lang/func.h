@@ -25,7 +25,7 @@ struct func_base {
   virtual ~func_base() {}
 
   virtual arity_t arity() const=0;
-  virtual void operator()(const_vsubtree loc,vsubtree dst) const=0;
+  virtual void operator()(const_subvtree loc,subvtree dst) const=0;
 };
 
 template<arity_t Arity>
@@ -37,14 +37,14 @@ struct func : public func_base {
   func(arity_t a) : _arity(a) {}
 
   arity_t arity() const { return _arity; }
-  void operator()(const_vsubtree loc,vsubtree dst) const {}
+  void operator()(const_subvtree loc,subvtree dst) const {}
   
   friend struct environment;
  protected:
   arity_t _arity;
   vtree _body;
 
-  void set_body(vsubtree body) { _body.splice(_body.end(),body); }
+  void set_body(subvtree body) { _body.splice(_body.end(),body); }
 };
 
 }} //namespace plap::lang

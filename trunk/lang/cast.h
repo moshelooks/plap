@@ -86,21 +86,21 @@ inline arity_t arg_idx(const vertex& v) {
 namespace lang_private {
 template<typename T>
 struct literal_caster { 
-  T operator()(const_vsubtree s) { 
+  T operator()(const_subvtree s) { 
     assert(s.childless());
     return vertex_cast<T>(s.root()); 
   }
 };
 template<typename T>
 struct literal_caster<list_of<T> > {
-  list_of<T> operator()(const_vsubtree s) { 
+  list_of<T> operator()(const_subvtree s) { 
     assert(type_name(s.root())==type_name(func_t()));
     return list_of<T>(s);
   }
 };
 template<typename T>
 struct literal_caster<func_of<T> > {
-  func_of<T> operator()(const_vsubtree s) { 
+  func_of<T> operator()(const_subvtree s) { 
     assert(type_name(s.root())==type_name(func_t()));
     return func_of<T>(s);
   }
@@ -108,12 +108,12 @@ struct literal_caster<func_of<T> > {
 } //namespace lang_private
 
 template<typename T>
-T literal_cast(const_vsubtree s) { 
+T literal_cast(const_subvtree s) { 
   return lang_private::literal_caster<T>()(s); 
 }
 
 template<>
-inline const_vsubtree literal_cast<const_vsubtree>(const_vsubtree s) { 
+inline const_subvtree literal_cast<const_subvtree>(const_subvtree s) { 
   return s; 
 }
 

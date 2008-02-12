@@ -22,7 +22,7 @@
 
 namespace plap { namespace lang_io {
 
-ostream& pretty_print(ostream& out,const_vsubtree s);
+ostream& pretty_print(ostream& out,const_subvtree s);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_PRETTY_PRINT_H__

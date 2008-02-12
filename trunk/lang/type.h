@@ -33,7 +33,7 @@ typedef bool     bool_t;
 
 //fwd declaration
 template<typename T>
-T literal_cast(const_vsubtree);
+T literal_cast(const_subvtree);
 template<typename T>
 T vertex_cast(const vertex&);
 template<typename T>
@@ -42,11 +42,11 @@ T& vertex_cast(vertex&);
 namespace lang_private {
 template<typename Type>
 struct type : boost::equality_comparable<Type> {
-  type(const_vsubtree s) : _s(s) { assert(vertex_cast<func_t>(s.root())); }
+  type(const_subvtree s) : _s(s) { assert(vertex_cast<func_t>(s.root())); }
   bool operator==(const Type& rhs) const { return _s==rhs._s; }
   Type operator=(const Type& rhs) { _s=rhs._s; }
  protected:
-  const_vsubtree _s;
+  const_subvtree _s;
 };
 }//namespace lang_private
 
@@ -63,7 +63,7 @@ struct list_of {
                                     const_vsub_child_it> const_iterator;
   typedef const_iterator iterator;
 
-  list_of(const_vsubtree s) : _s(s) {}
+  list_of(const_subvtree s) : _s(s) {}
 
   const_iterator begin() const { 
     return util::transform_it(this->_s.begin_sub_child(),&literal_cast<T>);
@@ -78,7 +78,7 @@ struct list_of {
   const T& front() const { return literal_cast<T>(this->_s.front_sub()); }
   const T& back() const { return literal_cast<T>(this->_s.back_sub()); }
  protected:
-  const_vsubtree _s;
+  const_subvtree _s;
 };
 
 template<typename T>
@@ -86,11 +86,11 @@ struct func_of;
 
 template<typename T,typename U>
 struct func_of<T(U)> {
-  func_of(const_vsubtree s) : lang_private::type<func_of<T(U)> >(s) {}
+  func_of(const_subvtree s) : lang_private::type<func_of<T(U)> >(s) {}
   T operator()(const U& u) {
 #if 0
      //break constness to add args
-    vsubtree sub=*reinterpret_cast<vsubtree*>(&this->_s);
+    subvtree sub=*reinterpret_cast<subvtree*>(&this->_s);
     sub.append(sub.begin(),u);
     (*vertex_cast<def_t>(sub.root()))(sub,tmp);
     sub.erase(sub.end_child()); //remove the args ****/
