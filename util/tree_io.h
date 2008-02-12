@@ -20,10 +20,7 @@
 #include <istream>
 #include <ostream>
 #include <string>
-#include <exception>
-#include <vector>
 #include "tree.h"
-#include "bimap.h"
 
 namespace plap { namespace util {
 
@@ -32,24 +29,7 @@ extern const tree_io_modifier sexpr_format;   //(trees (like this) for io)
 extern const tree_io_modifier funcall_format; //trees(like(this) for io)
 namespace util_private {
 extern bool sexpr_io;
-struct op_name {};
-struct op_symbol {};
-
-typedef bimap<std::string,std::string,op_name,op_symbol>::type infix_map;
-extern const infix_map imap;
-inline const std::string& name2symbol(const std::string& s) {
-  infix_map::index<op_name>::type::const_iterator i=
-      boost::multi_index::get<op_name>(imap).find(s);
-  return i==boost::multi_index::get<op_name>(imap).end() ? s : i->second;
-}
-inline const std::string& symbol2name(const std::string& s) {
-  infix_map::index<op_symbol>::type::const_iterator i=
-      boost::multi_index::get<op_symbol>(imap).find(s);
-  return i==boost::multi_index::get<op_symbol>(imap).end() ? s : i->first;
-}
 } //namespace util_private
-using util_private::name2symbol;
-using util_private::symbol2name;
 
 std::ostream& operator<<(std::ostream& out,const tree_io_modifier& m);
 
@@ -78,11 +58,7 @@ std::ostream& operator<<(std::ostream& out,const tree<T>& tr) {
   return out;
 }
 
-std::istream& operator>>(std::istream&,
-                         tree<std::string>&) throw(std::runtime_error);
-
-void string2sexpr(const std::string&,tree<std::string>&) 
-    throw(std::runtime_error);
+std::istream& operator>>(std::istream& in,tree<std::string>& dst);
 
 }} //namespace plap::util
 

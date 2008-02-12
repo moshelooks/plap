@@ -32,15 +32,15 @@ void initialize_lib(environment& env);
 template<typename T>
 T lang_plus(list_of<T> l) { return std::accumulate(l.begin(),l.end(),T(0)); }
 
-inline disc_t lang_foreach(list_of<const_vsubtree> l,
-                         func_of<const_vsubtree(const_vsubtree)> f) {
+inline disc_t lang_foreach(list_of<const_subvtree> l,
+                         func_of<const_subvtree(const_subvtree)> f) {
   //fixmestd::for_each(l.begin(),l.end(),f);
   return 0;
 }
 
-disc_t lang_print(const_vsubtree v) { 
+disc_t lang_print(const_subvtree v) { 
   std::cout << "yuk ";
-  //foreach (const_vsubtree s,l) std::cout << "yuk ";
+  //foreach (const_subvtree s,l) std::cout << "yuk ";
   return 0;
 }
 

@@ -36,7 +36,7 @@ extern disc_t unit;
 //def(name list(arg1 arg2 ...) body)
 #if 0
 struct def : public narg_func<3> {
-  void operator()(const_vsubtree s,vsubtree d) const {
+  void operator()(const_subvtree s,subvtree d) const {
     
   }
 };
@@ -45,7 +45,7 @@ struct def : public narg_func<3> {
 /**
 template<typename T>
 struct eval : public func_base {
-  void operator()(const_vsubtree s,vsubtree d) const {
+  void operator()(const_subvtree s,subvtree d) const {
     assert(d.childless());
     if (s.childless())
       d.root()=s.root();
@@ -57,7 +57,7 @@ struct eval : public func_base {
 
 template<typename T>
 struct cons : public def {
-  void operator()(const_vsubtree s,vsubtree d) const {
+  void operator()(const_subvtree s,subvtree d) const {
     assert(d.childless());
     d.root()=def_t(this);
     d.append(d.begin(),s.arity(),vertex());

@@ -768,32 +768,4 @@ test_case(tree_input_modifiers) {
   check_tree(tr,8,s);
   
   check_parse2(s,s,tr);
-
-  check_parse("((1) (2) (3))","(1 2 3)");
-}
-
-test_case(tree_infix) {
-  check_parse("(foo bar + bar baz)","(foo (plus bar bar) baz)");
-  check_parse("(1+23*4)","(plus 1 (times 23 4))");
-  check_parse("(a<b && c>d+e)","(and (less a b) (greater c (plus d e)))");
-
-
-  check_parse("(foo x p = \\y z -> z+q)",
-              "(def foo (list x p) (lambda (arrow (y z) (plus z q))))");
-
-  check_parse("([1,2,3,foo bar, baz])","(list 1 2 3 (foo bar) baz)");
-
-  check_parse("([(a b)])","(list (a b))");
-
-  check_parse("([(a b),c+d,a (x x)])","(list (a b) (plus c d) (a (x x)))");
-
-  check_parse("(a b:c d)","(cons (a b) (c d))");
-
-  check_parse("([]:[]:a b+d)","(cons (cons list list) (plus (a b) d))");
-
-  check_parse("(a+b)","(plus a b)");
-  check_parse("(a==b)","(equal a b)");
-  check_parse("(!a)","(not a)");
-  check_parse("(-a)","(negative a)");
-  check_parse("(a-b/c)","(minus a (div b c))");
 }

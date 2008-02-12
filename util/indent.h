@@ -14,25 +14,16 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_VTREE_FWD_H__
-#define PLAP_LANG_VTREE_FWD_H__
+#ifndef PLAP_UTIL_INDENT_H__
+#define PLAP_UTIL_INDENT_H__
 
-#include "vertex.h"
+#include <istream>
+#include <ostream>
 
-//fwd declarations
-namespace plap { namespace util { 
-template<typename>
-struct tree;
-template<typename>
-struct subtree;
-template<typename>
-struct const_subtree;
+namespace plap { namespace util {
+
+void indent2parens(std::istream& in,std::ostream& out);
+void parens2indent(std::istream& in,std::ostream& out);
+
 }} //namespace plap::util
-
-namespace plap { namespace lang {
-typedef util::tree<vertex>               vtree;
-typedef util::subtree<vertex>            subvtree;
-typedef util::const_subtree<vertex>      const_subvtree;
-}} //namespace plap::lang
-
-#endif //PLAP_LANG_VTREE_FWD_H__
+#endif //PLAP_UTIL_INDENT_H__

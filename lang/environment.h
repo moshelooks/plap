@@ -41,16 +41,16 @@ struct environment : public boost::noncopyable {
 
   //these all splice out body - so if you want to keep it, make a copy
   template<typename Iterator>
-  func_t define_func(Iterator f,Iterator l,vsubtree body,
+  func_t define_func(Iterator f,Iterator l,subvtree body,
                      const std::string& name) { 
     return define_func(f,l,body,declare_func(std::distance(f,l),name));
   }
   template<typename Iterator>
-  func_t define_func(Iterator f,Iterator l,vsubtree body) { 
+  func_t define_func(Iterator f,Iterator l,subvtree body) { 
     return define_func(f,l,body,new func(std::distance(f,l)));
   }
   template<typename Iterator>
-  func_t define_func(Iterator f,Iterator l,vsubtree body,func_t decl) { 
+  func_t define_func(Iterator f,Iterator l,subvtree body,func_t decl) { 
     assert(_argnames.find(decl)==_argnames.end());
     assert(dynamic_cast<func*>(decl));
     std::transform(f,l,std::back_inserter(

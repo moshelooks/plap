@@ -27,7 +27,7 @@
 // creates a def that corresponds to summing over a list of ints
 //
 // make_lazy_def<arity>(f) does the same thing, but all arguments to f are of
-// type const_vsubtree (make_lazy_def not yet implemented - fixme)
+// type const_subvtree (make_lazy_def not yet implemented - fixme)
 
 #ifndef PLAP_LANG_DEF_H__
 #define PLAP_LANG_DEF_H__
@@ -38,7 +38,7 @@ namespace plap { namespace lang {
 
 struct def {
   virtual ~def() {}
-  virtual void operator()(const_vsubtree loc,vsubtree dst) const=0;
+  virtual void operator()(const_subvtree loc,subvtree dst) const=0;
 };
 
 }} //namespace plap::lang

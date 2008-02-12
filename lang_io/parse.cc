@@ -15,365 +15,112 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "parse.h"
-#include <map>
-#include <stack>
-#include <boost/lexical_cast.hpp>
-#include <iostream>
-#include <sstream>
-#include "iterator_shorthands.h"
-#include "dorepeat.h"
 #include "algorithm.h"
-#include "foreach.h"
-#include "tree_io.h"
-#include "environment.h"
-#include "core.h"
+#include <sstream>
+#include <boost/spirit/core.hpp>
+#include <boost/spirit/tree/ast.hpp>
+#include <boost/spirit/tree/parse_tree.hpp>
+#include "tree.h"
+#include "operators.h"
+#include "indent.h"
 
 namespace plap { namespace lang_io {
 
-using namespace lang;
-using namespace util;
-using boost::lexical_cast;
-using boost::bind;
-using std::string;
-using std::stringstream;
-
-void throw_bad_arity(const string& name,arity_t actual, arity_t tgt) {
-  throw std::runtime_error(string("Bad arity for ")+name+" - expected "+
-                           lexical_cast<string>((int)tgt)+", got "+
-                           lexical_cast<string>((int)actual)+".");
-}
-
-#define make_exception(nm,dsc)                   \
-  void throw_ ## nm(const string& str) {         \
-    throw std::runtime_error(dsc);               \
-  }
-make_exception(undeclared_name,"Bad nested definition of '"+str+
-               "' - name must be declared first at global scope.")
-make_exception(bad_identifier,"Bad identifier '"+str+"'.")
-make_exception(bad_number,"Expected a number, got '"+str+"'.")
-make_exception
-    (bad_arity_decl,
-     "Arity in declarion must be a positive integer literal - instead got '"+
-     str+"'.");
-make_exception
-    (bad_args,
-     "Bad argument list '"+str+"' - should be unbound scalars (e.g.$foo).");
-make_exception(unbound_scalar,"Unbound scalar '"+str+"'.");
-make_exception(bad_indent,"Bad indention around line '"+str+"'.");
-
-#define process(name) \
-  void process_ ## name(subsexpr src,vsubtree dst)
-#define special_case(name)                       \
-    if (f==id::name) {                           \
-      process_ ## name(src,dst);                 \
-      return;                                    \
-    }
-
-struct semantic_analyzer {
-  semantic_analyzer(environment& e,const_subsexpr r) : env(e),root(r) {}
-  environment& env;
-  const_subsexpr root;
-
-  process(sexpr) {
-    if (src.childless())
-      process_leaf(src,dst);
-    else
-      process_internal(src,dst);
-  }
-
-  process(leaf) { dst.root()=string2vertex(src.root()); }
-
-  process(internal) {
-    if (func_t f=string2func(src.root())) {
-      validate_arity(src,f);
-
-      special_case(def);
-      special_case(lambda);
-      special_case(let);
-      special_case(decl);
-
-      dst.root()=f;
-      process_children(src,dst);
-    } else { //see if its a scalar - if so, need to introduce an apply node
-      dst.root()=id::apply;
-      dst.append(string2scalar(src.root()));
-      dst.append(vertex(id::list));
-      process_children(src,dst.back_sub());
-    }
-  }
-
-  process(children) {
-    dst.append(src.arity(),vertex());
-    for_each(src.begin_sub_child(),src.end_sub_child(),dst.begin_sub_child(),
-             bind(&semantic_analyzer::process_sexpr,this,_1,_2));
-  }
-
-  process(def) { //def(name list(arg1 arg2 ...) body)
-    //validate and set up arguments
-    const string& name=sexpr2identifier(src[0]);
-    replace_args(src[1],src[2]);
-    vtree body=vtree(vertex());
-    process_sexpr(src[2],body);
-
-    if (func_t f=env.name2func(name)) { //an already-declared function?
-      validate_arity(src[1],f);
-      if (nested(src)) { //set to be created at runtime - def(func args body)
-#if 0
-        dst.root()=id::def;
-        dst.append(i->second);
-        dst.append(id::list);
-        dst.back_sub();//fixeme what do do with args???
-        dst.splice(dst.end_child(),body);
-#endif
-      } else { //create it now and return unit
-        env.define_func(src[1].begin_child(),src[1].end_child(),
-                        body,f);
-        dst.root()=id::unit;
-      }
-    } else { //a previously undeclared function
-      if (nested(src)) //error - defs must first be declared at global scope
-        throw_undeclared_name(name);
-      //otherwise, create a new function and return unit
-      env.define_func(src[1].begin_child(),src[1].end_child(),body,name);
-      dst.root()=id::unit;
-    }
-  }
-  
-  process(lambda) { //lambda(args body)
-#if 0
-    //fixme - create a closure if variables are included
-    argument_list args=bind_arguments(src[0],scalars); //fixme
-    vtree body(vertex());
-    process_sexpr(src[1],body);
-    scalars.pop(args); //fixme
-    dst.root()=env.create_func(args,body);
-#endif
-  }
-
-  process(let) { //let(list(def1 ...) body)
-#if 0
-    argu..;//fixme
-#endif
-  }
-
-  process(decl) { //decl(name arity)
-    env.declare_func(sexpr2arity(src[1]),sexpr2identifier(src[0]));
-  }
- 
-  //parsing an individual node always unambiguous (i.e. can be done without any
-  //context other than the given environment+bindings)
-  //throws if invalid
-  vertex string2vertex(const string& str) {
-    assert(!str.empty());
-    if (func_t f=string2func(str))
-      return f;
-    char c=str[0];
-    if (c=='-' || c=='.' || (c>='0' && c<='9')) {
-      try {
-        return lexical_cast<contin_t>(c);
-      } catch (...) {
-        throw_bad_number(str);
-      }
-    }
-    return string2scalar(str);
-  }
-
-  //returns a func_t if available, else NULL
-  func_t string2func(const string& str) {
-#if 0
-    bindings::const_iterator i=lets.find(str);
-    if (i!=lets.end())
-      return i->second;
-#endif
-    if (func_t f=env.name2func(str))
-      return f;
-    return NULL;
-  }
-
-  //returns a scalar if available, else throws
-  vertex string2scalar(const string& str) {
-    if (str[0]!='#')
-      throw_bad_identifier(str);
-    assert(str.size()>1u);
-    return arg(arity_t(str[1]));
-  }
-
-  const string& sexpr2identifier(const_subsexpr src) {
-    if (!src.childless())
-      throw_bad_identifier(lexical_cast<string>(src));
-    return src.root();
-  }
-
-  lang::arity_t sexpr2arity(const_subsexpr src) {
-    if (!src.childless())
-      throw_bad_arity_decl(lexical_cast<string>(src));
-    try {
-      return lexical_cast<arity_t>(src.root());
-    } catch (...) {
-      throw_bad_arity_decl(lexical_cast<string>(src));
-    }
-    return arity_t(0);
-  }
-
-  void validate_arity(const_subsexpr src,func_t f) {
-    if (src.arity()!=f->arity())
-      if (const string* name=env.func2name(f))
-        throw_bad_arity(*name,src.arity(),f->arity());
-      else
-        throw_bad_arity("anonymous function",src.arity(),f->arity());
-  }
-  
-  /**  void bind_arguments(const_subsexpr src,bindings& scalars) {
-
-       }**/
-
-  bool nested(const_subsexpr src) { return src.begin()!=root.begin(); }
-
-  bool scalar(const string& s) { return (s[0]=='$'); }
-
-  void replace_args(const_subsexpr args,subsexpr body) {
-    if (!args.flat())
-      throw_bad_args(lexical_cast<string>(args));
-    std::map<string,arity_t> arg2idx(pair_it(args.begin_child(),count_it(0)),
-                                     pair_it(args.end_child(),count_it(-1)));
-    if (!scalar(arg2idx.begin()->first) || !scalar(arg2idx.rbegin()->first))
-      throw_bad_args(lexical_cast<string>(args));
-
-    foreach (string& s,body) {
-      if (s[0]=='#')
-        throw_bad_identifier(s);
-      if (scalar(s)) {
-        std::map<string,arity_t>::const_iterator i=arg2idx.find(s);
-        if (i==arg2idx.end())
-          throw_unbound_scalar(s);
-        s[0]='#';
-        s[1]=char(i->second);
-      }
-    }
-  }
-};
-
 namespace {
-const char whitespace[]=" \t";
-bool is_whitespace(char c) { return (c==' ' || c=='\t'); }
-string::size_type count_indent(const string& s) {
-  return s.find_first_not_of(whitespace);
-}
-bool all_whitespace(const string& s) {
-  return count_indent(s)==string::npos;
-}
-bool has_whitespace(const string& s,string::size_type from) {
-  return s.find_first_of(whitespace,from)!=string::npos;
-}
-void chomp_trailing_whitespace(string& s) {
-  s.erase(s.find_last_not_of(whitespace)+1);
-}
+using namespace boost::spirit;
+using std::string;
 
-void zap_comments(string& s) {
-  string::size_type from=s.find_first_of('#');
-  if (from!=string::npos && (from==0 || s[from-1]!='\\'))
-    s.erase(from);
-}
+void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
+  string::size_type arity=s.children.size();
+  string name=string(s.value.begin(),s.value.end());
 
-void process_line(std::istream& in,string& s) {
-  s.clear();
-  do {
-    std::getline(in,s);
-    zap_comments(s);
-    if (!all_whitespace(s))
-      break;
-  } while (in.good());
-  chomp_trailing_whitespace(s);
+  if (name==def_symbol) { //special case
+    if (arity!=2u)
+      throw std::runtime_error("Malformed def of '"+name+"'.");
+    ++arity;
+    d.append(string(s.children[0].value.begin(),s.children[0].value.end()));
+    d.append(string());
+    if (!s.children[0].children.empty())
+      tosexpr(s.children[0],d.back_sub());
+    d.back()=list_name;
+    d.append(string());
+    tosexpr(s.children[1],d.back_sub());
+  } else {
+    d.append(s.children.size(),string());
+    for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
+  }
+  d.root()=symbol2name(name,arity);
 }
+struct sexpr_grammar : public grammar<sexpr_grammar> {
+  template<typename Scanner>
+  struct definition {
+    definition(const sexpr_grammar&) {
+      sexpr    = inner_node_d[ch_p('(') >> range_x >> ch_p(')')];
+
+      range_x  = list_x
+               | (no_node_d[ch_p('[')] >> (seq|sexpr)
+                  >> root_node_d[str_p("..")] 
+                  >> (seq|sexpr) >> no_node_d[ch_p(']')]);
+      list_x   = def_x
+               | root_node_d[ch_p('[')] >> infix_node_d[(list_x|sexpr) % ',']
+                                        >> no_node_d[ch_p(']')];
+
+      def_x    = lambda_x  >> !(root_node_d[ch_p('=')] >>
+                                (eps_p(~ch_p('=') >> *anychar_p) >> lambda_x));
+
+      lambda_x =            !root_node_d[ch_p('\\')]               >> arrow_x;
+      arrow_x  = seq   >> *(root_node_d[str_p("->")]              >> seq);
+
+      seq      = (root_node_d[or_x] >> *or_x);
+
+      or_x     = and_x  >> *(root_node_d[str_p("||")]              >> and_x);
+      and_x    = cons_x >> *(root_node_d[str_p("&&")]              >> cons_x);
+      cons_x   = eq_x   >> *(root_node_d[ch_p(':')]                >> eq_x);
+      eq_x     = cmp_x  >> *(root_node_d[str_p("==")|"!="]         >> cmp_x);
+      cmp_x    = add_x  >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add_x);
+      add_x    = mlt_x  >> *(root_node_d[ch_p('+')|'-']            >> mlt_x);
+      mlt_x    = neg_x  >> *(root_node_d[ch_p('*')|'/']            >> neg_x);
+      neg_x    =           *root_node_d[ch_p('!')|ch_p('-')]       >> prime;
+
+
+      prime   = sexpr | term;
+      term    = token_node_d[lexeme_d[!ch_p('$') >> (alpha_p | '_')
+                                      >> *(alnum_p | '_')]]
+              | lexeme_d[real_p]
+              | inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]");
+      
+      ident   = scalar | name;
+      scalar  = '$' >> name;
+      // name    = 
+      //+(anychar_p-'|'-'&'-'='-'!'-'<'-'>'-','-'['-']'-'+'-'-'-'*'-
+      //      '/'-'('-')'-':'-'.'-space_p);
+    }
+    rule<Scanner> sexpr,range_x,list_x,def_x,lambda_x,arrow_x,seq;
+    rule<Scanner> or_x,and_x,cons_x,eq_x,cmp_x,add_x,mlt_x,neg_x,prime,term;
+    rule<typename lexeme_scanner<Scanner>::type> ident,scalar,name;
+    const rule<Scanner>& start() const { return sexpr; }
+  };
+};
 } //namespace
 
-void indent_parse(std::istream& in,std::ostream& out) {
-  std::stack<string::size_type> indents;
-  string s;
-  do {
-    process_line(in,s);
-    if (s.empty())
-      break;
-
-    string::size_type indent=count_indent(s);
-    if (!indents.empty() && indent<=indents.top()) {
-      for (out << ')';!indents.empty() && indent<indents.top();indents.pop())
-        out << ')';
-      if (indents.empty() || indent!=indents.top())
-        throw_bad_indent(s);
-    } else {
-      indents.push(indent);
-    }
-    out << '(' << s;
-  } while (in.good() && is_whitespace(in.peek()));
-  while (!indents.empty()) {
-    out << ')';
-    indents.pop();
-  }
+void parse(std::istream& in,sexpr& dst) {
+  std::stringstream ss;
+  util::indent2parens(in,ss);
+  parse(ss.str(),dst);
 }
-        
+
+void parse(const std::string& str,sexpr& dst) {
+  if (str.empty()) {
+    dst.clear();
+    return;
+  }
+
+  dst=sexpr(string());
+  const char* s=str.data();
+  tree_parse_info<> t=ast_parse(s,s+str.length(),sexpr_grammar(),space_p);
+  if (!t.match || !t.full || t.trees.size()!=1)
+    throw std::runtime_error("bad tree structure parsing '"+str+"'");
+  tosexpr(t.trees.front(),dst);
+}
   
-  /**
-  string lastline,s;
-  string::size_type indent=0;
-  std::stack<string::size_type> oldindents;
-  for (string s=process_line(in,s);!s.empty();process_line(in,s)) {
-    string::size_type newindent=count_whitespace(s);
-    if (newindent>indent)
-      oldindents.push(indent);
-    if (newindent>indent || has_whitespace(lastline))
-      out << lparen;
-    out << lastline << " ";
-    while (newindent<indent) {
-      if (oldindents.empty())
-        throw_bad_indent(s);
-      out << rparen;
-      indent=oldindents.top();
-      oldindents.pop();
-    }
-    bool has=has_whitespace(s,newindent);
-    if (has)
-      out << lparen;
-      out << s;
-      if (has)
-        out << rparen;
-    }    
-    if (!is_whitespace(in.peek()))
-      break;
-    indent=newindent;
-  }
-finalize:
-  if (!oldindents.empty())
-    throw_bad_indent(s);
-  **/
-
-
-void stream2sexpr(std::istream& in,sexpr& dst) {
-  stringstream ss;
-  indent_parse(in,ss);
-  string2sexpr(ss.str(),dst);
-}
-/*
-void sexpr2vtree(const_subsexpr src,vsubtree dst,environment& env)
-    throw(std::runtime_error) {
-  sexpr tmp(src);
-  semantic_analyzer se(env,tmp);
-  se.process_sexpr(tmp,dst);
-}
-
-void stream2vtree(std::istream& in,lang::vsubtree dst,lang::environment& env,
-                  bool interactive) throw(std::runtime_error) {
-  sexpr s=sexpr(string());
-  stream2sexpr(in,s,interactive);
-  semantic_analyzer se(env,s);  
-  se.process_sexpr(s,dst);
-}
-
-void string2vtree(const string& str,lang::vsubtree dst,
-                  lang::environment& env) throw(std::runtime_error) {
-  stringstream ss;
-  ss << str;
-  stream2vtree(ss,dst,env);
-}
-*/
 }} //namespace plap::lang

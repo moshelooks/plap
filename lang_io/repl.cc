@@ -29,7 +29,7 @@ void repl(std::istream& in,std::ostream& out,lang::environment& env,
     out << prompt << std::endl;
 
     sexpr s;
-    stream2sexpr(in,s);
+    parse(in,s);
     if (!in.good())
       break;
     out << std::endl;

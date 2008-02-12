@@ -1,5 +1,5 @@
 # Factorial
-fact $n = if $n=0 1 $n*(fact $n-1)
+fact $n = if $n==0 1 $n*(fact $n-1)
 # or
 fact $n = accumulate [1..$n] times
 

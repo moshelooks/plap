@@ -19,12 +19,7 @@
 #include "tree_io.h"
 #include <algorithm>
 #include <boost/spirit/core.hpp>
-#include <boost/spirit/tree/ast.hpp>
-#include <boost/assign/list_of.hpp>
-#include "algorithm.h"
-#include "tree_iterator.h"
-
-#include <iostream>
+#include "io.h"
 
 namespace plap { namespace util {
 
@@ -33,44 +28,7 @@ const tree_io_modifier funcall_format=tree_io_modifier();
 
 namespace util_private {
 bool sexpr_io=false;
-const infix_map imap=boost::assign::map_list_of 
-    //nullary operators
-    ("list","[]")
-   
-    //unary operators
-    ("not","!")
-    ("negative","-")
-    ("lambda","\\")
-
-    //negavite vs minus fixme
-
-    //binary operators
-    ("plus","+")
-    ("minus","-")
-    ("times","*")
-    ("div","/")
-
-    ("equal","==")
-    ("nequal","!=")
-    ("less","<")
-    ("less_equal","<=")
-    ("greater",">")
-    ("greater_equal",">=")
-
-    ("and","&&")
-    ("or","||")
-
-    ("arrow","->")
-    ("cons",":")
-    //ternary operators
-    ("def","=")
-
-    //variadic operators
-    ("list","")
-    ("list","[");
-
-} //namespace util_private
-
+} //~namespace util_private
 std::ostream& operator<<(std::ostream& out,const tree_io_modifier& m) {
   assert(&m==&sexpr_format || &m==&funcall_format);
   if (&m==&sexpr_format)
@@ -84,131 +42,49 @@ namespace {
 using namespace boost::spirit;
 using std::string;
 
-void to_sexpr(const tree_node<node_val_data<> >& s,subtree<string> d) {
-  d.root()=symbol2name(string(s.value.begin(),s.value.end()));
-  d.append(s.children.size(),string());
-  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&to_sexpr);
-}
-struct sexpr_grammar : public grammar<sexpr_grammar> {
-  template<typename Scanner>
-  struct definition {
-    definition(const sexpr_grammar&) {
-      sexpr    = inner_node_d[ch_p('(') >> seq >> ch_p(')')];
-
-      seq      = root_node_d[list_x] >> *list_x;
-
-      //list_x | (root_node_d[term] >> +list_x);
-      pterm    = inner_node_d['(' >> pterm >> ')'] | term;
-
-      list_x   = def_x
-               | root_node_d[ch_p('[')] >> infix_node_d[(seq|sexpr) % ',']
-                                        >> no_node_d[ch_p(']')];
-      def_x    = lambda_x  >> !(root_node_d[ch_p('=')] >>
-                                (eps_p(~ch_p('=') >> *anychar_p) >> lambda_x));
-#if 0
-/* !(((*~ch_p('=')) & (term >> terms))
-                   >> root_node_d[ch_p('=')])
-
-          //(eps_p(*anychar_p >> ~ch_p('=') >> ch_p('=')) 
-          //       >> 
-          >>*/!(foo >> root_node_d[ch_p('=')]) >>
-
-      foo = eps_p(*~ch_p('=')) >> +term;
-#endif
-      lambda_x =            !root_node_d[ch_p('\\')]               >> arrow_x;
-      arrow_x  = or_x   >> *(root_node_d[str_p("->")]              >> or_x);
-
-      or_x     = and_x  >> *(root_node_d[str_p("||")]              >> and_x);
-      and_x    = cons_x >> *(root_node_d[str_p("&&")]              >> cons_x);
-      cons_x   = eq_x   >> *(root_node_d[ch_p(':')]                >> eq_x);
-      eq_x     = cmp_x  >> *(root_node_d[str_p("==")|"!="]         >> cmp_x);
-      cmp_x    = add_x  >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add_x);
-      add_x    = mlt_x  >> *(root_node_d[ch_p('+')|'-']            >> mlt_x);
-      mlt_x    = neg_x  >> *(root_node_d[ch_p('*')|'/']            >> neg_x);
-      neg_x    =           *root_node_d[ch_p('!')|ch_p('-')]       >> prime;
-
-
-      prime   = sexpr | term;
-      term    = token_node_d[lexeme_d[+(anychar_p-'|'-'&'-'='-'!'-'<'-'>'-','-
-                                         '['-']'-'+'-'-'-'*'-'/'-'('-')'-':'-
-                                        space_p)]]
-              | inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]");
-      terms   = root_node_d[eps_p] >> *term;
-    }
-    rule<Scanner> sexpr,list_x,def_x,lambda_x,arrow_x;
-    rule<Scanner> or_x,and_x,cons_x,eq_x,cmp_x,add_x,mlt_x,neg_x;
-    rule<Scanner> seq,prime,term,terms,pterm,foo;
-    const rule<Scanner>& start() const { return sexpr; }
-  };
-};
-
 tree<string>* tr;
 tree<string>::sub_child_iterator at;
 void begin_internal(const char* from, const char* to) {
-  at=tr->insert(at,string(from,to-1))->begin_child();
+  if (util_private::sexpr_io)
+    ++from;
+  else
+    --to;
+  at=tr->insert(at,string(from,to))->begin_child();
 }
 void end_internal(const char) { ++++at; }
 void add_leaf(const char* from, const char* to) {
   tr->insert(at,string(from,to));
 }
-struct funcall_grammar : public grammar<funcall_grammar> {
+struct tree_grammar : public grammar<tree_grammar> {
   template<typename ScannerT>
   struct definition {
-    definition(const funcall_grammar&) {
+    definition(const tree_grammar&) {
       term=lexeme_d[(+( anychar_p - ch_p('(') - ch_p(')') - space_p))]
           [&add_leaf];
-      beg=lexeme_d[(+( anychar_p - ch_p('(') - ch_p(')') - space_p)) >> '('];
+      if (util_private::sexpr_io)
+        beg=lexeme_d['(' >> (+( anychar_p - ch_p('(') - ch_p(')') - space_p))];
+      else
+        beg=lexeme_d[(+( anychar_p - ch_p('(') - ch_p(')') - space_p)) >> '('];
       expr=(beg[&begin_internal] >> +expr >> ch_p(')')[&end_internal]) |
           term;
     }
     rule<ScannerT> expr,beg,term;
+    
     const rule<ScannerT>& start() const { return expr; }
   };
 };
-
-void read_balanced(std::istream& in,string& str) {
-  int nparen=0;
-  do {
-    string tmp;
-    in >> tmp;
-    nparen+=count(tmp.begin(),tmp.end(),'(')-count(tmp.begin(),tmp.end(),')');
-    str+=tmp+' ';
-  } while (in.good() && nparen>0);
-  if (nparen!=0)
-    throw std::runtime_error("paren mismatch parsing tree: '"+str+"'");
-  str.erase(str.length()-1);
-}
-
 } //~namespace
 
-std::istream& operator>>(std::istream& in,
-                         tree<std::string>& dst) throw(std::runtime_error) {
+std::istream& operator>>(std::istream& in,tree<std::string>& dst) {
   std::string str;
   read_balanced(in,str);
-  string2sexpr(str,dst);
+  
+  dst.clear();
+  tr=&dst;
+  at=dst.begin();
+  parse(str.c_str(),tree_grammar(),space_p);
+
   return in;
-}
-
-void string2sexpr(const std::string& str,tree<std::string>& dst)
-    throw(std::runtime_error) {
-  if (str.empty())
-    return;
-  if (util_private::sexpr_io) {
-    dst=tree<std::string>(std::string());
-    const char* begin=str.c_str();
-    tree_parse_info<> t=ast_parse(begin,begin+str.length(),
-                                  sexpr_grammar(),space_p);
-
-    if (!t.match || !t.full || t.trees.size()!=1)
-      throw std::runtime_error("bad tree structure parsing '"+str+"'");
-    std::cout << "XX " << t.trees.front().children.size() << std::endl;
-    to_sexpr(t.trees.front(),dst);
-  } else {
-    dst.clear();
-    tr=&dst;
-    at=dst.begin();
-    parse(str.c_str(),funcall_grammar(),space_p);
-  }
 }
 
 }} //namespace plap::util
