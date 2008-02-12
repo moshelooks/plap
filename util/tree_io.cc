@@ -14,6 +14,8 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+//#define BOOST_SPIRIT_DEBUG
+
 #include "tree_io.h"
 #include <algorithm>
 #include <boost/spirit/core.hpp>
@@ -21,6 +23,8 @@
 #include <boost/assign/list_of.hpp>
 #include "algorithm.h"
 #include "tree_iterator.h"
+
+#include <iostream>
 
 namespace plap { namespace util {
 
@@ -89,26 +93,41 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
-      sexpr    = inner_node_d[ch_p('(') >> *(list_x|sexpr) >> ch_p(')')];
+      sexpr    = inner_node_d[ch_p('(') >> seq >> ch_p(')')];
+
+      seq      = root_node_d[list_x] >> *list_x;
+
+      //list_x | (root_node_d[term] >> +list_x);
+      pterm    = inner_node_d['(' >> pterm >> ')'] | term;
 
       list_x   = def_x
-               | root_node_d[ch_p('[')] >> infix_node_d[(list_x|sexpr) % ',']
+               | root_node_d[ch_p('[')] >> infix_node_d[(seq|sexpr) % ',']
                                         >> no_node_d[ch_p(']')];
-      def_x    = !(term >> terms >> root_node_d[ch_p('P')])        >> lambda_x;
-      //def_x=lambda_x;
+      def_x    = lambda_x  >> !(root_node_d[ch_p('=')] >>
+                                (eps_p(~ch_p('=') >> *anychar_p) >> lambda_x));
+#if 0
+/* !(((*~ch_p('=')) & (term >> terms))
+                   >> root_node_d[ch_p('=')])
+
+          //(eps_p(*anychar_p >> ~ch_p('=') >> ch_p('=')) 
+          //       >> 
+          >>*/!(foo >> root_node_d[ch_p('=')]) >>
+
+      foo = eps_p(*~ch_p('=')) >> +term;
+#endif
       lambda_x =            !root_node_d[ch_p('\\')]               >> arrow_x;
-      arrow_x  = or_x   >> !(root_node_d[str_p("->")]              >> or_x);
+      arrow_x  = or_x   >> *(root_node_d[str_p("->")]              >> or_x);
 
-      or_x     = and_x  >> !(root_node_d[str_p("||")]              >> and_x);
-      and_x    = cons_x >> !(root_node_d[str_p("&&")]              >> cons_x);
-      cons_x   = eq_x   >> !(root_node_d[ch_p(':')]                >> eq_x);
-      eq_x     = cmp_x  >> !(root_node_d[str_p("==")|"!="]         >> cmp_x);
-      cmp_x    = add_x  >> !(root_node_d[str_p("<=")|">="|'<'|'>'] >> add_x);
-      add_x    = mlt_x  >> !(root_node_d[ch_p('+')|'-']            >> mlt_x);
-      mlt_x    = neg_x  >> !(root_node_d[ch_p('*')|'/']            >> neg_x);
-      neg_x    =           !root_node_d[ch_p('!')|ch_p('-')]       >> prime;
+      or_x     = and_x  >> *(root_node_d[str_p("||")]              >> and_x);
+      and_x    = cons_x >> *(root_node_d[str_p("&&")]              >> cons_x);
+      cons_x   = eq_x   >> *(root_node_d[ch_p(':')]                >> eq_x);
+      eq_x     = cmp_x  >> *(root_node_d[str_p("==")|"!="]         >> cmp_x);
+      cmp_x    = add_x  >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add_x);
+      add_x    = mlt_x  >> *(root_node_d[ch_p('+')|'-']            >> mlt_x);
+      mlt_x    = neg_x  >> *(root_node_d[ch_p('*')|'/']            >> neg_x);
+      neg_x    =           *root_node_d[ch_p('!')|ch_p('-')]       >> prime;
 
-      seq     = root_node_d[term] >> *prime;
+
       prime   = sexpr | term;
       term    = token_node_d[lexeme_d[+(anychar_p-'|'-'&'-'='-'!'-'<'-'>'-','-
                                          '['-']'-'+'-'-'-'*'-'/'-'('-')'-':'-
@@ -118,7 +137,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
     }
     rule<Scanner> sexpr,list_x,def_x,lambda_x,arrow_x;
     rule<Scanner> or_x,and_x,cons_x,eq_x,cmp_x,add_x,mlt_x,neg_x;
-    rule<Scanner> seq,prime,term,terms;
+    rule<Scanner> seq,prime,term,terms,pterm,foo;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
@@ -182,6 +201,7 @@ void string2sexpr(const std::string& str,tree<std::string>& dst)
 
     if (!t.match || !t.full || t.trees.size()!=1)
       throw std::runtime_error("bad tree structure parsing '"+str+"'");
+    std::cout << "XX " << t.trees.front().children.size() << std::endl;
     to_sexpr(t.trees.front(),dst);
   } else {
     dst.clear();
