@@ -17,10 +17,10 @@
 #include "parse.h"
 #include "algorithm.h"
 #include <sstream>
-#include <boost/next_prior.hpp>
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/tree/ast.hpp>
 #include <boost/spirit/tree/parse_tree.hpp>
+#include <boost/spirit/utility/confix.hpp>
 #include "tree.h"
 #include "operators.h"
 #include "indent.h"
@@ -47,15 +47,11 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
                                    s.children[0].value.end())+"'")+".");
     
     d.append(string(s.children[0].value.begin(),s.children[0].value.end()));
-    cout << d << endl;
     d.append(string());
     if (!s.children[0].children.empty())
       tosexpr(s.children[0],d.back_sub());
-    cout << d << endl;
     d.back()=list_name;
-    cout << d << endl;
     d.append(string());
-    cout << d << endl;
     if (arity==2u) {
       tosexpr(s.children[1],d.back_sub());
     } else if (arity>=2u) {
@@ -75,41 +71,50 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     //fixme - no apply!
-    //fixme - string literals
-    //fixme - ~ for concatenation
 
     definition(const sexpr_grammar&) {
-      sexpr  = no_node_d[ch_p('(')] >> root_node_d[list] 
-                                    >> *list >> no_node_d[ch_p(')')];
-      list   = range | (root_node_d[ch_p('[')]
-                        >> infix_node_d[(list|sexpr) % ','] 
-                        >> no_node_d[ch_p(']')]);
-      range  = def   | (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
-                        >> root_node_d[str_p("..")] >> (int_p|seq|sexpr)
-                        >> no_node_d[ch_p(']')]);
+      sexpr  = no_node_d[ch_p('(')] >> root_node_d[list] >> *list 
+                                    >> no_node_d[ch_p(')')];
+      list   = range    | listh;
+      range  = def      | rangeh;
 
-      def    =  lambda  >> !(root_node_d[ch_p('=')] >>
+      def    = lambda   >> !(root_node_d[ch_p('=')] >>
                              eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
       lambda =             ! root_node_d[ch_p('\\')]               >> arrow;
       arrow  = seq      >> *(root_node_d[str_p("->")]              >> lambda);
+
       seq    =               root_node_d[or_op]                    >> *or_op;
+
+      /*      seq    = or_op;      ((root_node_d[ch_p('(')] >> or_op >> ')')
+                             | root_node_d[or_op])                >> *or_op;*/
       or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
       and_op = cons     >> *(root_node_d[str_p("&&")]              >> cons);
       cons   = eq       >> *(root_node_d[ch_p(':')]                >> eq);
       eq     = cmp      >> *(root_node_d[str_p("==")|"!="]         >> cmp);
       cmp    = add      >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add);
-      add    = mlt      >> *(root_node_d[ch_p('+')|'-']            >> mlt);
+      add    = cat      >> *(root_node_d[ch_p('+')|'-']            >> cat);
+      cat    = mlt      >> *(root_node_d[ch_p('~')]                >> mlt);
       mlt    = neg      >> *(root_node_d[ch_p('*')|'/']            >> neg);
       neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
-      prime  = sexpr | term;
-      term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]") 
+      prime  = sexpr | term | listh | rangeh;
+      term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]") | str
              | lexeme_d[(token_node_d[!ch_p('$') >> (alpha_p | '_') >> 
                                       *(alnum_p | '_')]
                          | (real_p >> ~eps_p('.' | alnum_p)))];
+      str    = lexeme_d[root_node_d[ch_p('\"')] 
+                        >> *((ch_p('\\') >> '\"') | anychar_p - '\"') 
+                        >> no_node_d[ch_p('\"')]];
+
+      listh  = (root_node_d[ch_p('[')] >> infix_node_d[(list|sexpr) % ','] 
+                >> no_node_d[ch_p(']')]);
+      rangeh = (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
+                >> root_node_d[str_p("...")|".."]
+                >> (int_p|seq|sexpr) >> no_node_d[ch_p(']')]);
     }
     rule<Scanner> sexpr,list,range,def,lambda,arrow,seq;
-    rule<Scanner> or_op,and_op,cons,eq,cmp,add,mlt,neg,prime,term;
+    rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
+    rule<Scanner> prime,term,str,listh,rangeh;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
