@@ -35,46 +35,85 @@ namespace {
 using namespace boost::spirit;
 using std::string;
 
+void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d);
+
+inline string tostr(const tree_node<node_val_data<> >& s,int idx=-1) {
+  if (idx==-1)
+    return string(s.value.begin(),s.value.end());
+  return string(s.children[idx].value.begin(),s.children[idx].value.end());
+}
+void sexpr_rec(const tree_node<node_val_data<> >& s,subsexpr d,int n=0) {
+  d.append(s.children.size()-n,string());
+  for_each(s.children.begin()+n,s.children.end(),d.begin_sub_child(),&tosexpr);
+}
+
 void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
   string::size_type arity=s.children.size();
-  string name=string(s.value.begin(),s.value.end());
+  string name=tostr(s);
 
+
+  /*  if (name=="") {
+    name=tostr(s,0);
+    sexpr_rec(s,d,1);*/
+#if 0
   if (name==def_symbol) {
-    if (arity<2u)
-      throw std::runtime_error
-          ("Malformed def"+(arity==0 ? "" : " of '"+
-                            string(s.children[0].value.begin(),
-                                   s.children[0].value.end())+"'")+".");
-    
-    d.append(string(s.children[0].value.begin(),s.children[0].value.end()));
+    if (arity==0)
+      throw std::runtime_error("Bad def (no arguments).");
+    else if (arity==1)
+      throw std::runtime_error("Bad def of '"+tostr(s,1)+"' (missing body).");
+    assert(arity==2)
+
+    d.append(tostr(s,0));
     d.append(string());
     if (!s.children[0].children.empty())
       tosexpr(s.children[0],d.back_sub());
     d.back()=list_name;
     d.append(string());
-    if (arity==2u) {
+    if (arity==2) {
       tosexpr(s.children[1],d.back_sub());
-    } else if (arity>=2u) {
-      d.back()=string(s.children[1].value.begin(),s.children[1].value.end());
-      d.back_sub().append(s.children.size()-2,string());
-      for_each(s.children.begin()+2,s.children.end(),
-               d.back_sub().begin_sub_child(),&tosexpr);      
+    } else if (arity>=2) {
+      d.back()=tostr(s,1);
+      sexpr_rec(s,d.back_sub(),2);
     }
     arity=3;
-  } else {
-    d.append(s.children.size(),string());
-    for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
+  } else if (name==apply_symbol && false) {
+    /***
+    if (arity==1) {
+      tosexpr(s.children[0],d);
+      return;
+    }
+    if (arity!=2)
+      throw std::runtime_error("Bad apply (must have exactly two arguments).");
+    name=apply_name;
+    d.append(2,string());
+    tosexpr(s.children[0],d.front_sub());
+    d.back()=list_name;
+    d.back().append(
+        sexpr_rec(s,d.back_sub(),1);
+    }
+    ***/
+#endif
+    //  } else
+ {
+    sexpr_rec(s,d);
+  }
+
+  if (name==def_symbol) {
+    arity=3;
+    d.prepend(d[0].root());
+    d[1].root()=list_name;
   }
   d.root()=symbol2name(name,arity);
 }
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
-    //fixme - no apply!
-
     definition(const sexpr_grammar&) {
-      sexpr  = no_node_d[ch_p('(')] >> root_node_d[list] >> *list 
-                                    >> no_node_d[ch_p(')')];
+      sexpr  = no_node_d[ch_p('(')] 
+          >> !(root_node_d[ch_p('(')] >> list >> 
+               lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
+               >> list >> no_node_d[ch_p(')')];
+      //helper = root_node_d[list];
       list   = range    | listh;
       range  = def      | rangeh;
 
@@ -82,11 +121,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
                              eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
       lambda =             ! root_node_d[ch_p('\\')]               >> arrow;
       arrow  = seq      >> *(root_node_d[str_p("->")]              >> lambda);
-
-      seq    =               root_node_d[or_op]                    >> *or_op;
-
-      /*      seq    = or_op;      ((root_node_d[ch_p('(')] >> or_op >> ')')
-                             | root_node_d[or_op])                >> *or_op;*/
+      seq    =               or_op                    >> *or_op;
       or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
       and_op = cons     >> *(root_node_d[str_p("&&")]              >> cons);
       cons   = eq       >> *(root_node_d[ch_p(':')]                >> eq);
@@ -114,7 +149,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
     }
     rule<Scanner> sexpr,list,range,def,lambda,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
-    rule<Scanner> prime,term,str,listh,rangeh;
+    rule<Scanner> prime,term,str,listh,rangeh,helper;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
