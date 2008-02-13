@@ -10,7 +10,7 @@ fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
 foo $n = \$i -> set $n ($n+$i)
 
 # Combinators
-S $x = \$y -> $\z -> ($x $y) ($x $z)
+S $x = \$y -> \$z -> ($x $y) ($x $z)
 K $x = \$y -> $x
 I $x = $x
 # Note that you can't do much with these, because every expression must have a
@@ -31,12 +31,12 @@ sub $list $indices =
       if (empty $indices) [] 
          if (hd $indices)=$offset 
             (hd $list):(helper (tl $list) (tl $indices) $offset+1)
-	    helper (tl $list) $indices $offset
+            helper (tl $list) $indices $offset
     helper $list $indices 0
 
-subs $list $from $len = sub $list [$from...$from+$len]
+subs $list $from $len = sub $list [$from..$from+$len-1]
 
-last $l = hd (if (empty $x) $x (last (t
+#last $l = hd (if (empty $x) $x (last (t
 last $x:[] = $x
 last $x:$y = last $y
 
@@ -47,8 +47,8 @@ lasts $list@$x:$y $n = if (length $list)<=$n $list (lasts $y $n-1)
 
 s = "This is what you have"
 first = nth s 0                         # "T"
-start = sub s [5...7]                    # "is"
-rest  = sub s [13...(length s)]         # "you have"
+start = sub s [5..6]                    # "is"
+rest  = sub s [13..(length s)-1]        # "you have"
 lastl = last s                          # "e"
 end   = lasts s 4                       # "have"
 piece = subs s 8 5                      # "you"
@@ -87,7 +87,7 @@ words $x =
       words_helper $words $word $x:$xs = 
         if $x==' ' 
           words_helper $word:$words [] $xs
-	  words_helper $words $word~[$x] $xs
+          words_helper $words $word~[$x] $xs
   words_helper [] [] $x
 
 println (reverse s)                           # reverse letters

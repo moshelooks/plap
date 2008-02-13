@@ -17,12 +17,17 @@
 #include "parse.h"
 #include "algorithm.h"
 #include <sstream>
+#include <boost/next_prior.hpp>
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/tree/ast.hpp>
 #include <boost/spirit/tree/parse_tree.hpp>
 #include "tree.h"
 #include "operators.h"
 #include "indent.h"
+
+#include <iostream>
+#include "tree_io.h"
+using namespace std;
 
 namespace plap { namespace lang_io {
 
@@ -34,17 +39,32 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
   string::size_type arity=s.children.size();
   string name=string(s.value.begin(),s.value.end());
 
-  if (name==def_symbol) { //special case
-    if (arity!=2u)
-      throw std::runtime_error("Malformed def of '"+name+"'.");
-    ++arity;
+  if (name==def_symbol) {
+    if (arity<2u)
+      throw std::runtime_error
+          ("Malformed def"+(arity==0 ? "" : " of '"+
+                            string(s.children[0].value.begin(),
+                                   s.children[0].value.end())+"'")+".");
+    
     d.append(string(s.children[0].value.begin(),s.children[0].value.end()));
+    cout << d << endl;
     d.append(string());
     if (!s.children[0].children.empty())
       tosexpr(s.children[0],d.back_sub());
+    cout << d << endl;
     d.back()=list_name;
+    cout << d << endl;
     d.append(string());
-    tosexpr(s.children[1],d.back_sub());
+    cout << d << endl;
+    if (arity==2u) {
+      tosexpr(s.children[1],d.back_sub());
+    } else if (arity>=2u) {
+      d.back()=string(s.children[1].value.begin(),s.children[1].value.end());
+      d.back_sub().append(s.children.size()-2,string());
+      for_each(s.children.begin()+2,s.children.end(),
+               d.back_sub().begin_sub_child(),&tosexpr);      
+    }
+    arity=3;
   } else {
     d.append(s.children.size(),string());
     for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
@@ -54,50 +74,42 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
+    //fixme - no apply!
+    //fixme - string literals
+    //fixme - ~ for concatenation
+
     definition(const sexpr_grammar&) {
-      sexpr    = inner_node_d[ch_p('(') >> range_x >> ch_p(')')];
+      sexpr  = no_node_d[ch_p('(')] >> root_node_d[list] 
+                                    >> *list >> no_node_d[ch_p(')')];
+      list   = range | (root_node_d[ch_p('[')]
+                        >> infix_node_d[(list|sexpr) % ','] 
+                        >> no_node_d[ch_p(']')]);
+      range  = def   | (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
+                        >> root_node_d[str_p("..")] >> (int_p|seq|sexpr)
+                        >> no_node_d[ch_p(']')]);
 
-      range_x  = list_x
-               | (no_node_d[ch_p('[')] >> (seq|sexpr)
-                  >> root_node_d[str_p("..")] 
-                  >> (seq|sexpr) >> no_node_d[ch_p(']')]);
-      list_x   = def_x
-               | root_node_d[ch_p('[')] >> infix_node_d[(list_x|sexpr) % ',']
-                                        >> no_node_d[ch_p(']')];
+      def    =  lambda  >> !(root_node_d[ch_p('=')] >>
+                             eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
+      lambda =             ! root_node_d[ch_p('\\')]               >> arrow;
+      arrow  = seq      >> *(root_node_d[str_p("->")]              >> lambda);
+      seq    =               root_node_d[or_op]                    >> *or_op;
+      or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
+      and_op = cons     >> *(root_node_d[str_p("&&")]              >> cons);
+      cons   = eq       >> *(root_node_d[ch_p(':')]                >> eq);
+      eq     = cmp      >> *(root_node_d[str_p("==")|"!="]         >> cmp);
+      cmp    = add      >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add);
+      add    = mlt      >> *(root_node_d[ch_p('+')|'-']            >> mlt);
+      mlt    = neg      >> *(root_node_d[ch_p('*')|'/']            >> neg);
+      neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
-      def_x    = lambda_x  >> !(root_node_d[ch_p('=')] >>
-                                (eps_p(~ch_p('=') >> *anychar_p) >> lambda_x));
-
-      lambda_x =            !root_node_d[ch_p('\\')]               >> arrow_x;
-      arrow_x  = seq   >> *(root_node_d[str_p("->")]              >> seq);
-
-      seq      = (root_node_d[or_x] >> *or_x);
-
-      or_x     = and_x  >> *(root_node_d[str_p("||")]              >> and_x);
-      and_x    = cons_x >> *(root_node_d[str_p("&&")]              >> cons_x);
-      cons_x   = eq_x   >> *(root_node_d[ch_p(':')]                >> eq_x);
-      eq_x     = cmp_x  >> *(root_node_d[str_p("==")|"!="]         >> cmp_x);
-      cmp_x    = add_x  >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add_x);
-      add_x    = mlt_x  >> *(root_node_d[ch_p('+')|'-']            >> mlt_x);
-      mlt_x    = neg_x  >> *(root_node_d[ch_p('*')|'/']            >> neg_x);
-      neg_x    =           *root_node_d[ch_p('!')|ch_p('-')]       >> prime;
-
-
-      prime   = sexpr | term;
-      term    = token_node_d[lexeme_d[!ch_p('$') >> (alpha_p | '_')
-                                      >> *(alnum_p | '_')]]
-              | lexeme_d[real_p]
-              | inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]");
-      
-      ident   = scalar | name;
-      scalar  = '$' >> name;
-      // name    = 
-      //+(anychar_p-'|'-'&'-'='-'!'-'<'-'>'-','-'['-']'-'+'-'-'-'*'-
-      //      '/'-'('-')'-':'-'.'-space_p);
+      prime  = sexpr | term;
+      term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]") 
+             | lexeme_d[(token_node_d[!ch_p('$') >> (alpha_p | '_') >> 
+                                      *(alnum_p | '_')]
+                         | (real_p >> ~eps_p('.' | alnum_p)))];
     }
-    rule<Scanner> sexpr,range_x,list_x,def_x,lambda_x,arrow_x,seq;
-    rule<Scanner> or_x,and_x,cons_x,eq_x,cmp_x,add_x,mlt_x,neg_x,prime,term;
-    rule<typename lexeme_scanner<Scanner>::type> ident,scalar,name;
+    rule<Scanner> sexpr,list,range,def,lambda,arrow,seq;
+    rule<Scanner> or_op,and_op,cons,eq,cmp,add,mlt,neg,prime,term;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
