@@ -51,59 +51,29 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
   string::size_type arity=s.children.size();
   string name=tostr(s);
 
-
-  /*  if (name=="") {
+  if (name=="" && s.children[0].children.empty()) {
     name=tostr(s,0);
-    sexpr_rec(s,d,1);*/
-#if 0
-  if (name==def_symbol) {
-    if (arity==0)
-      throw std::runtime_error("Bad def (no arguments).");
-    else if (arity==1)
-      throw std::runtime_error("Bad def of '"+tostr(s,1)+"' (missing body).");
-    assert(arity==2)
-
-    d.append(tostr(s,0));
-    d.append(string());
-    if (!s.children[0].children.empty())
-      tosexpr(s.children[0],d.back_sub());
-    d.back()=list_name;
-    d.append(string());
-    if (arity==2) {
-      tosexpr(s.children[1],d.back_sub());
-    } else if (arity>=2) {
-      d.back()=tostr(s,1);
-      sexpr_rec(s,d.back_sub(),2);
-    }
-    arity=3;
-  } else if (name==apply_symbol && false) {
-    /***
-    if (arity==1) {
-      tosexpr(s.children[0],d);
-      return;
-    }
-    if (arity!=2)
-      throw std::runtime_error("Bad apply (must have exactly two arguments).");
-    name=apply_name;
-    d.append(2,string());
-    tosexpr(s.children[0],d.front_sub());
-    d.back()=list_name;
-    d.back().append(
-        sexpr_rec(s,d.back_sub(),1);
-    }
-    ***/
-#endif
-    //  } else
- {
+    sexpr_rec(s,d,1);
+  } else {
     sexpr_rec(s,d);
   }
-
-  if (name==def_symbol) {
-    arity=3;
-    d.prepend(d[0].root());
-    d[1].root()=list_name;
-  }
-  d.root()=symbol2name(name,arity);
+  /**/
+  if (name==apply_symbol && d.front_sub().childless()) {
+    std::swap(d.root(),d.front());
+    d.erase(d.begin_child());
+    d.flatten(d.begin_child());
+  } else {
+    if (name==def_symbol) {
+      arity=3;
+      d.prepend(d[0].root());
+      d[1].root()=list_name;
+    } else if (name==apply_symbol && d[1].root()!=list_name) {
+      d.insert_above(d[1],list_name);
+      d.flatten(d[1][0]);
+    }
+    d.root()=symbol2name(name,arity);
+    }/**/
+  //d.root()=name;
 }
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
@@ -141,7 +111,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
                         >> *((ch_p('\\') >> '\"') | anychar_p - '\"') 
                         >> no_node_d[ch_p('\"')]];
 
-      listh  = (root_node_d[ch_p('[')] >> infix_node_d[(list|sexpr) % ','] 
+      listh  = (root_node_d[ch_p('[')] >> (list % no_node_d[ch_p(',')])
                 >> no_node_d[ch_p(']')]);
       rangeh = (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
                 >> root_node_d[str_p("...")|".."]
