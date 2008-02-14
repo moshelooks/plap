@@ -73,7 +73,7 @@ void indent2parens(std::istream& in,std::ostream& out) {
     } else {
       indents.push(indent);
     }
-    out << '(' << s;
+    out << '(' << s.substr(indent);
   } while (in.good() && is_whitespace(in.peek()));
   while (!indents.empty()) {
     out << ')';

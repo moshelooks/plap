@@ -82,16 +82,16 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       sexpr  = no_node_d[ch_p('(')] 
           >> !(root_node_d[ch_p('(')] >> list >> 
                lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
-               >> list >> no_node_d[ch_p(')')];
-      //helper = root_node_d[list];
-      list   = range    | listh;
-      range  = def      | rangeh;
+          >> list >> !root_node_d[ch_p('.')] >> no_node_d[ch_p(')')];
+
+      list   = range    |  listh;
+      range  = def      |  rangeh;
 
       def    = lambda   >> !(root_node_d[ch_p('=')] >>
                              eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
-      lambda =             ! root_node_d[ch_p('\\')]               >> arrow;
+      lambda = arrow    |  lambdah;
       arrow  = seq      >> *(root_node_d[str_p("->")]              >> lambda);
-      seq    =               or_op                    >> *or_op;
+      seq    = or_op    >> *(lambdah|or_op);
       or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
       and_op = cons     >> *(root_node_d[str_p("&&")]              >> cons);
       cons   = eq       >> *(root_node_d[ch_p(':')]                >> eq);
@@ -103,23 +103,27 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
       prime  = sexpr | term | listh | rangeh;
-      term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | str_p("[]") | str
+      term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
              | lexeme_d[(token_node_d[!ch_p('$') >> (alpha_p | '_') >> 
                                       *(alnum_p | '_')]
                          | (real_p >> ~eps_p('.' | alnum_p)))];
       str    = lexeme_d[root_node_d[ch_p('\"')] 
                         >> *((ch_p('\\') >> '\"') | anychar_p - '\"') 
                         >> no_node_d[ch_p('\"')]];
+      chr    = lexeme_d['\'' >> !ch_p('\\') >> anychar_p 
+                        >> no_node_d[ch_p('\'')]];
 
       listh  = (root_node_d[ch_p('[')] >> (list % no_node_d[ch_p(',')])
                 >> no_node_d[ch_p(']')]);
       rangeh = (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
                 >> root_node_d[str_p("...")|".."]
                 >> (int_p|seq|sexpr) >> no_node_d[ch_p(']')]);
+
+      lambdah = root_node_d[ch_p('\\')] >> arrow;
     }
     rule<Scanner> sexpr,list,range,def,lambda,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
-    rule<Scanner> prime,term,str,listh,rangeh,helper;
+    rule<Scanner> prime,term,str,chr,listh,rangeh,lambdah;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
