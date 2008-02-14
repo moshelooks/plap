@@ -44,12 +44,12 @@ void zap_comments(string& s) {
     s.erase(from);
 }
 
-void process_line(std::istream& in,string& s) {
+void process_line(std::istream& in,string& s,bool indented) {
   s.clear();
   do {
     std::getline(in,s);
     zap_comments(s);
-    if (!all_whitespace(s))
+    if (!all_whitespace(s) || (indented && !is_whitespace(in.peek())))
       break;
   } while (in.good());
   chomp_trailing_whitespace(s);
@@ -60,7 +60,7 @@ void indent2parens(std::istream& in,std::ostream& out) {
   std::stack<string::size_type> indents;
   string s;
   do {
-    process_line(in,s);
+    process_line(in,s,!indents.empty());
     if (s.empty())
       break;
 

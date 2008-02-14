@@ -36,14 +36,11 @@ sub $list $indices =
 
 subs $list $from $len = sub $list [$from..$from+$len-1]
 
-#last $l = hd (if (empty $x) $x (last (t
-last $x:[] = $x
-last $x:$y = last $y
+last $l = if (empty (tl $x)) (hd $x) last (tl $x)
 
-length [] = 0
-length $x:$y = 1+(length $y)
+length $l = if (empty $l) 0 1+(length (tl $l))
 
-#lasts $list@$x:$y $n = if (length $list)<=$n $list (lasts $y $n-1)
+lasts $l $n = if (length $list)<=$n $list (lasts (tl $l) $n-1)
 
 s = "This is what you have"
 first = nth s 0                         # "T"
@@ -63,15 +60,20 @@ map "HAL" \$x -> char (int $x)+1            # "IBM"
 # Processing a String One Character at a Time
 ##
 
-uniq [] = []
-uniq $x:[] = $x
-uniq $x:$y:$z = if $x==$y (uniq $y:$z) $x:(uniq $y:$z)
+uniq $l =
+  let uniq_h $x $l = 
+    if (empty $l) [$x]
+      (if $x==(hd $l) [] [$x])~(uniq (hd $l) (tl $l))
+  if (empty $l) $l (uniq_h (hd $l) (tl $l))
+    
+filter $pred $l = 
+  if (empty $l) $l
+    (if ($p (hd $l)) [hd $l] [])~(filter $p (tl $l))
 
-filter $pred [] = []
-filter $p $x:$xs = if ($p $x) $x:(filter $p $xs) (filter $p $xs)
-
-sort [] = []
-sort $x:$xs = (sort (filter (lt $x) $xs))~[$x]~(sort (filter (gte $x $xs)))
+sort $l = 
+  if (empty $l) $l
+    (sort (filter (less (hd $l)) (tl $l)))~[(hd $l)]~
+     sort (filter (greater_equal (hd $l) (tl $l)))
 
 println "unique chars are: "~(uniq (sort "an apple a day"))
 
@@ -79,17 +81,17 @@ println "unique chars are: "~(uniq (sort "an apple a day"))
 # Reversing a String by Word or Character
 ##
 
-reverse [] = []
-reverse $x:$xs = [(reverse $xs),$x]
+reverse $l = if (empty $l) $l (reverse (tl $x))~[hd $x]
 
-words $x =
-  let words_helper $words $word [] = $word:$words
-      words_helper $words $word $x:$xs = 
-        if $x==' ' 
-          words_helper $word:$words [] $xs
-          words_helper $words $word~[$x] $xs
-  words_helper [] [] $x
+words $l =
+  let words_helper $words $word $l = 
+    if (empty $l) $word:$words
+      if (hd $l)==' '
+        words_helper $word:$words [] (tl $l)
+        words_helper $words $word~[hd $l] (tl $l)
+  words_helper [] [] $l
 
+s = "foobar"
 println (reverse s)                           # reverse letters
 println (join " " (reverse (words s)))        # reverse words
 
@@ -115,13 +117,11 @@ randnums = rand [25..75]                 # rand is in [25,75]
 password = power 8 "" \$x -> rand chars
 
 # 4.7. Finding Elements in One (Sorted) List but Not Another
-difference $a [] = $a
-difference [] $b = []
-difference $a $b = 
+difference $a $b = if (empty $b)||(empty $a) $a
   cond 
     hd $a<hd $b -> [$a]~difference (tl $a) $b
     hd $b<hd $a -> [$a]~difference $a (tl $b)
-    difference (tl $a) (tl $b)
+    true        -> difference (tl $a) (tl $b)
 
 # Finding the Most Common Anything (requires tuples)
 max $a $b $cmp = if ($cmp $a $b) $b $a
