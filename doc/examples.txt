@@ -127,13 +127,13 @@ difference $a $b =
 max $a $b $cmp = if ($cmp $a $b) $b $a
 max_elem [$x] _ = $x 
 max_elem $x:$xs $cmp = max $x (max_elem $xs $cmp) $cmp
-most_common $l =
-  let most_common_helper $x:$xs = 
-    let group $n $x [] = [($n+1,$x)]
-        group $n $x $x:$xs = group ($n+1) $x $xs
-        group $n $y $x:$xs = ($n,$y):(group 0 $x $xs)
-      group 0 $x $xs
-  max_elem (most_common_helper (sort $l)) \($x,_) ($y,_) -> $x<$y
+#most_common $l =
+#  let most_common_helper $x:$xs = 
+#    let group $n $x [] = [($n+1,$x)]
+#        group $n $x $x:$xs = group ($n+1) $x $xs
+#        group $n $y $x:$xs = ($n,$y):(group 0 $x $xs)
+#    group 0 $x $xs
+#  max_elem (most_common_helper (sort $l)) \($x,_) ($y,_) -> $x<$y
 
 # Representing Relationships Between Data
 father "Cain" "Adam".
@@ -142,7 +142,7 @@ father "Seth" "Adam".
 father "Enoch" "Cain".
 
 foreach (satisfying_set \$x $y -> father $x $y)
-        $\x $y -> println "The father of "~$x~" is "~$y~"."
+        \$x $y -> println "The father of "~$x~" is "~$y~"."
 
 foreach (satisfying_set \$x $y -> father $y $x)
-        $\x $y -> println $x~" begat "~$y~"."
+        \$x $y -> println $x~" begat "~$y~"."
