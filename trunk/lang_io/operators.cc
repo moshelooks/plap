@@ -59,6 +59,7 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
      ("def","="));
 
 const infix_map infix_vararg=boost::assign::map_list_of   //variadic operators
+    //    ("tuple",",")
     ("list","")
     ("list","[");
 

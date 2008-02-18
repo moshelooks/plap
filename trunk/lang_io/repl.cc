@@ -17,6 +17,7 @@
 #include "repl.h"
 #include "parse.h"
 #include "environment.h"
+#include "io.h"
 #include "tree_io.h"
 //fixme#include "pretty_print.h"
 
@@ -25,6 +26,9 @@ namespace plap { namespace lang_io {
 void repl(std::istream& in,std::ostream& out,lang::environment& env,
           const std::string& prompt) throw(std::runtime_error) {
   out << util::sexpr_format;
+  util::io_loop<sexpr>(in,out,&indent_parse,
+                       boost::bind(&eval_print,ref(_1),ref(env),
+&pretty_print)
   while (in.good()) {
     out << prompt << std::endl;
 

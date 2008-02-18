@@ -23,8 +23,8 @@
 
 namespace plap { namespace lang_io {
 
-void parse(std::istream& in,sexpr& dst);
-void parse(const std::string& str,sexpr& dst);
+void indent_parse(std::istream& in,sexpr& dst);
+void paren_parse(const std::string& str,sexpr& dst);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_PARSE_H__

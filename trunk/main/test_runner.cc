@@ -57,4 +57,4 @@ using namespace boost::assign;
 
 #include "tree_test.cc"
 #include "lang_io_test.cc"
-//#include "lang_test.cc"
+#include "lang_test.cc"

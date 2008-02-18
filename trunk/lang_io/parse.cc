@@ -80,9 +80,10 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
   struct definition {
     definition(const sexpr_grammar&) {
       sexpr  = no_node_d[ch_p('(')] 
-          >> !(root_node_d[ch_p('(')] >> list >> 
-               lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
-          >> list >> !root_node_d[ch_p('.')] >> no_node_d[ch_p(')')];
+          >> ((!(root_node_d[ch_p('(')] >> list >> 
+                 lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
+               >> list >> !root_node_d[ch_p('.')]) % ch_p(','))//fixme tuples
+          >> no_node_d[ch_p(')')];
 
       list   = range    |  listh;
       range  = def      |  rangeh;
@@ -104,11 +105,12 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
 
       prime  = sexpr | term | listh | rangeh;
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
-             | lexeme_d[(token_node_d[!ch_p('$') >> (alpha_p | '_') >> 
-                                      *(alnum_p | '_')]
-                         | (real_p >> ~eps_p('.' | alnum_p)))];
+             | lexeme_d[
+                 token_node_d[!ch_p('$') >> (alpha_p | '_') >> 
+                              *(alnum_p | '_') >> ~eps_p('.' | alnum_p | '$')]
+                 | (real_p >> ~eps_p('.' | alnum_p | '$'))];
       str    = lexeme_d[root_node_d[ch_p('\"')] 
-                        >> *((ch_p('\\') >> '\"') | anychar_p - '\"') 
+                        >> *((ch_p('\\') >> '\"') | anychar_p - '\"')
                         >> no_node_d[ch_p('\"')]];
       chr    = lexeme_d['\'' >> !ch_p('\\') >> anychar_p 
                         >> no_node_d[ch_p('\'')]];
@@ -118,8 +120,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       rangeh = (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
                 >> root_node_d[str_p("...")|".."]
                 >> (int_p|seq|sexpr) >> no_node_d[ch_p(']')]);
-
-      lambdah = root_node_d[ch_p('\\')] >> arrow;
+      lambdah= root_node_d[ch_p('\\')] >> arrow;
     }
     rule<Scanner> sexpr,list,range,def,lambda,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
@@ -129,13 +130,13 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
 };
 } //namespace
 
-void parse(std::istream& in,sexpr& dst) {
+void indent_parse(std::istream& in,sexpr& dst) {
   std::stringstream ss;
   util::indent2parens(in,ss);
-  parse(ss.str(),dst);
+  paren_parse(ss.str(),dst);
 }
 
-void parse(const std::string& str,sexpr& dst) {
+void paren_parse(const std::string& str,sexpr& dst) {
   if (str.empty()) {
     dst.clear();
     return;

@@ -38,6 +38,8 @@ using boost::bind;
 using std::string;
 using std::stringstream;
 
+namespace {
+
 void throw_bad_arity(const string& name,arity_t actual, arity_t tgt) {
   throw std::runtime_error(string("Bad arity for ")+name+" - expected "+
                            lexical_cast<string>((int)tgt)+", got "+

@@ -1,7 +1,7 @@
 # Factorial
 fact $n = if $n==0 1 $n*(fact $n-1)
 # or
-fact $n = accumulate [1..$n] times
+fact1 $n = accumulate [1..$n] times
 
 # Fibonacci
 fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
@@ -10,7 +10,7 @@ fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
 foo $n = \$i -> set $n ($n+$i)
 
 # Combinators
-S $x = \$y -> \$z -> ($x $y) ($x $z)
+S $x = \$y -> \$z -> ($x $z) ($y $z)
 K $x = \$y -> $x
 I $x = $x
 # Note that you can't do much with these, because every expression must have a
@@ -91,7 +91,7 @@ words $l =
         words_helper $words $word~[hd $l] (tl $l)
   words_helper [] [] $l
 
-s = "foobar"
+
 println (reverse s)                           # reverse letters
 println (join " " (reverse (words s)))        # reverse words
 
@@ -123,17 +123,25 @@ difference $a $b = if (empty $b)||(empty $a) $a
     hd $b<hd $a -> [$a]~difference $a (tl $b)
     true        -> difference (tl $a) (tl $b)
 
-# Finding the Most Common Anything (requires tuples)
+# Finding the Most Common Anything
 max $a $b $cmp = if ($cmp $a $b) $b $a
-max_elem [$x] _ = $x 
-max_elem $x:$xs $cmp = max $x (max_elem $xs $cmp) $cmp
-#most_common $l =
-#  let most_common_helper $x:$xs = 
-#    let group $n $x [] = [($n+1,$x)]
-#        group $n $x $x:$xs = group ($n+1) $x $xs
-#        group $n $y $x:$xs = ($n,$y):(group 0 $x $xs)
-#    group 0 $x $xs
-#  max_elem (most_common_helper (sort $l)) \($x,_) ($y,_) -> $x<$y
+max_elem $l $cmp = 
+  if (empty (tl $l))
+    hd $l
+    max (hd $l) (max_elem (tl $l)) $cmp
+most_common $l =
+  let most_common_helper $l =
+    let group $n $x $l =
+      if (empty $l) [[$n+1,$x]]
+        if ($x==(hd $l)) (group ($n+1) $x (tl $l))
+          [$n,$x]:(group 0 (hd $l) (tl $l))
+    group 0 (hd $l) (tl $l)
+  hd (tl max_elem (most_common_helper (sort $l)) \$l1 $l2 -> (hd $l1)<(hd $l2))
+
+hetrogenous lists are damn convenient, and the type inference code is a pain in
+the ass and probably requires function synthesis - how is < supposed to work on
+anything, otherwise?
+most_common ['a','b',c']
 
 # Representing Relationships Between Data
 father "Cain" "Adam".

@@ -14,33 +14,26 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_UTIL_IO_H__
-#define PLAP_UTIL_IO_H__
+#ifndef PLAP_LANG_IO_SEXPR_H__
+#define PLAP_LANG_IO_SEXPR_H__
 
-#include <istream>
 #include <string>
 
-namespace plap { namespace util {
+//fwd declarations
+namespace plap { namespace util { 
+template<typename>
+struct tree;
+template<typename>
+struct subtree;
+template<typename>
+struct const_subtree;
+}} //namespace plap::uti
 
-void read_balanced(std::istream& in,std::string& str);
+namespace plap { namespace lang_io {
 
-template<typename In,typename Reader,typename Writer>
-void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
-             const std::string& prompt) {
-  char c;
-  in >> c;
-  while (in.good()) {
-    in.putback(c);
+typedef util::tree<std::string> sexpr;
+typedef util::subtree<std::string> subsexpr;
+typedef util::const_subtree<std::string> const_subsexpr;
 
-    In i;
-    read(in,i);
-    if (!in.good())
-      break;
-    write(out,i);
-
-    in >> c;
-  }
-}
-
-}} //namespace plap::util
-#endif //PLAP_UTIL_IO_H__
+}} //namespace plap::lang_io
+#endif //PLAP_LANG_IO_SEXPR_H__
