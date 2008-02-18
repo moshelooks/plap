@@ -15,32 +15,38 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "repl.h"
+#include <stdexcept>
+#include <iostream>
 #include "parse.h"
 #include "environment.h"
 #include "io.h"
 #include "tree_io.h"
+
+
 //fixme#include "pretty_print.h"
 
 namespace plap { namespace lang_io {
 
-void repl(std::istream& in,std::ostream& out,lang::environment& env,
-          const std::string& prompt) throw(std::runtime_error) {
-  out << util::sexpr_format;
-  util::io_loop<sexpr>(in,out,&indent_parse,
-                       boost::bind(&eval_print,ref(_1),ref(env),
-&pretty_print)
-  while (in.good()) {
-    out << prompt << std::endl;
+void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
+  using std::endl;
+  using boost::ref;
 
-    sexpr s;
-    parse(in,s);
-    if (!in.good())
+  plap::lang::environment env;
+  out << util::sexpr_format << "ctrl+D exits" << endl;
+  while (true) {
+    try {
+      util::io_loop<sexpr>(in,out,&indent_parse,
+                           boost::bind(&eval_print,_1,_2,ref(env)),
+                           ref(prompt));
       break;
-    out << std::endl;
+    } catch (std::runtime_error e) {
+      std::cerr << "\033[22;31m" << e.what() << "\033[00;m" << endl;
+    }
+  }
+}
 
-    assert(!s.empty());
-
-    out << "goes to " << s << std::endl;
+void eval_print(std::ostream& out,const_subsexpr s,lang::environment& env) {
+  out << "goes to " << s << std::endl;
 
     /*
     vtree expr(vertex());
@@ -52,7 +58,6 @@ void repl(std::istream& in,std::ostream& out,lang::environment& env,
     pretty_print(out,result);
     out << endl;
     */
-  }
 }
 
 }} //namespace plap::lang
