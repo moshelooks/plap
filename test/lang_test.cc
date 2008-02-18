@@ -14,6 +14,39 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+#if 0
+
+#define check_eval(str,res) check_eq(env.eval(str),res)
+
+test_case(lang_eval_examples) {
+  environment env;
+  require_eq(env.eval("import \"doc/examples.txt\""),id::unit);
+
+  check_eval("fact 0",1);
+  check_eval("fact 1",1);
+  check_eval("fact 2",2);
+  check_eval("fact 3",6);
+  check_eval("fact 9",362880);
+
+  check_eval("fact1 0",1);
+  check_eval("fact1 1",1);
+  check_eval("fact1 2",2);
+  check_eval("fact1 3",6);
+  check_eval("fact1 9",362880);
+
+  check_eval("fib 1+1",2);
+  check_eval("fib 1-1",1);
+  check_eval("fib 14",610);
+
+  check_eval("I 42",42);
+  check_eval("(K 1) 2",1);
+  check_eval("S (\$x -> \$y -> times $x $y) negative 5",-25);
+
+  check_eval("nth [1,2,3] 0",1);
+  check_eval("nth [0..10] 5",5);
+  check_eval("nth ['a','b','c'] 1",'b');
+}  
+
 test_case(lang_env_declare_func) {
   environment env;
 
@@ -208,4 +241,6 @@ test_case(lang_foreach) {
 
 //  register_declaration(register_rewrite("to_enf",lang_bool),
 //                     &reduct::reduce_to_enf);
+#endif
+
 #endif

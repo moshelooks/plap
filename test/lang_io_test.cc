@@ -25,6 +25,13 @@ namespace plap { namespace test {
     parse(ss,tmpXXX);                                   \
     check_eq(lexical_cast<string>(tmpXXX),goal);        \
   }
+#define check_parse_throw(src) {                        \
+    cout << sexpr_format;                               \
+    stringstream ss;                                    \
+    ss << src;                                          \
+    tree<string> tmpXXX;                                \
+    check_throw(parse(ss,tmpXXX),runtime_error);        \
+  }
 
 test_case(parse_sexpr) {
   string s="(1 (2 2.5 2.8) 3 (4 5 6))";
@@ -79,4 +86,26 @@ test_case(parse_infix) {
   check_parse("[[[]]]","(list (list list))");
 }
 
+test_case(parse_fail_infix) {
+  check_parse_throw("[[[]]");
+  check_parse_throw("(");
+  check_parse_throw("a:");
+  check_parse_throw(":a");
+
+  check_parse_throw("1.2.");
+  check_parse_throw(".2.2");
+  check_parse_throw("2x");
+  check_parse_throw("x2.2");
+  check_parse_throw("2.x");
+
+  check_parse_throw("a~");
+  check_parse_throw("a =");
+  check_parse_throw("= a");
+
+  check_parse_throw("\\");
+  check_parse_throw("(1,2)");
+  check_parse_throw("a$b");
+  check_parse_throw("a$");
+  check_parse_throw("2$a");
+}
 }} //namespace plap::test

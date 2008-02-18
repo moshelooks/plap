@@ -63,6 +63,7 @@ def build(bld):
 	lang/core.cc
 	lang/environment.cc
 	lang/lib.cc
+	lang_io/analyze.cc
 	lang_io/operators.cc
 	lang_io/parse.cc
 	lang_io/repl.cc
@@ -70,7 +71,7 @@ def build(bld):
 	util/io.cc
 	util/tree_io.cc
         '''
-#	lang_io/analyze.cc
+
 	if Params.g_options.test or not Params.g_options.repl:
 		build_program(src,'test_runner') #unit tests
 	if Params.g_options.test:
