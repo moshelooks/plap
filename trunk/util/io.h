@@ -31,12 +31,15 @@ void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
   in >> c;
   while (in.good()) {
     in.putback(c);
+    out << prompt;
+    out.flush();
 
     In i;
     read(in,i);
     if (!in.good())
       break;
     write(out,i);
+    out.flush();
 
     in >> c;
   }

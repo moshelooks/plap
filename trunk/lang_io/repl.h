@@ -20,18 +20,21 @@
 #include <string>
 #include <istream>
 #include <ostream>
-#include <stdexcept>
+#include "sexpr.h"
 
 namespace plap { namespace lang {
 struct environment;
 }} //namespace plap::lang
 
+
 namespace plap { namespace lang_io {
 
 //reads from in and writes to out as long as in is good, 
 //throws on language errors
-void repl(std::istream& in,std::ostream& out,lang::environment& env,
-          const std::string& prompt) throw(std::runtime_error);
+void repl(std::istream& in,std::ostream& out,
+          const std::string& prompt="\033[22;32m> \033[00;m\n");
+
+void eval_print(std::ostream& out,const_subsexpr s,lang::environment& env);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_REPL_H__
