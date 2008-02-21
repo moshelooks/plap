@@ -23,6 +23,7 @@
 #include "io.h"
 
 #include <iostream>
+using namespace std;
 
 namespace plap { namespace util {
 
@@ -164,24 +165,44 @@ void zap_comments(string& s) {
 
 void process_line(std::istream& in,string& s,bool indented) {
   s.clear();
-  do {
-    std::getline(in,s);
-    zap_comments(s);
-    if (!all_whitespace(s) || (indented && !is_whitespace(in.peek())))
-      break;
-  } while (in.good());
+
+  char c=in.get();
+  while (in.good() && c!=EOF) {
+    in.putback(c);
+    
+    c=in.get();
+    cout << "YYY     " << c << endl;
+    if (c!='\n')
+      s.push_back(c);
+    else {
+      cout << "NEWLINE!!" << endl;
+      //std::getline(in,s);
+      zap_comments(s);
+      c=in.get();
+        in.putback(c);
+      if (!all_whitespace(s) || (indented && !is_whitespace(c)))
+        break;
+    }
+
+    c=in.get();
+  }
+      zap_comments(s);
+  cout << "gott " << s << "XX " << in.good() << endl;
   chomp_trailing_whitespace(s);
 }
 } //namespace
 
 void indent2parens(istream& in,ostream& out,string::size_type indent) {
   boost::iostreams::filtering_istream f;
-  zap_comments(f,in);
+  comment_zap_filter z;
+  f.push(z);
+  f.push(in,0,1);
+  //zap_comments(f,in);
   //io_loop(zap_comments(f,in),out,indent_parser(s));
   std::stack<string::size_type> indents;
   string s;
   do {
-    process_line(in,s,!indents.empty());
+    process_line(f,s,!indents.empty());
     if (s.empty())
       break;
 
@@ -195,7 +216,7 @@ void indent2parens(istream& in,ostream& out,string::size_type indent) {
       indents.push(indent);
     }
     out << '(' << s.substr(indent);
-  } while (in.good() && is_whitespace(in.peek()));
+  } while (f.good() && is_whitespace(f.peek()));
   while (!indents.empty()) {
     out << ')';
     indents.pop();
