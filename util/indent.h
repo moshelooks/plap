@@ -14,6 +14,25 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+// the indent parser reads expressions in indent format:
+// foo
+//  bar baz
+//  bla
+// 
+// and transforms into paren-format:
+// (foo (bar baz) bla)
+//
+// it also discards comments (# to newline)
+//
+// a comma at the end of a line causes the follow indent to be ignored, e.g.:
+// foo [this list,
+//      spans,
+//      many lines] fooarg1
+//  fooarg2
+//
+// goes to
+// (foo [this list,spans,many lines] fooarg1 fooarg2)
+
 #ifndef PLAP_UTIL_INDENT_H__
 #define PLAP_UTIL_INDENT_H__
 

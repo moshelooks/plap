@@ -100,7 +100,6 @@ struct indent_parser {
     out << c;
     return true;
   }
-
 };
 } //namespace
 
@@ -108,6 +107,5 @@ void indent2parens(istream& in,ostream& out,string::size_type start) {
   assert(start==0);
   io_loop(in,out,indent_parser(),true);
 }
-
 
 }} //namespace plap::util
