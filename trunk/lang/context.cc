@@ -14,27 +14,27 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "environment.h"
+#include "context.h"
 #include "core.h"
 
 namespace plap { namespace lang {
 #if 0
-func& environment::create_func(const std::string& name) { 
+func& context::create_func(const std::string& name) { 
   func& f=create_func();
   _names.insert(make_pair(&f,name));
   return f;
 }
-func& environment::create_func() { 
+func& context::create_func() { 
   _funcs.push_front(func());
   return _funcs.front();
 }
 
-void environment::bind(func& f,def* d) {
+void context::bind(func& f,def* d) {
   
 }
 #endif
 
-void environment::init() {
+void context::init() {
 
 }
 

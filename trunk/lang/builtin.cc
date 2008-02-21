@@ -14,18 +14,18 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "lib.h"
-#include "environment.h"
+#include "builtin.h"
+#include "context.h"
 //fixme#include "eager_def.h"
 
 namespace plap { namespace lang {
 
-#define LANG_LIB_cf(name) func& name=env.create_func(#name);
+#define LANG_LIB_cf(name) func& name=c.create_func(#name);
 #define LANG_LIB_arithmetic_nary(name) {                                \
     LANG_LIB_cf(name);                                                  \
-    env.bind(name,make_eager_def<                                       \
+    c.bind(name,make_eager_def<                                         \
              list_of<int_t> >(&lang_ ## name<disc_t>));                 \
-    env.bind(name,make_eager_def<                                       \
+    c.bind(name,make_eager_def<                                         \
              list_of<float_t> >(&lang_ ## name<contin_t>));             \
   }
 #define LANG_LIB_arithmetic_binary(name) {                              \
@@ -44,8 +44,9 @@ namespace plap { namespace lang {
   }
     
 
-void initialize_lib(environment& env) {
+void initialize_lib(context& c) {
 #if 0 
+foo
 fixme
   //arithmetic functions
   LANG_LIB_arithmetic_nary(plus);

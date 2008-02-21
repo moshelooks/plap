@@ -22,9 +22,9 @@
 #include "algorithm.h"
 #include "foreach.h"
 #include "tree_io.h"
-#include "environment.h"
+#include "context.h"
 #include "core.h"
-
+#include "operators.h"
 
 #include "algorithm.h"
 #include "tree_iterator.h"
@@ -62,20 +62,24 @@ make_exception
     (bad_args,
      "Bad argument list '"+str+"' - should be unbound scalars (e.g.$foo).");
 make_exception(unbound_scalar,"Unbound scalar '"+str+"'.");
+make_exception(bad_def,
+               "Bad definition of function '"+str+"'");
+make_exception(bad_arg_name,
+               "Bad argument name '"+str+"'");
 
 #define process(name) \
-  void process_ ## name(subsexpr src,subvtree dst)
+  void process_ ## name(const_subsexpr src,subvtree dst)
 #define special_case(name)                       \
-    if (f==id::name) {                           \
-      process_ ## name(src,dst);                 \
-      return;                                    \
-    }
+  if (src.root()==name ## _name) {               \
+    process_ ## name(src,dst);                   \
+    return;                                      \
+  }
 
 struct semantic_analyzer {
-  semantic_analyzer(environment& e,const_subsexpr r) : env(e),root(r) {}
-  environment& env;
+  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r) {}
+  context& c;
   const_subsexpr root;
-
+  
   process(sexpr) {
     if (src.childless())
       process_leaf(src,dst);
@@ -83,24 +87,34 @@ struct semantic_analyzer {
       process_internal(src,dst);
   }
 
-  process(leaf) { dst.root()=string2vertex(src.root()); }
+  process(leaf) { 
+    if (dst==root) //avoid creating a singleton leaf that's not a func_t
+      if (func_t f=string2func(src.root())) {
+        dst.root()=f;
+      } else {
+        dst.append(string2vertex(src.root()));
+          c.to_tuple(dst);
+      }
+    else
+      dst.root()=string2vertex(src.root());
+  }
 
   process(internal) {
+    special_case(def);
+    special_case(lambda);
+    special_case(let);
+    special_case(decl);
+
     if (func_t f=string2func(src.root())) {
       validate_arity(src,f);
-
-      special_case(def);
-      special_case(lambda);
-      special_case(let);
-      special_case(decl);
-
       dst.root()=f;
       process_children(src,dst);
     } else { //see if its a scalar - if so, need to introduce an apply node
-      dst.root()=id::apply;
       dst.append(string2scalar(src.root()));
-      dst.append(vertex(id::list));
+      dst.append(vertex());
       process_children(src,dst.back_sub());
+      c.to_list(dst.back_sub());
+      c.to_apply(dst);
     }
   }
 
@@ -113,11 +127,21 @@ struct semantic_analyzer {
   process(def) { //def(name list(arg1 arg2 ...) body)
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
-    replace_args(src[1],src[2]);
+    if (src[1].root()!=list_name) 
+      throw_bad_def(name);/**
+    for (const_subsexpr::child_sub_iterator i=src[1].begin_sub_child();
+         i!=src[1].end_sub_child();++i) {
+      if (!i->childless())
+        throw_bad_def(name);
+      if (i->root()[0]!='$')
+        throw_bad_arg_name(i->root());
+        bindings[i->root()**/
+    
+    //fixmereplace_args(src[1],src[2]);
     vtree body=vtree(vertex());
     process_sexpr(src[2],body);
 
-    if (func_t f=env.name2func(name)) { //an already-declared function?
+    if (func_t f=c.name2func(name)) { //an already-declared function?
       validate_arity(src[1],f);
       if (nested(src)) { //set to be created at runtime - def(func args body)
 #if 0
@@ -128,7 +152,7 @@ struct semantic_analyzer {
         dst.splice(dst.end_child(),body);
 #endif
       } else { //create it now and return unit
-        env.define_func(src[1].begin_child(),src[1].end_child(),
+        c.define_func(src[1].begin_child(),src[1].end_child(),
                         body,f);
         dst.root()=id::unit;
       }
@@ -136,7 +160,7 @@ struct semantic_analyzer {
       if (nested(src)) //error - defs must first be declared at global scope
         throw_undeclared_name(name);
       //otherwise, create a new function and return unit
-      env.define_func(src[1].begin_child(),src[1].end_child(),body,name);
+      c.define_func(src[1].begin_child(),src[1].end_child(),body,name);
       dst.root()=id::unit;
     }
   }
@@ -148,7 +172,7 @@ struct semantic_analyzer {
     vtree body(vertex());
     process_sexpr(src[1],body);
     scalars.pop(args); //fixme
-    dst.root()=env.create_func(args,body);
+    dst.root()=c.create_func(args,body);
 #endif
   }
 
@@ -159,11 +183,11 @@ struct semantic_analyzer {
   }
 
   process(decl) { //decl(name arity)
-    env.declare_func(sexpr2arity(src[1]),sexpr2identifier(src[0]));
+    c.declare_func(sexpr2arity(src[1]),sexpr2identifier(src[0]));
   }
  
   //parsing an individual node always unambiguous (i.e. can be done without any
-  //context other than the given environment+bindings)
+  //context other than the given context+bindings)
   //throws if invalid
   vertex string2vertex(const string& str) {
     assert(!str.empty());
@@ -187,7 +211,7 @@ struct semantic_analyzer {
     if (i!=lets.end())
       return i->second;
 #endif
-    if (func_t f=env.name2func(str))
+    if (func_t f=c.name2func(str))
       return f;
     return NULL;
   }
@@ -219,7 +243,7 @@ struct semantic_analyzer {
 
   void validate_arity(const_subsexpr src,func_t f) {
     if (src.arity()!=f->arity())
-      if (const string* name=env.func2name(f))
+      if (const string* name=c.func2name(f))
         throw_bad_arity(*name,src.arity(),f->arity());
       else
         throw_bad_arity("anonymous function",src.arity(),f->arity());
@@ -291,40 +315,12 @@ finalize:
     throw_bad_indent(s);
   **/
 
-
-
-/*
-void sexpr2vtree(const_subsexpr src,subvtree dst,environment& env)
-    throw(std::runtime_error) {
-  sexpr tmp(src);
-  semantic_analyzer se(env,tmp);
-  se.process_sexpr(tmp,dst);
-}
-
-void stream2vtree(std::istream& in,lang::subvtree dst,lang::environment& env,
-                  bool interactive) throw(std::runtime_error) {
-
-}
-
-void string2vtree(const string& str,lang::subvtree dst,
-                  lang::environment& env) throw(std::runtime_error) {
-  stringstream ss;
-  ss << str;
-  stream2vtree(ss,dst,env);
-}
-*/
-
-
-void string2sexpr(const std::string& str,tree<std::string>& dst)
-    throw(std::runtime_error) {
-
-}
-
 } //namespace
 
 
-void analyze(const_subsexpr src,lang::subvtree dst,lang::environment& env) {
-
+void analyze(const_subsexpr src,lang::subvtree dst,lang::context& c) {
+  semantic_analyzer sa(c,src);
+  sa.process_sexpr(src,dst);
 }
 
 }} //namespace plap::lang_io

@@ -22,8 +22,7 @@
 
 namespace plap { namespace util {
 
-void indent2parens(std::istream& in,std::ostream& out);
-void parens2indent(std::istream& in,std::ostream& out);
+void indent2parens(std::istream&,std::ostream&,std::string::size_type=0);
 
 }} //namespace plap::util
 #endif //PLAP_UTIL_INDENT_H__

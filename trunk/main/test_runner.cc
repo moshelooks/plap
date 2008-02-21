@@ -22,11 +22,11 @@
 #include "tree_iterator.h"
 #include "foreach.h"
 #include "dorepeat.h"
-#include "environment.h"
+#include "context.h"
 #include "parse.h"
 #include "cast.h"
 //#include "eager_def.h"
-//#include "lib.h"
+//#include "builtin.h"
 
 #include <iterator>
 #include <numeric>

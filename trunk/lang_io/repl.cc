@@ -18,12 +18,11 @@
 #include <stdexcept>
 #include <iostream>
 #include "parse.h"
-#include "environment.h"
-#include "io.h"
+#include "analyze.h"
+#include "context.h"
+#include "pretty_print.h"
 #include "tree_io.h"
-
-
-//fixme#include "pretty_print.h"
+#include "io.h"
 
 namespace plap { namespace lang_io {
 
@@ -31,13 +30,12 @@ void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
   using std::endl;
   using boost::ref;
 
-  plap::lang::environment env;
+  plap::lang::context c;
   out << util::sexpr_format << "ctrl+D exits" << endl;
   while (true) {
     try {
       util::io_loop<sexpr>(in,out,&indent_parse,
-                           boost::bind(&eval_print,_1,_2,ref(env)),
-                           ref(prompt));
+                           boost::bind(&eval_print,_1,_2,ref(c)),ref(prompt));
       break;
     } catch (std::runtime_error e) {
       std::cerr << "\033[22;31m" << e.what() << "\033[00;m" << endl;
@@ -45,19 +43,24 @@ void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
   }
 }
 
-void eval_print(std::ostream& out,const_subsexpr s,lang::environment& env) {
-  out << "goes to " << s << std::endl;
+void eval_print(std::ostream& out,const_subsexpr s,lang::context& c) {
+  using namespace lang;
 
-    /*
-    vtree expr(vertex());
-    sexpr_to_vtree(s,expr,env);
-    
-    //evaluate it
-    vtree result(vertex());
-    eval(expr,result);
-    pretty_print(out,result);
-    out << endl;
-    */
+  out << "goes to sexpr '" << s << "'" << std::endl;
+  /*
+  vtree expr=vtree(vertex());
+  analyze(s,expr,c);
+  out << "goes to vtree '" << std::endl;
+  pretty_print(out,expr);
+  out << "'" << std::endl << std::endl;
+  */
+  /*
+  //evaluate it
+  vtree result(vertex());
+  eval(expr,result);
+  pretty_print(out,result);
+  out << endl;
+  */
 }
 
-}} //namespace plap::lang
+}} //namespace plap::lang_io

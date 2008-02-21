@@ -29,7 +29,7 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
      ("not","!")
      ("negative","-")
      ("lambda","\\")
-     ("fact","."))
+     ("fact","<-"))
 
     (boost::assign::map_list_of    //binary operators
      ("plus","+")
@@ -48,7 +48,7 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
      ("or","||")
 
      ("arrow","->")
-     ("apply","(")
+     //("apply","(")
 
      ("cons",":")
      ("concat","~")
@@ -60,15 +60,22 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
 
 const infix_map infix_vararg=boost::assign::map_list_of   //variadic operators
     //    ("tuple",",")
-    ("list","")
+    ("XXX","")
+    ("lparen","(")
+    //   ("rparen",")")
     ("list","[");
 
 } //namespace lang_io_private
 
 const std::string def_symbol="=";
-const std::string list_name="list";
 const std::string strlit_symbol="\"";
 const std::string apply_symbol="(";
+
+const std::string list_name="list";
 const std::string apply_name="apply";
+const std::string def_name="def";
+const std::string lambda_name="lambda";
+const std::string let_name="let";
+const std::string decl_name="decl";
 
 }} //namespace plap::lang_io

@@ -18,6 +18,7 @@
 #define PLAP_LANG_FUNC_H__
 
 #include "vtree.h"
+#include <ostream>
 
 namespace plap { namespace lang {
 
@@ -26,7 +27,19 @@ struct func_base {
 
   virtual arity_t arity() const=0;
   virtual void operator()(const_subvtree loc,subvtree dst) const=0;
+
+  virtual std::ostream& operator<<(std::ostream&) const=0;
+
+  /**
+  virtual bool is_def()    const { return false; }
+  virtual bool is_lambda() const { return false; }
+  virtual bool is_let()    const { return false; }
+  virtual bool is_decl()   const { return false; }
+  **/
 };
+inline std::ostream& operator<<(std::ostream& out,const func_base& f) {
+  return f.operator<<(out);
+}
 
 template<arity_t Arity>
 struct narg_func : public func_base {
@@ -38,8 +51,10 @@ struct func : public func_base {
 
   arity_t arity() const { return _arity; }
   void operator()(const_subvtree loc,subvtree dst) const {}
+
+  std::ostream& operator<<(std::ostream& out) const { return out << "func"; }
   
-  friend struct environment;
+  friend struct context;
  protected:
   arity_t _arity;
   vtree _body;
