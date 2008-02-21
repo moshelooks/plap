@@ -37,20 +37,24 @@ using std::string;
 
 void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d);
 
-inline string tostr(const tree_node<node_val_data<> >& s,int idx=-1) {
-  if (idx==-1)
+inline string tostr(const tree_node<node_val_data<> >& s) {
     return string(s.value.begin(),s.value.end());
-  return string(s.children[idx].value.begin(),s.children[idx].value.end());
-}
-void sexpr_rec(const tree_node<node_val_data<> >& s,subsexpr d,int n=0) {
-  d.append(s.children.size()-n,string());
-  for_each(s.children.begin()+n,s.children.end(),d.begin_sub_child(),&tosexpr);
 }
 
 void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
-  sexpr_rec(s,d);
-
+  d.append(s.children.size(),string());
   string name=tostr(s);
+
+  if (name==strlit_symbol) {
+    assert(d.size()==d.arity()+1);
+    d.root()=strlit_symbol;
+    std::transform(s.children.begin(),s.children.end(),d.begin_sub_child(),
+                   &tostr);
+    return;
+  }
+
+  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
+
   if (name==")") {
     assert(!d.childless());
     if (++d.begin_child()==d.end_child()) {

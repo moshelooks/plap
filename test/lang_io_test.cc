@@ -129,4 +129,10 @@ test_case(parse_indents) {
   check_parse("a b [1,2,\n 3,4] c d\n e f","(a b (list 1 2 3 4) c d (e f))");
 }
 
+test_case(parse_quotes) {
+  check_parse("\"([\" \"](\"","(apply (\" ( [) (list (\" ] ()))");
+  check_parse("a b c #comment\n \"a\\# fake\"",
+              "(a b c (\" a \\ #   f a k e))");
+}
+
 }} //namespace plap::test
