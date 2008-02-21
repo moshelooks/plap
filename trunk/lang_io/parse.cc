@@ -55,13 +55,13 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
 
   for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
 
-  if (name==")") {
+  if (name==")") { //not used but needed to get parsing right
     assert(!d.childless());
     if (++d.begin_child()==d.end_child()) {
       std::swap(d.root(),d.front());
       d.erase(d.flatten(d.begin_child()));
     }
-  } else if (name=="") {
+  } else if (name=="") { //a potential apply-expression
     if (d.front_sub().childless()) {
       std::swap(d.root(),d.front());
       d.erase(d.begin_child());
@@ -71,7 +71,7 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
       d.insert(d[1],list_name);
       d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
     }
-  } else if (name==def_symbol) {
+  } else if (name==def_symbol) { //a definition (explicitly set up structure)
       d.prepend(d[0].root());
       d[1].root()=list_name;
       d.root()=def_name;
