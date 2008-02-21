@@ -61,9 +61,6 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
     if (d.front_sub().childless()) {
       std::swap(d.root(),d.front());
       d.erase(d.begin_child());
-      /* } else if (++d.begin_child()==d.end_child()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.flatten(d.begin_child()));*/
     } else {
       assert(d.arity()>1);
       d.root()=apply_name;
@@ -77,124 +74,17 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
   } else {
     d.root()=symbol2name(name,s.children.size());
   }
-
-
-
-  /* if (name=="(")
-    name="lparen";
-  if (name==")")
-    name="rparen";
-  if (name=="")
-    name="blank";
-    d.root()=name;
-  if (name=="" || name==")") {
-    assert(!d.childless());
-    if (d.front_sub().childless()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.begin_child());
-    }
-  } else {
-    string::size_type arity=s.children.size();
-    if (name==def_symbol) {
-      arity=3;
-      d.prepend(d[0].root());
-      d[1].root()=list_name;
-    }
-    d.root()=symbol2name(name,arity);
-    }*/
-
-
-  /*  if (!d.childless() && d.back_sub().root()==")") {
-    assert(d.back_sub().childless());
-    d.erase(d.back_sub());
-  }
-
-  string name=tostr(s);
-  string::size_type arity=s.children.size();
-  if (name=="") {
-    assert(!d.childless());
-    if (d.front_sub().childless()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.begin_child());
-    } else if (++d.begin_child()==d.end_child()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.flatten(d.begin_child()));
-    } else {
-      d.root()=apply_name;
-    }
-  } else if (name==apply_symbol) {
-    if (d.front_sub().childless()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.begin_child());
-      d.flatten(d.begin_child());
-    } else {
-      d.root()=apply_name;
-      d.insert_above(d[1],list_name);
-      d.flatten(d[1][0]);
-    }
-  } else { 
-    if (name==def_symbol) {
-      arity=3;
-      d.prepend(d[0].root());
-      d[1].root()=list_name;
-    }
-    d.root()=symbol2name(name,arity);
-    }*/
-
-
-  /* if (name==apply_symbol && d.front_sub().childless()) {
-    std::swap(d.root(),d.front());
-    d.erase(d.begin_child());
-    d.flatten(d.begin_child());
-    } else*/ 
-
-    /*
-  if (name=="" && s.children[0].children.empty()) {
-    name=tostr(s,0);
-    sexpr_rec(s,d,1);
-  } else {
-    sexpr_rec(s,d);
-  }
-
-  if (name==apply_symbol && d.front_sub().childless()) {
-    std::swap(d.root(),d.front());
-    d.erase(d.begin_child());
-    d.flatten(d.begin_child());
-  } else {
-    if (name==def_symbol) {
-      arity=3;
-      d.prepend(d[0].root());
-      d[1].root()=list_name;
-    } else if (name==apply_symbol) {
-      if (d[1].root()=="") {
-        d[1].root()=list_name;
-      } else {
-        d.insert_above(d[1],list_name);
-        d.flatten(d[1][0]);
-      }
-      }*/
-    //    d.root()=symbol2name(name,arity);
-    //}
-  //d.root()=name;
 }
+
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
-      sexpr  = no_node_d[ch_p('(')] >> *list >> root_node_d[ch_p(')')];
-      /*          >> !(root_node_d[ch_p('(')] >> list >> 
-               lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
-          >> list //% ch_p(','))//fixme tuples
-          >> ch_p(')');*/
-
-      /*          >> !(root_node_d[ch_p('(')] >> list >> 
-               lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
-          >> list //% ch_p(','))//fixme tuples
-          >> ch_p(')');*/
-
-
+      sexpr  = no_node_d[ch_p('(')] >> +list >> root_node_d[ch_p(')')];
+ 
       list   = range    |  listh;
-      range  = def      |  rangeh;
+      range  = comma    |  rangeh;
+      comma  = def      |  commah;
 
       def    = lambda   >> !(root_node_d[ch_p('=')] >>
                              eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
@@ -229,11 +119,13 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       rangeh = (no_node_d[ch_p('[')] >> (int_p|seq|sexpr) 
                 >> root_node_d[str_p("...")|".."]
                 >> (int_p|seq|sexpr) >> no_node_d[ch_p(']')]);
+      commah = (root_node_d[ch_p('(')] >> (list % no_node_d[ch_p(',')])
+                >> no_node_d[ch_p(')')]);
       lambdah= root_node_d[ch_p('\\')] >> arrow;
     }
-    rule<Scanner> sexpr,list,range,def,lambda,fact,arrow,seq;
+    rule<Scanner> sexpr,list,range,comma,def,lambda,fact,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
-    rule<Scanner> prime,term,str,chr,listh,rangeh,lambdah;
+    rule<Scanner> prime,term,str,chr,listh,rangeh,commah,lambdah;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };
@@ -250,8 +142,6 @@ bool paren_parse(const std::string& str,sexpr& dst) {
     dst.clear();
     return false;
   }
-
-  //  if (str.size()>3 && str.substr(str.size()-2)==".)") //a fact
 
   dst=sexpr(string());
   const char* s=str.data();
