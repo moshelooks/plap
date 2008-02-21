@@ -17,9 +17,7 @@
 #include "indent.h"
 #include <string>
 #include <stack>
-#include <sstream>
 #include <stdexcept>
-#include "dorepeat.h"
 #include "io.h"
 
 #include <iostream>
@@ -31,25 +29,22 @@ namespace {
 using std::string;
 using std::istream;
 using std::ostream;
-using std::stringstream;
 
-//const char whitespace_chars[]=" \t";
 bool whitespace(char c) { return (c==' ' || c=='\t'); }
-/*string::size_type chomp_indent(string& s) {
-  string::size_type n=min(s.find_first_not_of(whitespace_chars),string::npos);
-  s.erase(0,n);
-  return n;
-  }*/
+bool newline(char c) { return (c=='\n'); }
+bool eof(char c) { return (c==EOF); }
 
 struct indent_parser {
-  indent_parser() : indenting(true),indent(0),comma_mode(false),
-                    incomment(false),prev(0) { }
-  bool indenting;
+  indent_parser() : mode(indenting),indent(0) {}
+  //      indenting(true),indent(0),comma_mode(false),
+  //                incomment(false),c(0) { }
+  enum { indenting,commaed,incomment,escaped,normal } mode;
+
+  //bool indenting;
   string::size_type indent;
   std::stack<string::size_type> indents;
-  string line;
-  bool comma_mode,incomment;
-  char prev;
+  //bool comma_mode,incomment;
+  //char c;
 
   bool dump(ostream& out) {
     if (indents.empty())
@@ -63,39 +58,33 @@ struct indent_parser {
 
   bool operator()(istream& in,ostream& out) {
     char c=in.get();
-
-    if (c=='#' && prev!='\\') {
-      incomment=true;
+    
+    if (c=='#' && mode!=escaped) {
+      mode=incomment;
       return true;
-    } else if (incomment) {
-      if (c=='\n' || c==EOF)
-        incomment=false;
+    } else if (mode==incomment) {
+      if (newline(c) || eof(c))
+        mode=indenting;
       else
         return true;
     }
 
-    if (indenting && whitespace(c)) {
+    if (mode==indenting && whitespace(c)) {
       ++indent;
-      prev=c;
       return true;
-    } else if (c=='\n') {
-      if (prev==',') {
-        comma_mode=true;
-      } else {
-        indenting=true;
+    } else if (newline(c)) {
+      if (mode!=commaed) {
+        mode=indenting;
         indent=0;
-        comma_mode=false;
       }
-      prev=c;
-      //fixme - advance by start here
       return (whitespace(in.peek()) || !dump(out));
-    } else if (c==EOF) {
+    } else if (eof(c)) {
       in.putback(c);
       dump(out);
       return false;
     }
-    if (indenting) {
-      indenting=false;
+
+    if (mode==indenting) {
       if (!indents.empty() && indent<=indents.top()) {
         for (out << ')';!indents.empty() && indent<indents.top();indents.pop())
           out << ')';
@@ -108,21 +97,15 @@ struct indent_parser {
         out << ' ';
       out << '(';
     }
+    
+    if (c==',')
+      mode=commaed;
+    else if (c=='\\')
+      mode=escaped;
+    else
+      mode=normal;
 
-    /* if (c=='[')  {
-      in.putback(c);
-      string tmp;
-      read_balanced(in,tmp,'[',']');
-      stringstream ss_in,ss_out;
-      ss_in << tmp.substr(1,tmp.length()-2);
-      io_loop(ss_in,ss_out,indent_parser(),true);
-      tmp=ss_out.str();
-      cout << "read '" << tmp << "'" << endl;
-      out << "([" << tmp.substr(1,tmp.length()-2) << "])";
-      } else*/ {
-      out << c;
-    }
-    prev=c;
+    out << c;
     return true;
   }
 
