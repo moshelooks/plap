@@ -20,9 +20,6 @@
 #include <stdexcept>
 #include "io.h"
 
-#include <iostream>
-using namespace std;
-
 namespace plap { namespace util {
 
 namespace {
@@ -36,15 +33,10 @@ bool eof(char c) { return (c==EOF); }
 
 struct indent_parser {
   indent_parser() : mode(indenting),indent(0) {}
-  //      indenting(true),indent(0),comma_mode(false),
-  //                incomment(false),c(0) { }
-  enum { indenting,commaed,incomment,escaped,normal } mode;
 
-  //bool indenting;
+  enum { indenting,commaed,incomment,escaped,normal } mode;
   string::size_type indent;
   std::stack<string::size_type> indents;
-  //bool comma_mode,incomment;
-  //char c;
 
   bool dump(ostream& out) {
     if (indents.empty())
