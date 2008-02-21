@@ -23,6 +23,8 @@
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/operations.hpp>
 
+#include <iostream>//fixme
+
 namespace plap { namespace util {
 
 void read_balanced(std::istream& in,std::string& str,
@@ -30,7 +32,7 @@ void read_balanced(std::istream& in,std::string& str,
 
 #define UTIL_IO_begin_loop                      \
   out << prompt; out.flush();                   \
-  char c; c=in.get();                           \
+  char c=in.get();                              \
   while (in.good()) { in.putback(c);
 #define UTIL_IO_end_loop                        \
   out << prompt; out.flush();                   \
@@ -61,7 +63,7 @@ struct comment_zap_filter : public boost::iostreams::input_filter {
   comment_zap_filter() : _escaped(false),_incomment(false) {}
   template<typename Source>
   int get(Source& src) {
-    int c;
+    /*  int c;
     do {
       c=boost::iostreams::get(src);
       if (!_escaped && c=='#')
@@ -70,6 +72,17 @@ struct comment_zap_filter : public boost::iostreams::input_filter {
         _incomment=false;
       _escaped=(c=='\\' && !_escaped);
     } while (c!=EOF && c!=boost::iostreams::WOULD_BLOCK && _incomment);
+    return c;*/
+    //return boost::iostreams::get(src);
+    /*  int c;
+    while ( (c = boost::iostreams::get(src)) != EOF &&
+            c != boost::iostreams::WOULD_BLOCK &&
+            false)
+      ;
+      return c;*/
+    int c=boost::iostreams::get(src);
+    std::cout << "XXX " << (c==EOF) << " " << (c=='\n') << ":" << (char)c
+              << "PP" << (c==boost::iostreams::WOULD_BLOCK) << std::endl;
     return c;
   }
  protected:
@@ -79,7 +92,7 @@ struct comment_zap_filter : public boost::iostreams::input_filter {
 inline boost::iostreams::filtering_istream& 
 zap_comments(boost::iostreams::filtering_istream& dst,std::istream& in) {
   dst.push(comment_zap_filter());
-  dst.push(in);
+  dst.push(in,2,2);
   return dst;
 }
 
