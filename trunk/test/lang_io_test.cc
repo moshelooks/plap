@@ -89,6 +89,10 @@ test_case(parse_infix) {
   check_parse("(1 2 3) (4 5 6)","(apply (1 2 3) (list (4 5 6)))");
   check_parse("(1 2 3) (list 4 5 6)","(apply (1 2 3) (list (list 4 5 6)))");
   check_parse("(1 2 3) list 4 5 6","(apply (1 2 3) (list list 4 5 6))");
+
+  check_parse("(1,2)","(tuple 1 2)");
+  check_parse("([1,2])","(list 1 2)");
+  check_parse("([1,2],3)","(tuple (list 1 2) 3)");
 }
 
 test_case(parse_fail_infix) {
@@ -108,7 +112,6 @@ test_case(parse_fail_infix) {
   check_parse_throw("= a");
 
   check_parse_throw("\\");
-  //fixmecheck_parse_throw("(1,2)");
   check_parse_throw("a$b");
   check_parse_throw("a$");
   check_parse_throw("2$a");
