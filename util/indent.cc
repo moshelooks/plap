@@ -33,186 +33,106 @@ using std::istream;
 using std::ostream;
 using std::stringstream;
 
-const char whitespace[]=" \t";
-bool is_whitespace(char c) { return (c==' ' || c=='\t'); }
-string::size_type count_indent(const string& s) {
-  return s.find_first_not_of(whitespace);
-}
-bool all_whitespace(const string& s) {
-  return count_indent(s)==string::npos;
-}
-bool has_whitespace(const string& s,string::size_type from) {
-  return s.find_first_of(whitespace,from)!=string::npos;
-}
-void chomp_trailing_whitespace(string& s) {
-  s.erase(s.find_last_not_of(whitespace)+1);
-}
+//const char whitespace_chars[]=" \t";
+bool whitespace(char c) { return (c==' ' || c=='\t'); }
+/*string::size_type chomp_indent(string& s) {
+  string::size_type n=min(s.find_first_not_of(whitespace_chars),string::npos);
+  s.erase(0,n);
+  return n;
+  }*/
 
-#if 0
 struct indent_parser {
-  indent_parser(string::size_type s) : start(s) {}
-  string::size_type start;
+  indent_parser() : indenting(true),indent(0),comma_mode(false),
+                    incomment(false),prev(0) { }
+  bool indenting;
+  string::size_type indent;
   std::stack<string::size_type> indents;
+  string line;
+  bool comma_mode,incomment;
+  char prev;
 
-  void finish_expr(ostream& out) {
-    while (!indents.empty()) {
+  bool dump(ostream& out) {
+    if (indents.empty())
+      return false;
+    do {
       out << ')';
       indents.pop();
-    }
+    } while (!indents.empty());
+    return true;      
   }
 
   bool operator()(istream& in,ostream& out) {
-    string s;
-    string::size_type indent=readline(in,out,s,!indents.empty());
-    if (s.empty()) {
-      finish_expr(out);
+    char c=in.get();
+
+    if (c=='#' && prev!='\\') {
+      incomment=true;
+      return true;
+    } else if (incomment) {
+      if (c=='\n' || c==EOF)
+        incomment=false;
+      else
+        return true;
+    }
+
+    if (indenting && whitespace(c)) {
+      ++indent;
+      prev=c;
+      return true;
+    } else if (c=='\n') {
+      if (prev==',') {
+        comma_mode=true;
+      } else {
+        indenting=true;
+        indent=0;
+        comma_mode=false;
+      }
+      prev=c;
+      //fixme - advance by start here
+      return (whitespace(in.peek()) || !dump(out));
+    } else if (c==EOF) {
+      in.putback(c);
+      dump(out);
       return false;
     }
-
-    flush_indents(out,indent);
-    out << '(' << s;
-    
-    if (in && is_whitespace(in.peek()))
-      return true;
-    finish_expr(out);
-    return false;
-  }
-
-  void flush_indents(ostream& out,string::size_type indent) {
-    if (!indents.empty() && indent<=indents.top()) {
-      for (out << ')';!indents.empty() && indent<indents.top();indents.pop())
-        out << ')';
-      if (indents.empty() || indent!=indents.top())
-        throw std::runtime_error("Bad indention.");
-    } else {
-      indents.push(indent);
-    }
-  }
-
-  string::size_type readline(istream& in,ostream& out,
-                             string& line,bool indented) {
-    char c;
-    string::size_type indent=0;
-    if (indented) {
-      dorepeat(start) {
-        c=in.get();
-        if (c=='\n')
-          return 0;
-        else if (!in || !is_whitespace(c))
-          throw std::runtime_error("Insufficient indent within expression.");
+    if (indenting) {
+      indenting=false;
+      if (!indents.empty() && indent<=indents.top()) {
+        for (out << ')';!indents.empty() && indent<indents.top();indents.pop())
+          out << ')';
+        if (indents.empty() || indent!=indents.top())
+          throw std::runtime_error("Bad indention.");
+      } else {
+        indents.push(indent);
       }
+      if (indent!=0)
+        out << ' ';
+      out << '(';
     }
 
-    while (true) {
-      c=in.get();
-      if (!in)
-        return 0;
-      else if (c=='\n')
-        if (indented)
-          throw std::runtime_error("Insufficient indent within expression.");
-        else
-          indent=0;
-      else if (!is_whitespace(c))
-        break;
-      else
-        ++indent;
+    /* if (c=='[')  {
+      in.putback(c);
+      string tmp;
+      read_balanced(in,tmp,'[',']');
+      stringstream ss_in,ss_out;
+      ss_in << tmp.substr(1,tmp.length()-2);
+      io_loop(ss_in,ss_out,indent_parser(),true);
+      tmp=ss_out.str();
+      cout << "read '" << tmp << "'" << endl;
+      out << "([" << tmp.substr(1,tmp.length()-2) << "])";
+      } else*/ {
+      out << c;
     }
-    in.putback(c);
-
-    do {
-      c=in.get();
-#define UTIL_INDENT_do_parens(lparen,rparen)            \
-      if (c==lparen) {                                  \
-        flush_indents(out,indent);                      \
-        out << line;                                    \
-        line.clear();                                   \
-        in.putback(c);                                  \
-        string tmp;                                     \
-        read_balanced(in,tmp,lparen,rparen);            \
-        std::cout << "READ '" << tmp << "'" << std::endl;\
-        tmp=string(++tmp.begin(),--tmp.end());           \
-        std::cout << "OK" << tmp << std::endl;           \
-        out << lparen << '{';                                \
-        stringstream ss;                                \
-        ss << tmp;                                      \
-        indent2parens(ss,out);                          \
-        out << '}' << rparen;                            \
-        std::cout << "OK" << std::endl;                 \
-        continue;                                       \
-      }
-      
-      UTIL_INDENT_do_parens('(',')');
-      UTIL_INDENT_do_parens('[',']');
-      
-      line.push_back(c);
-    } while (in && c!='\n');
-    std::cout << "XOK" << std::endl;
-    if (!line.empty() && (*line.rbegin()=='\n' || *line.rbegin()==EOF))
-      line.erase(--line.end());
-    std::cout << "TOK" << std::endl;
-    chomp_trailing_whitespace(line);
-    std::cout << "ZOK" << std::endl;
-    return indent;
+    prev=c;
+    return true;
   }
+
 };
-#endif
-
-void zap_comments(string& s) {
-  string::size_type from=s.find_first_of('#');
-  if (from!=string::npos && (from==0 || s[from-1]!='\\'))
-    s.erase(from);
-}
-
-void process_line(std::istream& in,string& s,bool indented) {
-  s.clear();
-
-  char c=in.get();
-  while (in.good() && c!=EOF) {
-    in.putback(c);
-    
-    c=in.get();
-    if (c!='\n')
-      s.push_back(c);
-    else {
-      //std::getline(in,s);
-      c=in.get();
-        in.putback(c);
-      if (!all_whitespace(s) || (indented && !is_whitespace(c)))
-        break;
-    }
-
-    c=in.get();
-  }
-  chomp_trailing_whitespace(s);
-}
 } //namespace
 
-void indent2parens(istream& in,ostream& out,string::size_type indent) {
-  //io_loop(in,out,indent_parser());
-  std::stack<string::size_type> indents;
-  string s;
-  do {
-    process_line(in,s,!indents.empty());
-    if (s.empty())
-      break;
-
-    string::size_type indent=count_indent(s);
-    if (!indents.empty() && indent<=indents.top()) {
-      for (out << ')';!indents.empty() && indent<indents.top();indents.pop())
-        out << ')';
-      if (indents.empty() || indent!=indents.top())
-        throw std::runtime_error("Bad indention around '"+s+"'.");
-    } else {
-      indents.push(indent);
-    }
-    out << '(' << s.substr(indent);
-  } while (in.good() && is_whitespace(in.peek()));
-  while (!indents.empty()) {
-    out << ')';
-    indents.pop();
-  }
+void indent2parens(istream& in,ostream& out,string::size_type start) {
+  assert(start==0);
+  io_loop(in,out,indent_parser(),true);
 }
-
 
 
 }} //namespace plap::util

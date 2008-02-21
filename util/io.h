@@ -45,11 +45,13 @@ void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
 }
 template<typename ReadWrite>
 void io_loop(std::istream& in,std::ostream& out,ReadWrite rw,
-             const std::string& prompt="") {
+             bool final_call,const std::string& prompt="") {
   UTIL_IO_begin_loop;
-  if (!rw(in,out) || !in.good())
-      break;
-  UTIL_IO_end_loop
+  if (!rw(in,out))
+      return;
+  UTIL_IO_end_loop;
+  if (final_call)
+    rw(in,out);
 }
 #undef UTIL_IO_begin_loop;
 #undef UTIL_IO_end_loop;

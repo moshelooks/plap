@@ -123,4 +123,10 @@ test_case(parse_comments) {
   check_parse("1 2 3 #blabla\n  7 8","(1 2 3 (7 8))");
 }
 
+test_case(parse_indents) {
+  check_parse("1 2 3\n 4 5\n 6","(1 2 3 (4 5) 6)");
+  check_parse("[1,2,\n 3,4]","(list 1 2 3 4)");
+  check_parse("a b [1,2,\n 3,4] c d\n e f","(a b (list 1 2 3 4) c d (e f))");
+}
+
 }} //namespace plap::test
