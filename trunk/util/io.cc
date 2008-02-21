@@ -24,14 +24,17 @@ void read_balanced(std::istream& in,std::string& dst,
                    char lparen,char rparen,bool ignore_comments) {
   std::string::size_type nparen=0;
   char c;
+  bool started=false;
   do {
     c=in.get();
-    if (c==lparen)
+    if (c==lparen) {
+      started=true;
       ++nparen;
-    else if (c==rparen)
+    } else if (c==rparen) {
       --nparen;
+    }
     dst.push_back(c);
-  } while (in && c!=EOF && (nparen>0 || (c!=' ' && c!='\t' && c!='\n')));
+  } while (in && c!=EOF && (nparen>0 || !started));
   if (c==EOF || c==' ' || c=='\t' || c=='\n') {
     in.putback(c);
     dst.erase(dst.length()-1); //get rid of trailing space

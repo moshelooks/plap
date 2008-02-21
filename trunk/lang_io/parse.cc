@@ -20,9 +20,6 @@
 #include <boost/spirit/tree/ast.hpp>
 #include <boost/spirit/tree/parse_tree.hpp>
 #include <boost/spirit/utility/confix.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/concepts.hpp>
-#include <boost/iostreams/operations.hpp>
 #include "algorithm.h"
 #include "tree.h"
 #include "operators.h"
@@ -133,35 +130,11 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
   };
 };
 
-
-struct comment_zap_filter : public boost::iostreams::input_filter {
-  comment_zap_filter() : _escaped(false),_incomment(false) {}
-  template<typename Source>
-  char get(Source& src) {
-    char c;
-    do { 
-      c=boost::iostreams::get(src);
-      if (!_escaped && c=='#')
-        _incomment=true;
-      else if (c=='\n')
-        _incomment=false;
-      _escaped=(c=='\\' && !_escaped);
-    } while (c!=EOF && _incomment);
-    return c;
-  }
- protected:
-  bool _escaped,_incomment;
-};
 } //namespace
 
 bool indent_parse(std::istream& in,sexpr& dst) {
   std::stringstream ss;
-  boost::iostreams::filtering_istream f;
-  comment_zap_filter z;
-  f.push(z);
-  f.push(in,0,1);
-
-  util::indent2parens(f,ss);
+  util::indent2parens(in,ss);
   return paren_parse(ss.str(),dst);
 }
 
