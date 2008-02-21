@@ -20,11 +20,11 @@
 #include "sexpr.h"
 #include "vtree_fwd.h"
 
-namespace plap { namespace lang { struct environment; }}
+namespace plap { namespace lang { struct context; }}
 
 namespace plap { namespace lang_io {
 
-void analyze(const_subsexpr src,lang::subvtree dst,lang::environment& env);
+void analyze(const_subsexpr src,lang::subvtree dst,lang::context& c);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_ANALYZE_H__

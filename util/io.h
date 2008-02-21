@@ -19,30 +19,68 @@
 
 #include <istream>
 #include <string>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/concepts.hpp>
+#include <boost/iostreams/operations.hpp>
 
 namespace plap { namespace util {
 
-void read_balanced(std::istream& in,std::string& str);
+void read_balanced(std::istream& in,std::string& str,
+                   char lparen='(',char rparen=')',bool ignore_comments=false);
+
+#define UTIL_IO_begin_loop                      \
+  out << prompt; out.flush();                   \
+  char c; c=in.get();                           \
+  while (in.good()) { in.putback(c);
+#define UTIL_IO_end_loop                        \
+  out << prompt; out.flush();                   \
+  c=in.get(); }
 
 template<typename In,typename Reader,typename Writer>
 void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
-             const std::string& prompt) {
-  char c;
-  in >> c;
-  while (in.good()) {
-    in.putback(c);
-    out << prompt;
-    out.flush();
-
-    In i;
-    read(in,i);
-    if (!in.good())
+             const std::string& prompt="") {
+  UTIL_IO_begin_loop;
+  In i;
+  if (!read(in,i) || !in.good())
+    break;
+  write(out,i);
+  UTIL_IO_end_loop;
+}
+template<typename ReadWrite>
+void io_loop(std::istream& in,std::ostream& out,ReadWrite rw,
+             const std::string& prompt="") {
+  UTIL_IO_begin_loop;
+  if (!rw(in,out) || !in.good())
       break;
-    write(out,i);
-    out.flush();
+  UTIL_IO_end_loop
+}
+#undef UTIL_IO_begin_loop;
+#undef UTIL_IO_end_loop;
 
-    in >> c;
+struct comment_zap_filter : public boost::iostreams::input_filter {
+  comment_zap_filter() : _escaped(false),_incomment(false) {}
+  template<typename Source>
+  int get(Source& src) {
+    int c;
+    do {
+      c=boost::iostreams::get(src);
+      if (!_escaped && c=='#')
+        _incomment=true;
+      else if (c=='\n')
+        _incomment=false;
+      _escaped=(c=='\\' && !_escaped);
+    } while (c!=EOF && c!=boost::iostreams::WOULD_BLOCK && _incomment);
+    return c;
   }
+ protected:
+  bool _escaped,_incomment;
+};
+
+inline boost::iostreams::filtering_istream& 
+zap_comments(boost::iostreams::filtering_istream& dst,std::istream& in) {
+  dst.push(comment_zap_filter());
+  dst.push(in);
+  return dst;
 }
 
 }} //namespace plap::util

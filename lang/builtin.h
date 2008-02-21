@@ -15,10 +15,10 @@
 // Author: madscience@google.com (Moshe Looks)
 
 // All library functions should appear in initialize_lib, which is called to
-// add library functions to an environment.
+// add library functions to an context.
 
-#ifndef PLAP_LANG_LIB_H__
-#define PLAP_LANG_LIB_H__
+#ifndef PLAP_LANG_BUILTIN_H__
+#define PLAP_LANG_BUILTIN_H__
 
 #include <numeric>
 #include <iostream>//fixme
@@ -26,8 +26,8 @@
 
 namespace plap { namespace lang {
 
-struct environment;
-void initialize_lib(environment& env);
+struct context;
+void initialize_lib(context& c);
 
 template<typename T>
 T lang_plus(list_of<T> l) { return std::accumulate(l.begin(),l.end(),T(0)); }
@@ -46,4 +46,4 @@ disc_t lang_print(const_subvtree v) {
 
 }} //namespace plap::lang
 
-#endif //PLAP_LANG_LIB_H__
+#endif //PLAP_LANG_BUILTIN_H__

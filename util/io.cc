@@ -20,16 +20,22 @@
 
 namespace plap { namespace util {
 
-void read_balanced(std::istream& in,std::string& dst) {
+void read_balanced(std::istream& in,std::string& dst,
+                   char lparen,char rparen,bool ignore_comments) {
   std::string::size_type nparen=0;
+  char c;
   do {
-    std::string s;
-    in >> s;
-    nparen+=
-        std::count(s.begin(),s.end(),'(')-std::count(s.begin(),s.end(),')');
-    dst+=s+' ';
-  } while (in.good() && nparen>0);
-  dst.erase(dst.length()-1); //get rid of trailing space
+    c=in.get();
+    if (c==lparen)
+      ++nparen;
+    else if (c==rparen)
+      --nparen;
+    dst.push_back(c);
+  } while (in && c!=EOF && (nparen>0 || (c!=' ' && c!='\t' && c!='\n')));
+  if (c==EOF || c==' ' || c=='\t' || c=='\n') {
+    in.putback(c);
+    dst.erase(dst.length()-1); //get rid of trailing space
+  }
   if (nparen!=0)
     throw std::runtime_error("paren mismatch reading: '"+dst+"'");
 }

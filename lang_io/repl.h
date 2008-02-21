@@ -23,7 +23,7 @@
 #include "sexpr.h"
 
 namespace plap { namespace lang {
-struct environment;
+struct context;
 }} //namespace plap::lang
 
 
@@ -34,7 +34,7 @@ namespace plap { namespace lang_io {
 void repl(std::istream& in,std::ostream& out,
           const std::string& prompt="\033[22;32m> \033[00;m\n");
 
-void eval_print(std::ostream& out,const_subsexpr s,lang::environment& env);
+void eval_print(std::ostream& out,const_subsexpr s,lang::context& c);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_REPL_H__

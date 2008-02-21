@@ -22,7 +22,8 @@
 
 namespace plap { namespace lang_io {
 
-ostream& pretty_print(ostream& out,const_subvtree s);
+std::ostream& pretty_print(std::ostream& out,lang::const_subvtree s,
+                           std::size_t indent=0,std::size_t line_max=80);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_PRETTY_PRINT_H__

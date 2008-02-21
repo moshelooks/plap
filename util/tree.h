@@ -385,7 +385,10 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
     return static_cast<node<T>*>(this->root_node()->end->prev)->data;
   }
   const_subtree<T> front_sub() const { return *this->begin_sub_child(); }
-  const_subtree<T> back_sub() const { return this->root_node()->end->prev; }
+  const_subtree<T> back_sub() const { 
+    return (const plap::util::util_private::node_base*)
+        this->root_node()->end->prev;
+  }
 
   bool childless() const { return this->root_node()->childless(); }
   //a tree is flat iff it consists of a root node with childless children
@@ -510,11 +513,12 @@ struct mutable_tr : public tr<T,Tree> {
     node_base* n=i._node;
     
     if (node_base* end=n->end) {
-      n->next->prev=end->prev;
-      end->prev->next=n->next;
-      
-      n->next=end->end;
-      end->end->prev=n;
+      if (end->prev!=end) {
+        n->next->prev=end->prev;
+        end->prev->next=n->next;
+        n->next=end->end;
+        end->end->prev=n;
+      }
 
       delete end;
       n->end=NULL;      
@@ -606,7 +610,10 @@ struct mutable_tr : public tr<T,Tree> {
     return static_cast<node<T>*>(this->root_node()->end->prev)->data;
   }
   subtree<T> front_sub() { return *this->begin_sub_child(); }
-  subtree<T> back_sub() { return this->root_node()->end->prev; }
+  subtree<T> back_sub() { 
+    return (plap::util::util_private::node_base*)
+        this->root_node()->end->prev;
+  }
 
   void prune() { this->erase(begin_child(),end_child()); }
 
@@ -763,10 +770,19 @@ struct const_subtree
   typedef util_private::subtr<util_private::const_node_policy
                               <T,const_subtree<T> > > super;
 
+  //for convenience
+  typedef typename super::const_pre_iterator pre_iterator;
+  typedef typename super::const_sub_pre_iterator sub_pre_iterator;
+  typedef typename super::const_child_iterator child_iterator;
+  typedef typename super::const_sub_child_iterator sub_child_iterator;
+  typedef typename super::const_post_iterator post_iterator;
+  typedef typename super::const_sub_post_iterator sub_post_iterator;
+
   template<typename OtherTr>
   const_subtree(const OtherTr& other) : super(other.root_node()) { 
     assert(!other.empty());
   }
+  const_subtree(const util_private::node_base* n) : super(n) {}
 
   template<typename OtherTr>
   const_subtree& operator=(const OtherTr& rhs) {
@@ -777,8 +793,6 @@ struct const_subtree
  protected:
   template<typename,typename>
   friend struct util_private::sub_iter_base;
-
-  const_subtree(const util_private::node_base* n) : super(n) {}
 };
 
 template<typename T>

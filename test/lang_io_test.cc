@@ -57,7 +57,8 @@ test_case(parse_infix) {
   check_parse("(a b:c d)","(a (cons b c) d)");
 
   check_parse("([]:[]:(a b+d))","(cons (cons list list) (a (plus b d)))");
-  //  check_parse("([]:[]:a b+d)","(cons (cons list list) (a (plus b d)))");
+  check_parse("([]:[]:a b+d)",
+              "(apply (cons (cons list list) a) (list (plus b d)))");
 
   check_parse("(a+b)","(plus a b)");
   check_parse("(a==b)","(equal a b)");
@@ -84,6 +85,10 @@ test_case(parse_infix) {
   check_parse("(1 2)||(3 4)||5","(or (or (1 2) (3 4)) 5)");
 
   check_parse("[[[]]]","(list (list list))");
+
+  check_parse("(1 2 3) (4 5 6)","(apply (1 2 3) (list (4 5 6)))");
+  check_parse("(1 2 3) (list 4 5 6)","(apply (1 2 3) (list (list 4 5 6)))");
+  check_parse("(1 2 3) list 4 5 6","(apply (1 2 3) (list list 4 5 6))");
 }
 
 test_case(parse_fail_infix) {
@@ -103,9 +108,16 @@ test_case(parse_fail_infix) {
   check_parse_throw("= a");
 
   check_parse_throw("\\");
-  check_parse_throw("(1,2)");
+  //fixmecheck_parse_throw("(1,2)");
   check_parse_throw("a$b");
   check_parse_throw("a$");
   check_parse_throw("2$a");
 }
+
+test_case(parse_comments) {
+  check_parse("#nothing here","");
+  check_parse("1 2 3 ### 456","(1 2 3)");
+  check_parse("1 2 3 #blabla\n  7 8","(1 2 3 (7 8))");
+}
+
 }} //namespace plap::test

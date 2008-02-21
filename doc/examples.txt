@@ -138,16 +138,16 @@ most_common $l =
     group 0 (hd $l) (tl $l)
   hd (tl max_elem (most_common_helper (sort $l)) \$l1 $l2 -> (hd $l1)<(hd $l2))
 
-hetrogenous lists are damn convenient, and the type inference code is a pain in
-the ass and probably requires function synthesis - how is < supposed to work on
-anything, otherwise?
-most_common ['a','b',c']
+#hetrogenous lists are damn convenient, and the type inference code is a pain in
+#the ass and probably requires function synthesis - how is < supposed to work on
+#anything, otherwise?
+#most_common ['a','b',c']
 
 # Representing Relationships Between Data
-father "Cain" "Adam".
-father "Abel" "Adam".
-father "Seth" "Adam".
-father "Enoch" "Cain".
+<- father Cain  Adam
+<- father Abel  Adam
+<- father Seth  Adam
+<- father Enoch Cain
 
 foreach (satisfying_set \$x $y -> father $x $y)
         \$x $y -> println "The father of "~$x~" is "~$y~"."

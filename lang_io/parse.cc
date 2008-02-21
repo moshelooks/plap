@@ -48,16 +48,114 @@ void sexpr_rec(const tree_node<node_val_data<> >& s,subsexpr d,int n=0) {
 }
 
 void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
-  string::size_type arity=s.children.size();
-  string name=tostr(s);
+  sexpr_rec(s,d);
 
+  string name=tostr(s);
+  if (name==")") {
+    assert(!d.childless());
+    if (++d.begin_child()==d.end_child()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.flatten(d.begin_child()));
+    }
+  } else if (name=="") {
+    if (d.front_sub().childless()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.begin_child());
+      /* } else if (++d.begin_child()==d.end_child()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.flatten(d.begin_child()));*/
+    } else {
+      assert(d.arity()>1);
+      d.root()=apply_name;
+      d.insert(d[1],list_name);
+      d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
+    }
+  } else if (name==def_symbol) {
+      d.prepend(d[0].root());
+      d[1].root()=list_name;
+      d.root()=def_name;
+  } else {
+    d.root()=symbol2name(name,s.children.size());
+  }
+
+
+
+  /* if (name=="(")
+    name="lparen";
+  if (name==")")
+    name="rparen";
+  if (name=="")
+    name="blank";
+    d.root()=name;
+  if (name=="" || name==")") {
+    assert(!d.childless());
+    if (d.front_sub().childless()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.begin_child());
+    }
+  } else {
+    string::size_type arity=s.children.size();
+    if (name==def_symbol) {
+      arity=3;
+      d.prepend(d[0].root());
+      d[1].root()=list_name;
+    }
+    d.root()=symbol2name(name,arity);
+    }*/
+
+
+  /*  if (!d.childless() && d.back_sub().root()==")") {
+    assert(d.back_sub().childless());
+    d.erase(d.back_sub());
+  }
+
+  string name=tostr(s);
+  string::size_type arity=s.children.size();
+  if (name=="") {
+    assert(!d.childless());
+    if (d.front_sub().childless()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.begin_child());
+    } else if (++d.begin_child()==d.end_child()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.flatten(d.begin_child()));
+    } else {
+      d.root()=apply_name;
+    }
+  } else if (name==apply_symbol) {
+    if (d.front_sub().childless()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.begin_child());
+      d.flatten(d.begin_child());
+    } else {
+      d.root()=apply_name;
+      d.insert_above(d[1],list_name);
+      d.flatten(d[1][0]);
+    }
+  } else { 
+    if (name==def_symbol) {
+      arity=3;
+      d.prepend(d[0].root());
+      d[1].root()=list_name;
+    }
+    d.root()=symbol2name(name,arity);
+    }*/
+
+
+  /* if (name==apply_symbol && d.front_sub().childless()) {
+    std::swap(d.root(),d.front());
+    d.erase(d.begin_child());
+    d.flatten(d.begin_child());
+    } else*/ 
+
+    /*
   if (name=="" && s.children[0].children.empty()) {
     name=tostr(s,0);
     sexpr_rec(s,d,1);
   } else {
     sexpr_rec(s,d);
   }
-  /**/
+
   if (name==apply_symbol && d.front_sub().childless()) {
     std::swap(d.root(),d.front());
     d.erase(d.begin_child());
@@ -67,30 +165,41 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
       arity=3;
       d.prepend(d[0].root());
       d[1].root()=list_name;
-    } else if (name==apply_symbol && d[1].root()!=list_name) {
-      d.insert_above(d[1],list_name);
-      d.flatten(d[1][0]);
-    }
-    d.root()=symbol2name(name,arity);
-    }/**/
+    } else if (name==apply_symbol) {
+      if (d[1].root()=="") {
+        d[1].root()=list_name;
+      } else {
+        d.insert_above(d[1],list_name);
+        d.flatten(d[1][0]);
+      }
+      }*/
+    //    d.root()=symbol2name(name,arity);
+    //}
   //d.root()=name;
 }
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
-      sexpr  = no_node_d[ch_p('(')] 
-          >> ((!(root_node_d[ch_p('(')] >> list >> 
-                 lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
-               >> list >> !root_node_d[ch_p('.')]) % ch_p(','))//fixme tuples
-          >> no_node_d[ch_p(')')];
+      sexpr  = no_node_d[ch_p('(')] >> *list >> root_node_d[ch_p(')')];
+      /*          >> !(root_node_d[ch_p('(')] >> list >> 
+               lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
+          >> list //% ch_p(','))//fixme tuples
+          >> ch_p(')');*/
+
+      /*          >> !(root_node_d[ch_p('(')] >> list >> 
+               lexeme_d[no_node_d[ch_p(')')] >> eps_p(space_p | '(')])
+          >> list //% ch_p(','))//fixme tuples
+          >> ch_p(')');*/
+
 
       list   = range    |  listh;
       range  = def      |  rangeh;
 
       def    = lambda   >> !(root_node_d[ch_p('=')] >>
                              eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
-      lambda = arrow    |  lambdah;
+      lambda = fact     |  lambdah;
+      fact   =             ! root_node_d[str_p("<-")]              >> arrow;
       arrow  = seq      >> *(root_node_d[str_p("->")]              >> lambda);
       seq    = or_op    >> *(lambdah|or_op);
       or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
@@ -105,9 +214,9 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
 
       prime  = sexpr | term | listh | rangeh;
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
-             | lexeme_d[
-                 token_node_d[!ch_p('$') >> (alpha_p | '_') >> 
-                              *(alnum_p | '_') >> ~eps_p('.' | alnum_p | '$')]
+             | lexeme_d[token_node_d
+                        [!ch_p('$') >> (alpha_p | '_') >> *(alnum_p | '_') 
+                         >> ~eps_p(('.' >> ~ch_p('.')) | alnum_p | '$')]
                  | (real_p >> ~eps_p('.' | alnum_p | '$'))];
       str    = lexeme_d[root_node_d[ch_p('\"')] 
                         >> *((ch_p('\\') >> '\"') | anychar_p - '\"')
@@ -122,7 +231,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
                 >> (int_p|seq|sexpr) >> no_node_d[ch_p(']')]);
       lambdah= root_node_d[ch_p('\\')] >> arrow;
     }
-    rule<Scanner> sexpr,list,range,def,lambda,arrow,seq;
+    rule<Scanner> sexpr,list,range,def,lambda,fact,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
     rule<Scanner> prime,term,str,chr,listh,rangeh,lambdah;
     const rule<Scanner>& start() const { return sexpr; }
@@ -130,17 +239,19 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
 };
 } //namespace
 
-void indent_parse(std::istream& in,sexpr& dst) {
+bool indent_parse(std::istream& in,sexpr& dst) {
   std::stringstream ss;
   util::indent2parens(in,ss);
-  paren_parse(ss.str(),dst);
+  return paren_parse(ss.str(),dst);
 }
 
-void paren_parse(const std::string& str,sexpr& dst) {
+bool paren_parse(const std::string& str,sexpr& dst) {
   if (str.empty()) {
     dst.clear();
-    return;
+    return false;
   }
+
+  //  if (str.size()>3 && str.substr(str.size()-2)==".)") //a fact
 
   dst=sexpr(string());
   const char* s=str.data();
@@ -148,6 +259,7 @@ void paren_parse(const std::string& str,sexpr& dst) {
   if (!t.match || !t.full || t.trees.size()!=1)
     throw std::runtime_error("bad tree structure parsing '"+str+"'");
   tosexpr(t.trees.front(),dst);
+  return true;
 }
   
 }} //namespace plap::lang

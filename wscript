@@ -59,13 +59,14 @@ def build(bld):
 			obj.uselib=obj.uselib+' PROFILER'
 	
 	src='''
+	lang/builtin.cc
 	lang/cast.cc
+	lang/context.cc
 	lang/core.cc
-	lang/environment.cc
-	lang/lib.cc
 	lang_io/analyze.cc
 	lang_io/operators.cc
 	lang_io/parse.cc
+	lang_io/pretty_print.cc
 	lang_io/repl.cc
 	util/indent.cc
 	util/io.cc

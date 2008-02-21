@@ -14,8 +14,8 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_ENVIRONMENT_H__
-#define PLAP_LANG_ENVIRONMENT_H__
+#ifndef PLAP_LANG_CONTEXT_H__
+#define PLAP_LANG_CONTEXT_H__
 
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/noncopyable.hpp>
@@ -26,13 +26,13 @@
 
 namespace plap { namespace lang {
 
-struct environment;
-void initialize_lib(environment&);
+struct context;
+void initialize_lib(context&);
 
-struct environment : public boost::noncopyable {
+struct context : public boost::noncopyable {
   typedef std::vector<std::string> argname_seq;
 
-  environment() { init(); initialize_lib(*this); }
+  context() { init(); initialize_lib(*this); }
 
   func_t declare_func(arity_t a,const std::string& name) {
     _funcs.push_back(new func(a)); 
@@ -90,6 +90,10 @@ struct environment : public boost::noncopyable {
   //  const func_name_map& func2name() const { return _func2name; }
   //  const func_name_map& name2func() const { return _name2func; }
 
+
+  void to_list(subvtree s) {}
+  void to_apply(subvtree s) {}
+  void to_tuple(subvtree s) {}
  protected:
   typedef boost::ptr_vector<func> func_vector;
   struct left {};
@@ -106,4 +110,4 @@ struct environment : public boost::noncopyable {
 };
 
 }} //namespace plap::lang
-#endif //PLAP_LANG_ENVIRONMENT_H__
+#endif //PLAP_LANG_context_H__

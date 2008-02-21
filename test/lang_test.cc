@@ -16,11 +16,11 @@
 
 #if 0
 
-#define check_eval(str,res) check_eq(env.eval(str),res)
+#define check_eval(str,res) check_eq(c.eval(str),res)
 
 test_case(lang_eval_examples) {
-  environment env;
-  require_eq(env.eval("import \"doc/examples.txt\""),id::unit);
+  context c;
+  require_eq(c.eval("import \"doc/examples.txt\""),id::unit);
 
   check_eval("fact 0",1);
   check_eval("fact 1",1);
@@ -47,22 +47,22 @@ test_case(lang_eval_examples) {
   check_eval("nth ['a','b','c'] 1",'b');
 }  
 
-test_case(lang_env_declare_func) {
-  environment env;
+test_case(lang_context_declare_func) {
+  context c;
 
-  func_t foo=env.declare_func(1,"foo");
+  func_t foo=c.declare_func(1,"foo");
 
-  check_eq(env.name2func("foo"),foo);
+  check_eq(c.name2func("foo"),foo);
 
-  check(env.func2name(foo));
-  check_eq(*env.func2name(foo),"foo");
+  check(c.func2name(foo));
+  check_eq(*c.func2name(foo),"foo");
 
-  check(!env.name2func("goo"));
+  check(!c.name2func("goo"));
 }
 
 test_case(lang_parse_expr) {
-  environment env;
-  func_t foo=env.declare_func(3,"foo");
+  context c;
+  func_t foo=c.declare_func(3,"foo");
 
   string target_str="foo(1 2)";
   vtree target=tree_of(vertex(foo))(vertex(disc_t(1)),vertex(disc_t(2)));
@@ -75,11 +75,11 @@ test_case(lang_parse_expr) {
 
   vtree dst=vtree(vertex());
   //this should fail since foo has arity 3
-  check_throw(sexpr2vtree(s,dst,env),runtime_error);
+  check_throw(sexpr2vtree(s,dst,c),runtime_error);
   dst.prune();
   s.append(std::string("3"));
   //should work now
-  sexpr2vtree(s,dst,env);
+  sexpr2vtree(s,dst,c);
 
   check_eq(dst.size(),4u);
   check_eq(vertex_cast<func_t>(dst.root()),foo);
@@ -93,37 +93,37 @@ test_case(lang_declare_func) {
 }
 
 test_case(lang_define_func) {
-  environment env;
+  context c;
   string str="def(foo list($x $y) $x)";
 
   vtree dst=vtree(vertex());
-  string2vtree(str,dst,env);
+  string2vtree(str,dst,c);
 
   vtree target=tree_of(vertex(disc_t(0))); //should be unit
   check_eq(dst,target);
 
-  check(env.name2func("foo"));
-  environment::argname_seq an=env.argnames(env.name2func("foo"));
+  check(c.name2func("foo"));
+  context::argname_seq an=c.argnames(c.name2func("foo"));
   check_eq(an.size(),2u);
   check_eq(an[0],"x");
   check_eq(an[1],"y");
 
   string call="foo(1 2)";
-  string2vtree(call,dst,env);
-  vtree target2=tree_of(vertex(env.name2func("foo")))(vertex(disc_t(1)),
+  string2vtree(call,dst,c);
+  vtree target2=tree_of(vertex(c.name2func("foo")))(vertex(disc_t(1)),
                                                       vertex(disc_t(2)));
   check_eq(dst,target2);
 
   vtree result=vtree(vertex());
-  //fixmeenv.eval(dst,result);
+  //fixmec.eval(dst,result);
   check_eq(result,tree_of(vertex(disc_t(1))));
 }
 
 test_case(lang_let) {
-  environment env;
+  context c;
   string str="let(list(decl(foo list($x $y) $x)) foo(1 2))";
   vtree dst=vtree(vertex());
-  string2vtree(str,dst,env);
+  string2vtree(str,dst,c);
 
   check_eq(dst,tree_of(vertex(disc_t(1))));
 }  
@@ -215,29 +215,29 @@ struct foreach_func {
 
   put the func_def in the tree, not the func
 
-  env.register_builtin(f,make_list_adapter(bind(std::accumulate<
+  c.register_builtin(f,make_list_adapter(bind(std::accumulate<
                                     
 
                                     accumulate_func<disc_t>()));
-  env.register_builtin(f,unary_func(list_type<float_type>(),float_type(),
+  c.register_builtin(f,unary_func(list_type<float_type>(),float_type(),
                                     accumulate_func<contin_t>()));
 
   vtree res(0);
 
-  env.eval(tree_of(&f)(1,2,3),res);
+  c.eval(tree_of(&f)(1,2,3),res);
   check_eq(res,tree_of("6"));
 
-  env.eval(tree_of(&f)(42),res);
+  c.eval(tree_of(&f)(42),res);
   check_eq(res,tree_of("42"));
 
-  env.eval(tree_of(&f)(tree_of(&f)(1,2),7),res);
+  c.eval(tree_of(&f)(tree_of(&f)(1,2),7),res);
   check_eq(res,tree_of("10"));
 }
 
 test_case(lang_foreach) {
-  func& f=env.register_func("foreach",std::foreach<);
+  func& f=c.register_func("foreach",std::foreach<);
 
-  env.register_builtin(f,foreach_func())
+  c.register_builtin(f,foreach_func())
 
 //  register_declaration(register_rewrite("to_enf",lang_bool),
 //                     &reduct::reduce_to_enf);
