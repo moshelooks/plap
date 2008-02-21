@@ -171,13 +171,10 @@ void process_line(std::istream& in,string& s,bool indented) {
     in.putback(c);
     
     c=in.get();
-    cout << "YYY     " << c << endl;
     if (c!='\n')
       s.push_back(c);
     else {
-      cout << "NEWLINE!!" << endl;
       //std::getline(in,s);
-      zap_comments(s);
       c=in.get();
         in.putback(c);
       if (!all_whitespace(s) || (indented && !is_whitespace(c)))
@@ -186,23 +183,16 @@ void process_line(std::istream& in,string& s,bool indented) {
 
     c=in.get();
   }
-      zap_comments(s);
-  cout << "gott " << s << "XX " << in.good() << endl;
   chomp_trailing_whitespace(s);
 }
 } //namespace
 
 void indent2parens(istream& in,ostream& out,string::size_type indent) {
-  boost::iostreams::filtering_istream f;
-  comment_zap_filter z;
-  f.push(z);
-  f.push(in,0,1);
-  //zap_comments(f,in);
-  //io_loop(zap_comments(f,in),out,indent_parser(s));
+  //io_loop(in,out,indent_parser());
   std::stack<string::size_type> indents;
   string s;
   do {
-    process_line(f,s,!indents.empty());
+    process_line(in,s,!indents.empty());
     if (s.empty())
       break;
 
@@ -216,7 +206,7 @@ void indent2parens(istream& in,ostream& out,string::size_type indent) {
       indents.push(indent);
     }
     out << '(' << s.substr(indent);
-  } while (f.good() && is_whitespace(f.peek()));
+  } while (in.good() && is_whitespace(in.peek()));
   while (!indents.empty()) {
     out << ')';
     indents.pop();
