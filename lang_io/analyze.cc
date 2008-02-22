@@ -31,6 +31,7 @@
 
 namespace plap { namespace lang_io {
 
+namespace {
 using namespace lang;
 using namespace util;
 using boost::lexical_cast;
@@ -38,14 +39,18 @@ using boost::bind;
 using std::string;
 using std::stringstream;
 
-namespace {
+bool scalar(const string& s) { return (s[0]=='$' && s.size()>1); }
+bool number(const string& s) { 
+  char c=s[0];
+  return ((c=='-' || c=='.' || (c>='0' && c<='9')) && s.size()>1);
+}
+bool identifier(const string& s) { return (!scalar(s) && !number(s)); }
 
 void throw_bad_arity(const string& name,arity_t actual, arity_t tgt) {
   throw std::runtime_error(string("Bad arity for ")+name+" - expected "+
                            lexical_cast<string>((int)tgt)+", got "+
                            lexical_cast<string>((int)actual)+".");
 }
-
 #define make_exception(nm,dsc)                   \
   void throw_ ## nm(const string& str) {         \
     throw std::runtime_error(dsc);               \
@@ -76,9 +81,10 @@ make_exception(bad_arg_name,
   }
 
 struct semantic_analyzer {
-  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r) {}
+  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r),arg_idx(0) {}
   context& c;
   const_subsexpr root;
+  arity_t arg_idx;
   
   process(sexpr) {
     if (src.childless())
@@ -124,11 +130,47 @@ struct semantic_analyzer {
              bind(&semantic_analyzer::process_sexpr,this,_1,_2));
   }
 
+  void index_scalar(const std::string& s,arity_t idx) {
+    if (!scalar(s))
+      throw_bad_arg_name(s);
+    if (!scalars.insert(make_pair(s.subtr(1),idx)).second)
+      throw_arg_shaddow(s);
+  }
+
   process(def) { //def(name list(arg1 arg2 ...) body)
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
     if (src[1].root()!=list_name) 
-      throw_bad_def(name);/**
+      throw_bad_def(name);
+
+    arity_t a=src[1].arity();
+    if (src[1].size()!=a+1);
+      throw_bad_def(name);
+    
+    for_each(src[1].begin_child(),src[1].end_child(),count_it(arg_idx),
+             bind(&semantic_analyzer::index_scalar,this,_1,_2));
+    arg_idx+=a;
+
+    vtree body=vtree(vertex());
+    process_sexpr(src[2],body);
+
+    c.define_func(transform_it(src[1].begin_child(),
+                               bind(&string::substr,_1,1,string::npos)),
+                  transform_it(src[1].end_child(),
+                               bind(&string::substr,_1,1,string::npos)),
+                  body,sexpr2identifier(src[0]));
+  }
+
+    foreach(const string& s,src[2]) {
+      if (scalar(s)) {
+        scalar_map::const_iterator i=scalars.find(s.substr(1));
+        if (i==scalars.end())
+          throw_arg_unbound(s);
+        
+          
+      
+    
+    
     for (const_subsexpr::child_sub_iterator i=src[1].begin_sub_child();
          i!=src[1].end_sub_child();++i) {
       if (!i->childless())
@@ -190,11 +232,9 @@ struct semantic_analyzer {
   //context other than the given context+bindings)
   //throws if invalid
   vertex string2vertex(const string& str) {
-    assert(!str.empty());
     if (func_t f=string2func(str))
       return f;
-    char c=str[0];
-    if (c=='-' || c=='.' || (c>='0' && c<='9')) {
+    if (number(str)) {
       try {
         return lexical_cast<contin_t>(c);
       } catch (...) {
@@ -225,7 +265,7 @@ struct semantic_analyzer {
   }
 
   const string& sexpr2identifier(const_subsexpr src) {
-    if (!src.childless())
+    if (!src.childless() || !identifier(src.root()))
       throw_bad_identifier(lexical_cast<string>(src));
     return src.root();
   }

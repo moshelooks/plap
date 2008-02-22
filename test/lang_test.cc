@@ -14,6 +14,28 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+#define str2vtr(src,vtr) {                              \
+    context c;                                          \
+    vtr=vtree(vertex());                                \
+    cout << sexpr_format;                               \
+    stringstream ss;                                    \
+    ss << src;                                          \
+    tree<string> tmpXXX;                                \
+    indent_parse(ss,tmpXXX);                            \
+    analyze(tmpXXX,vtr,c);                              \
+  }
+
+test_case(lang_def_examples) {
+  vtree v;
+  check_throw(str2vtr("def a b c",v));
+  check_throw(str2vtr("def a",v));
+  check_throw(str2vtr("def (list a b) c d",v));
+  check_throw(str2vtr("def (list ($a $b $c)) d",v));
+  check_throw(str2vtr("def (list $a b $c) d",v));
+}
+
+
+
 #if 0
 
 #define check_eval(str,res) check_eq(c.eval(str),res)
@@ -45,7 +67,7 @@ test_case(lang_eval_examples) {
   check_eval("nth [1,2,3] 0",1);
   check_eval("nth [0..10] 5",5);
   check_eval("nth ['a','b','c'] 1",'b');
-}  
+}
 
 test_case(lang_context_declare_func) {
   context c;

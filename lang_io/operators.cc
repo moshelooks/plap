@@ -23,6 +23,7 @@ namespace lang_io_private {
 bool sexpr_io=false;
 const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
     (boost::assign::map_list_of     //nullary operators
+     ("tuple","()")
      ("list","[]"))
 
     (boost::assign::map_list_of     //unary operators

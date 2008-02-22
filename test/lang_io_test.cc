@@ -30,7 +30,7 @@ namespace plap { namespace test {
     stringstream ss;                                    \
     ss << src;                                          \
     tree<string> tmpXXX;                                \
-    check_throw(indent_parse(ss,tmpXXX),runtime_error); \
+    check_throw(indent_parse(ss,tmpXXX));               \
   }
 
 test_case(parse_sexpr) {

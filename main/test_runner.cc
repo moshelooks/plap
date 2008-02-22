@@ -25,6 +25,7 @@
 #include "context.h"
 #include "parse.h"
 #include "cast.h"
+#include "analyze.h"
 //#include "eager_def.h"
 //#include "builtin.h"
 
@@ -37,7 +38,7 @@
 #define test_case BOOST_AUTO_TEST_CASE
 #define check BOOST_CHECK
 #define check_eq BOOST_CHECK_EQUAL
-#define check_throw BOOST_CHECK_THROW
+#define check_throw(x) BOOST_CHECK_THROW(x,std::runtime_error)
 #define check_tree(tr,sz,name)              \
 {                                           \
   check_eq(tr.empty(),(sz==0));             \
