@@ -32,11 +32,19 @@ void initialize_lib(context&);
 struct context : public boost::noncopyable {
   typedef std::vector<std::string> argname_seq;
 
-  context() { init(); initialize_lib(*this); }
+  //create a parent context
+  context() : _parent(NULL) { initialize_lib(*this); }
 
+  //create a child context
+  context(context& p) : _parent(&p) {}
+
+  //declarations are only needed for defining mutually recurize functions
   func_t declare_func(arity_t a,const std::string& name) {
-    _funcs.push_back(new func(a)); 
-    return _names.insert(make_pair(name,&_funcs.back())).first->second;
+    return _names.insert(make_pair(name,declare_func(a))).first->second;
+  }
+  func_t declare_func(arity_t a) {
+    _funcs.push_back(new func(a));
+    return &_funcs.back();
   }
 
   //these all splice out body - so if you want to keep it, make a copy
@@ -61,6 +69,7 @@ struct context : public boost::noncopyable {
     return decl;
   }
 
+  //lookup functions
   func_t name2func(const std::string& name) const {
     name_index::index<left>::type::const_iterator i=
         boost::multi_index::get<left>(_names).find(name);
@@ -99,9 +108,9 @@ struct context : public boost::noncopyable {
   struct left {};
   struct right {};
   typedef util::bimap<std::string,func_t,left,right>::type name_index;
-
   typedef std::tr1::unordered_map<func_t,argname_seq> argname_index;
 
+  context* _parent;
   func_vector _funcs;
   name_index _names;
   argname_index _argnames;

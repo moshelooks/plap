@@ -47,13 +47,13 @@ void eval_print(std::ostream& out,const_subsexpr s,lang::context& c) {
   using namespace lang;
 
   out << "goes to sexpr '" << s << "'" << std::endl;
-  /*
+
   vtree expr=vtree(vertex());
   analyze(s,expr,c);
-  out << "goes to vtree '" << std::endl;
+  out << "goes to vtree:" << std::endl;
   pretty_print(out,expr);
-  out << "'" << std::endl << std::endl;
-  */
+  out << std::endl << "***" << std::endl << std::endl;
+
   /*
   //evaluate it
   vtree result(vertex());

@@ -106,7 +106,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       mlt    = neg      >> *(root_node_d[ch_p('*')|'/']            >> neg);
       neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
-      prime  = sexpr | term | listh | rangeh;
+      prime  = sexpr | term | listh | rangeh | "()";
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
              | lexeme_d[token_node_d
                         [!ch_p('$') >> (alpha_p | '_') >> *(alnum_p | '_') 
