@@ -76,5 +76,6 @@ const std::string list_name="list";
 const std::string lambda_name="lambda";
 const std::string let_name="let";
 const std::string decl_name="decl";
+const std::string tuple_name="tuple";
 
 }} //namespace plap::lang_io

@@ -66,6 +66,7 @@ extern const std::string list_name;
 extern const std::string lambda_name;
 extern const std::string let_name;
 extern const std::string decl_name;
+extern const std::string tuple_name;
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_OPERATORS_H__

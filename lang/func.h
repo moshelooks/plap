@@ -20,6 +20,11 @@
 #include "vtree.h"
 #include <ostream>
 
+//this determines the maximal arity of defs in the language
+#ifndef LANG_LIMIT_ARITY
+#  define LANG_LIMIT_ARITY 4
+#endif
+
 namespace plap { namespace lang {
 
 struct func_base {

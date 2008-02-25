@@ -35,10 +35,10 @@ struct world;
 struct func_base;
 //fixmestruct rewrite;
 
-typedef int        disc_t;
-typedef float      contin_t;
-typedef world*     world_t;
-typedef func_base* func_t;
+typedef int              disc_t;
+typedef float            contin_t;
+typedef world*           world_t;
+typedef const func_base* func_t;
 //fixme typedef rewrite*  rewrite_t;
 
 typedef unsigned char arity_t;

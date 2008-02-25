@@ -26,10 +26,6 @@
 #include "core.h"
 #include "cast.h"
 
-//this determines the maximal arity of defs in the language
-#ifndef LANG_LIMIT_ARITY
-#  define LANG_LIMIT_ARITY 4
-#endif
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
 
 //helper functions for generating eager_def structs
