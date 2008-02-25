@@ -29,9 +29,11 @@ test_case(lang_def_examples) {
   vtree v;
   check_throw(str2vtr("def a b c",v));
   check_throw(str2vtr("def a",v));
-  check_throw(str2vtr("def (list a b) c d",v));
-  check_throw(str2vtr("def (list ($a $b $c)) d",v));
-  check_throw(str2vtr("def (list $a b $c) d",v));
+  check_throw(str2vtr("def x (list $a b) c",v));
+  check_throw(str2vtr("def x (list ($a $b $c)) d",v));
+  check_throw(str2vtr("def x (list $a $b $c) d e",v));
+
+  str2vtr("foo $x = ()",v);
 }
 
 

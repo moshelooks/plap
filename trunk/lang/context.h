@@ -20,11 +20,27 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/noncopyable.hpp>
 #include <tr1/unordered_map>
+
 #include <string>
 #include "bimap.h"
 #include "func.h"
 
 namespace plap { namespace lang {
+
+template<arity_t Arity,typename Type>
+struct type_func : public narg_func<Arity>,boost::noncopyable { 
+  static const Type* instance() {
+    static Type t;
+    return &t;
+  }
+};
+
+struct tuple0 : public type_func<0,tuple0> {
+  void operator()(const_subvtree loc,subvtree dst) const { 
+    dst.root()=func_t(this); 
+  }
+  std::ostream& operator<<(std::ostream& o) const { return o << "()"; }
+};
 
 struct context;
 void initialize_lib(context&);
@@ -33,10 +49,10 @@ struct context : public boost::noncopyable {
   typedef std::vector<std::string> argname_seq;
 
   //create a parent context
-  context() : _parent(NULL) { initialize_lib(*this); }
+  context() : _parent(this),_root(this) { initialize_lib(*this); }
 
   //create a child context
-  context(context& p) : _parent(&p) {}
+  context(context& p) : _parent(&p),_root(_parent->_root) {}
 
   //declarations are only needed for defining mutually recurize functions
   func_t declare_func(arity_t a,const std::string& name) {
@@ -60,14 +76,18 @@ struct context : public boost::noncopyable {
   template<typename Iterator>
   func_t define_func(Iterator f,Iterator l,subvtree body,func_t decl) { 
     assert(_argnames.find(decl)==_argnames.end());
-    assert(dynamic_cast<func*>(decl));
+    assert(dynamic_cast<const func*>(decl));
     std::transform(f,l,std::back_inserter(
                        _argnames.insert(
                            make_pair(decl,argname_seq())).first->second),
                    boost::bind(&std::string::substr,_1,1,std::string::npos));
-    dynamic_cast<func*>(decl)->set_body(body);
+    const_cast<func*>(dynamic_cast<const func*>(decl))->set_body(body);
     return decl;
   }
+
+  //type creation
+  template<typename Type>
+  func_t get_type() { return Type::instance(); }
 
   //lookup functions
   func_t name2func(const std::string& name) const {
@@ -80,7 +100,6 @@ struct context : public boost::noncopyable {
         boost::multi_index::get<right>(_names).find(f);
     return i==boost::multi_index::get<right>(_names).end() ? NULL : &i->first;
   }
-
   const argname_seq& argnames(func_t f) const {
     static const argname_seq empty;
     //argname_index::const_iterator i=_argnames.find(f);
@@ -111,6 +130,8 @@ struct context : public boost::noncopyable {
   typedef std::tr1::unordered_map<func_t,argname_seq> argname_index;
 
   context* _parent;
+  context* _root;
+
   func_vector _funcs;
   name_index _names;
   argname_index _argnames;
