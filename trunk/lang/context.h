@@ -18,32 +18,15 @@
 #define PLAP_LANG_CONTEXT_H__
 
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/noncopyable.hpp>
 #include <tr1/unordered_map>
 
 #include <string>
 #include "bimap.h"
-#include "func.h"
+#include "type.h"
 
 namespace plap { namespace lang {
-
-template<arity_t Arity,typename Type>
-struct type_func : public narg_func<Arity>,boost::noncopyable { 
-  static const Type* instance() {
-    static Type t;
-    return &t;
-  }
-};
-
-struct tuple0 : public type_func<0,tuple0> {
-  void operator()(const_subvtree loc,subvtree dst) const { 
-    dst.root()=func_t(this); 
-  }
-  std::ostream& operator<<(std::ostream& o) const { return o << "()"; }
-};
-
-struct context;
-void initialize_lib(context&);
 
 struct context : public boost::noncopyable {
   typedef std::vector<std::string> argname_seq;
@@ -77,10 +60,7 @@ struct context : public boost::noncopyable {
   func_t define_func(Iterator f,Iterator l,subvtree body,func_t decl) { 
     assert(_argnames.find(decl)==_argnames.end());
     assert(dynamic_cast<const func*>(decl));
-    std::transform(f,l,std::back_inserter(
-                       _argnames.insert(
-                           make_pair(decl,argname_seq())).first->second),
-                   boost::bind(&std::string::substr,_1,1,std::string::npos));
+    _argnames.insert(make_pair(decl,argname_seq(f,l)));
     const_cast<func*>(dynamic_cast<const func*>(decl))->set_body(body);
     return decl;
   }
@@ -91,12 +71,12 @@ struct context : public boost::noncopyable {
 
   //lookup functions
   func_t name2func(const std::string& name) const {
-    name_index::index<left>::type::const_iterator i=
+    func_index::index<left>::type::const_iterator i=
         boost::multi_index::get<left>(_names).find(name);
     return i==boost::multi_index::get<left>(_names).end() ? NULL : i->second;
   }
   const std::string* func2name(func_t f) const { 
-    name_index::index<right>::type::const_iterator i=
+    func_index::index<right>::type::const_iterator i=
         boost::multi_index::get<right>(_names).find(f);
     return i==boost::multi_index::get<right>(_names).end() ? NULL : &i->first;
   }
@@ -107,6 +87,17 @@ struct context : public boost::noncopyable {
     //return i->second;
       return empty;
   }
+  disc_t symbol2idx(const std::string& name) { return 0; }
+
+  //evaluation
+  template<typename T>
+  void eval(const_subvtree src,subvtree dst) {}
+
+  /* fixme
+  what about different funcs pointing to different things in diferent contexts?
+  need to store the various definition *in the context*
+  maybe we can use function pointers now??
+  */
 
   //fixme,const type& t);
   //func& create_func(const type& t);
@@ -122,21 +113,32 @@ struct context : public boost::noncopyable {
   void to_list(subvtree s) {}
   void to_apply(subvtree s) {}
   void to_tuple(subvtree s) {}
+
+  friend void initialize_lib(context&);
+  friend struct arg_func;
  protected:
-  typedef boost::ptr_vector<func> func_vector;
+  typedef boost::ptr_vector<func_base> func_vector;
   struct left {};
   struct right {};
-  typedef util::bimap<std::string,func_t,left,right>::type name_index;
+  typedef util::bimap<std::string,func_t,left,right>::type func_index;
   typedef std::tr1::unordered_map<func_t,argname_seq> argname_index;
+  //fixmetypedef util::bimap<std::string,disc_t,left,right>::type symbol_index;
 
   context* _parent;
   context* _root;
 
   func_vector _funcs;
-  name_index _names;
+  func_index _names;
   argname_index _argnames;
 
-  void init();
+  template<typename Func>
+  void insert_builtin(Func* f,bool manage) {
+    if (manage)
+      _funcs.push_back(f);
+    _names.insert(make_pair(boost::lexical_cast<std::string>(*f),f));
+  }
+
+  const_subvtree lookup_arg(arity_t i) const;
 };
 
 }} //namespace plap::lang

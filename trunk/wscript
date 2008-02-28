@@ -5,13 +5,29 @@ import Params,subprocess,boost,sys
 
 VERSION='0.0.1'
 APPNAME='plap'
-srcdir = '.'
-blddir = 'build'
-opt_levels = { 'coverage' : ['-fprofile-arcs -ftest-coverage',
-			     '-fprofile-arcs -ftest-coverage'],
-	       'default'  : ['',''],
-	       'normal'   : ['-O2','-O2'],
-	       'ultra'    : ['-O2 -DNDEBUG -DNLOGGING','-O2']}
+srcdir='.'
+blddir='build'
+opt_levels={'coverage' : ['-fprofile-arcs -ftest-coverage',
+			  '-fprofile-arcs -ftest-coverage'],
+	    'default'  : ['',''],
+	    'normal'   : ['-O2','-O2'],
+	    'ultra'    : ['-O2 -DNDEBUG -DNLOGGING','-O2']}
+src='''
+lang/builtin.cc
+lang/cast.cc
+lang/context.cc
+lang/core.cc
+lang_io/analyze.cc
+lang_io/names.cc
+lang_io/operators.cc
+lang_io/parse.cc
+lang_io/pretty_print.cc
+lang_io/repl.cc
+util/indent.cc
+util/io.cc
+util/tree_io.cc
+'''
+includes='lang lang_io test util'
 
 #Params.reset_colors() #if you don't like colors, uncomment
 
@@ -49,35 +65,28 @@ def build(bld):
 			     Params.g_options.opt_level)
 		exit(1)
 
-	def build_program(source,name):
+	#everything gets put in a simple static library (plaplib)
+	obj=bld.create_obj('cpp', 'staticlib')
+	obj.source=src
+	obj.includes=includes
+	obj.target='plaplib'
+	
+	#executables are just a main which gets linked with plaplib
+	def build_program(name):
 		obj=bld.create_obj('cpp','program')
-		obj.source=source+' main/'+name+'.cc'
-		obj.includes='lang lang_io test util'
+		obj.source='main/'+name+'.cc'
+		obj.includes=includes
 		obj.target=name
 		obj.uselib='OPT_'+Params.g_options.opt_level.upper()
+		obj.uselib_local='plaplib'
 		if Params.g_options.profile:
 			obj.uselib=obj.uselib+' PROFILER'
 	
-	src='''
-	lang/builtin.cc
-	lang/cast.cc
-	lang/context.cc
-	lang/core.cc
-	lang_io/analyze.cc
-	lang_io/operators.cc
-	lang_io/parse.cc
-	lang_io/pretty_print.cc
-	lang_io/repl.cc
-	util/indent.cc
-	util/io.cc
-	util/tree_io.cc
-        '''
-
 	if Params.g_options.test or not Params.g_options.repl:
-		build_program(src,'test_runner') #unit tests
+		build_program('test_runner') #unit tests
 	if Params.g_options.test:
 		return #don't need to build anything else
-	build_program(src,'repl') #read-eval-print loop
+	build_program('repl') #read-eval-print loop
 	if Params.g_options.repl:
 		return
 

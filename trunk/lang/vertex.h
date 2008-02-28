@@ -33,13 +33,11 @@ namespace plap { namespace lang {
 
 struct world;
 struct func_base;
-//fixmestruct rewrite;
 
 typedef int              disc_t;
 typedef float            contin_t;
 typedef world*           world_t;
 typedef const func_base* func_t;
-//fixme typedef rewrite*  rewrite_t;
 
 typedef unsigned char arity_t;
 
@@ -56,7 +54,7 @@ union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
 };
 #else //ifndef PLAP_LANG_VERTEX_UNION
 struct arg { 
-  explicit arg(arity_t a) : idx(a) {} 
+  template<typename T>arg(arity_t a) : idx(a) {} 
   arity_t idx; 
   bool operator==(const arg& rhs) const { return idx==rhs.idx; }
 };

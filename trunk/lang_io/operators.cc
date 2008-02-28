@@ -16,15 +16,13 @@
 
 #include "operators.h"
 #include <boost/assign/list_of.hpp>
+#include "names.h"
 
-namespace plap { namespace lang_io {
-
-namespace lang_io_private {
+namespace plap { namespace lang_io { namespace lang_io_private {
 bool sexpr_io=false;
 const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
     (boost::assign::map_list_of     //nullary operators
-     ("tuple","()")
-     ("list","[]"))
+     (nil_name,"[]"))
 
     (boost::assign::map_list_of     //unary operators
      ("not","!")
@@ -53,29 +51,15 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
      ("cons",":")
      ("concat","~")
      ("range","..")
-     ("xrange","..."))
+     ("xrange","...")
+     
+     ("decl","^"))
 
     (boost::assign::map_list_of    //ternary operators
      ("def","="));
 
 const infix_map infix_vararg=boost::assign::map_list_of   //variadic operators
-    ("tuple","(")
+    ("pair","(")
     ("list","[");
+}}} //namespace plap::lang_io::lang_io_private
 
-} //namespace lang_io_private
-
-const std::string def_symbol="=";
-const std::string strlit_symbol="\"";
-const std::string apply_symbol="(";
-
-const std::string def_name="def";
-const std::string strlit_name="strlit";
-const std::string apply_name="apply";
-
-const std::string list_name="list";
-const std::string lambda_name="lambda";
-const std::string let_name="let";
-const std::string decl_name="decl";
-const std::string tuple_name="tuple";
-
-}} //namespace plap::lang_io

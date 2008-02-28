@@ -17,21 +17,53 @@
 #ifndef PLAP_LANG_TYPE_H__
 #define PLAP_LANG_TYPE_H__
 
-#include "vtree.h"
+#include "func.h"
+#include "names.h"
 
 namespace plap { namespace lang {
 
+template<typename T>
+struct type_placeholder : public stateless_func<type_placeholder<T>,1> {
+  void operator()(context&,const_subvtree s,subvtree d) const { 
+    d.root()=s.front();
+  }
+};
+
+typedef type_placeholder<contin_t>                 number_type;
+typedef type_placeholder<bool>                     bool_type;
+typedef type_placeholder<char>                     char_type;
+typedef type_placeholder<disc_t>                   symbol_type;
+
+template<typename>
+struct list_of;
+template<typename>
+struct func_of;
+template<typename,typename>
+struct pair_of;
+
+//core types are bool, char, disc_t (for symbol), and contin_t
 //a valid type is a core type or list_of<Type> or func_of<Type(Type,...,Type)>
-//or tuple_of<Type,...,Type> where all Type are valid types
+//or pair_of<Type,...,Type> where all Type are valid types
+namespace lang_private {
+template<typename T>
+struct core_type {
+  //this will be triggered if this type is instantiated -
+  //ensures that only valid core types may be used
+  BOOST_STATIC_ASSERT(sizeof(T)==0);
+};
 
-//core types
-typedef contin_t number_t;
-typedef char     char_t;
-typedef disc_t   ordinal_t;
-typedef disc_t   categorical_t;
-typedef bool     bool_t;
+template<>struct core_type<bool> {};
+template<>struct core_type<char> {};
+template<>struct core_type<disc_t> {};
+template<>struct core_type<contin_t> {};
 
-//fwd declaration
+template<typename T>
+struct core_type<list_of<T> > : core_type<T> {};
+template<typename T,typename U>
+struct core_type<func_of<T(U)> > : core_type<T>,core_type<U> {};
+} //namespace lang_private
+
+//fwd declarations needed for list_of, func_of, pair_of
 template<typename T>
 T literal_cast(const_subvtree);
 template<typename T>
@@ -39,19 +71,8 @@ T vertex_cast(const vertex&);
 template<typename T>
 T& vertex_cast(vertex&);
 
-namespace lang_private {
-template<typename Type>
-struct type : boost::equality_comparable<Type> {
-  type(const_subvtree s) : _s(s) { assert(vertex_cast<func_t>(s.root())); }
-  bool operator==(const Type& rhs) const { return _s==rhs._s; }
-  Type operator=(const Type& rhs) { _s=rhs._s; }
- protected:
-  const_subvtree _s;
-};
-}//namespace lang_private
-
 template<typename T>
-struct list_of {
+struct list_of : lang_private::core_type<T> {
   typedef T                          value_type;
   typedef value_type*                pointer;
   typedef value_type&                reference;
@@ -85,8 +106,8 @@ template<typename T>
 struct func_of;
 
 template<typename T,typename U>
-struct func_of<T(U)> {
-  func_of(const_subvtree s) : lang_private::type<func_of<T(U)> >(s) {}
+struct func_of<T(U)> : lang_private::core_type<T>,lang_private::core_type<U> {
+  func_of(const_subvtree s) : _s(s) {}
   T operator()(const U& u) {
 #if 0
      //break constness to add args
@@ -99,7 +120,12 @@ struct func_of<T(U)> {
     assert(false);
     return T();
   }
+ protected:
+  const_subvtree _s;
 };
+
+template<typename T,typename U>
+struct pair_of : public std::pair<T,U> {};
 
 }} //namespace plap::lang
 #endif //PLAP_LANG_TYPE_H__

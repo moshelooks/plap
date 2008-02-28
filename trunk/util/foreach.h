@@ -20,20 +20,22 @@
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/range.hpp>
 
-namespace boost {
+namespace boost { 
 
-inline counting_iterator<int> boost_range_begin(int) { 
+inline counting_iterator<int> begin(const int&) { 
   return make_counting_iterator(0);
 }
-inline counting_iterator<int> boost_range_end(int i) {
+inline counting_iterator<int> end(const int& i) {
   return make_counting_iterator(i);
 }
-inline counting_iterator<std::size_t> boost_range_begin(std::size_t) {
+inline counting_iterator<std::size_t> begin(const std::size_t&) {
   return make_counting_iterator(std::size_t(0));
 }
-inline counting_iterator<std::size_t> boost_range_end(std::size_t i) {
+inline counting_iterator<std::size_t> end(const std::size_t& i) {
   return make_counting_iterator(i);
 }
+//} //namespace range_detail
+
 template<>
 struct range_iterator<int> { typedef counting_iterator<int> type; };
 template<>

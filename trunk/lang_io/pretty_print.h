@@ -19,10 +19,11 @@
 
 #include <ostream>
 #include "vtree_fwd.h"
+#include "context.h"
 
 namespace plap { namespace lang_io {
 
-std::ostream& pretty_print(std::ostream& out,lang::const_subvtree s,
+std::ostream& pretty_print(std::ostream&,lang::const_subvtree,lang::context&,
                            std::size_t indent=0,std::size_t line_max=80);
 
 }} //namespace plap::lang_io

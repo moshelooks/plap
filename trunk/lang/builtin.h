@@ -21,7 +21,7 @@
 #define PLAP_LANG_BUILTIN_H__
 
 #include <numeric>
-#include <iostream>//fixme
+//#include <iostream>//fixme
 #include "type.h"
 
 namespace plap { namespace lang {
@@ -29,9 +29,11 @@ namespace plap { namespace lang {
 struct context;
 void initialize_lib(context& c);
 
-template<typename T>
-T lang_plus(list_of<T> l) { return std::accumulate(l.begin(),l.end(),T(0)); }
+inline disc_t lang_plus(list_of<disc_t> l) { 
+  return std::accumulate(l.begin(),l.end(),disc_t(0));
+}
 
+#if 0
 inline disc_t lang_foreach(list_of<const_subvtree> l,
                          func_of<const_subvtree(const_subvtree)> f) {
   //fixmestd::for_each(l.begin(),l.end(),f);
@@ -43,7 +45,7 @@ disc_t lang_print(const_subvtree v) {
   //foreach (const_subvtree s,l) std::cout << "yuk ";
   return 0;
 }
-
+#endif
 }} //namespace plap::lang
 
 #endif //PLAP_LANG_BUILTIN_H__

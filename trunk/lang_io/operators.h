@@ -17,8 +17,8 @@
 #ifndef PLAP_LANG_IO_OPERATORS_H__
 #define PLAP_LANG_IO_OPERATORS_H__
 
-#include "bimap.h"
 #include <vector>
+#include "bimap.h"
 
 namespace plap { namespace lang_io {
 
@@ -53,20 +53,6 @@ inline const std::string& symbol2name(const std::string& s,
 } //namespace lang_io_private
 using lang_io_private::name2symbol;
 using lang_io_private::symbol2name;
-
-extern const std::string def_symbol;
-extern const std::string strlit_symbol;
-extern const std::string apply_symbol;
-
-extern const std::string def_name;
-extern const std::string strlit_name;
-extern const std::string apply_name;
-
-extern const std::string list_name;
-extern const std::string lambda_name;
-extern const std::string let_name;
-extern const std::string decl_name;
-extern const std::string tuple_name;
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_OPERATORS_H__

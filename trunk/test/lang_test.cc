@@ -15,7 +15,6 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #define str2vtr(src,vtr) {                              \
-    context c;                                          \
     vtr=vtree(vertex());                                \
     cout << sexpr_format;                               \
     stringstream ss;                                    \
@@ -24,16 +23,34 @@
     indent_parse(ss,tmpXXX);                            \
     analyze(tmpXXX,vtr,c);                              \
   }
+#define check_anal(src,goal) {                  \
+    vtree tmpYYY;                               \
+    str2vtr(src,tmpYYY);                        \
+    stringstream ss;                            \
+    pretty_print(ss,tmpYYY,c);                  \
+    check_eq(ss.str(),goal+string(" \n"));      \
+  }
 
 test_case(lang_def_examples) {
+  context c;
   vtree v;
+
   check_throw(str2vtr("def a b c",v));
   check_throw(str2vtr("def a",v));
   check_throw(str2vtr("def x (list $a b) c",v));
   check_throw(str2vtr("def x (list ($a $b $c)) d",v));
   check_throw(str2vtr("def x (list $a $b $c) d e",v));
 
-  str2vtr("foo $x = ()",v);
+  check_anal("foo $x = []","nil");
+  check_anal("goo $x = foo","nil");
+  check_throw(str2vtr("moo $x = blablabla",v));
+  
+  check_anal("blub^4","nil");
+  check_anal("moo $x = blub","nil");
+  check_throw(str2vtr("blub $x = moo",v));
+  check_throw(str2vtr("moo^1",v));
+  check_throw(str2vtr("blub $x $y $z $q $m= moo",v));
+  check_anal("blub $x $y $z $q = moo","nil");
 }
 
 

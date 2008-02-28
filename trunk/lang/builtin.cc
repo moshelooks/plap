@@ -15,8 +15,8 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "builtin.h"
-#include "context.h"
-//fixme#include "eager_def.h"
+#include "core.h"
+#include "eager_func.h"
 
 namespace plap { namespace lang {
 
@@ -42,9 +42,21 @@ namespace plap { namespace lang {
     bind(name,make_eager_def<float_t,                                   \
          float_t>(&lang_ ## name<contin_t>));                           \
   }
+
+/*template<typename Op,typename T,typename U,const char* Name>
+struct eager_func<Op,T(U)>
+    : public stateless_func<eager_func<Op,T(U)>,1,Name> {
+  void operator()(context& c,const_subvtree loc,subvtree dst) const {
+*/   
     
 
 void initialize_lib(context& c) {
+  c.insert_builtin(nil::instance(),false);
+  //c.insert_builtin(lang_list<const_subvtree>::instance(),false);
+  c.insert_builtin(make_eager<func_of<disc_t(list_of<disc_t>)>,
+                              lang_io::plus_name>(&lang_plus),true);
+  
+
 #if 0 
 foo
 fixme

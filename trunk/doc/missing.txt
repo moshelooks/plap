@@ -20,3 +20,5 @@ todo: add definition of a constant (x = bla)
 
 to make rules for paren-insertion consistent, should augment parser with
 cl-style "a b (c d)" -> a(b c(d))"
+
+escape-sequences

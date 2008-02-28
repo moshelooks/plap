@@ -15,16 +15,16 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "core.h"
+#include "iterator_shorthands.h"
+#include <vector>
 
 namespace plap { namespace lang {
-namespace id {
-func_t lambda;
-func_t apply;
-func_t list;
-func_t def;
-func_t let;
-func_t decl;
-disc_t unit=0;
-} //namespace id
+
+arg_func* arg_func::instance(arity_t i) {
+  static std::vector<arg_func> args(util::count_it(0),
+                                    util::count_it(LANG_LIMIT_ARITY));
+  return &args[i];
+}
+
 
 }} //namespace plap::lang
