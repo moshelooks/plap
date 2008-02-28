@@ -17,8 +17,11 @@
 #ifndef PLAP_LANG_FUNC_H__
 #define PLAP_LANG_FUNC_H__
 
-#include "vtree.h"
 #include <ostream>
+#include <boost/noncopyable.hpp>
+#include <limits>
+#include "vtree.h"
+#include "names.h"
 
 //this determines the maximal arity of defs in the language
 #ifndef LANG_LIMIT_ARITY
@@ -27,13 +30,17 @@
 
 namespace plap { namespace lang {
 
-struct func_base {
+struct context;
+
+static const arity_t variadic_arity=255;//std::numeric_limits<arity_t>::max();
+
+struct func_base : boost::noncopyable {
   virtual ~func_base() {}
 
+  bool variadic() const { return arity()==variadic_arity; }
   virtual arity_t arity() const=0;
-  virtual void operator()(const_subvtree loc,subvtree dst) const=0;
-
-  virtual std::ostream& operator<<(std::ostream&) const=0;
+  virtual void operator()(context&,const_subvtree loc,subvtree dst) const=0;
+  virtual std::ostream& operator<<(std::ostream&) const { assert(false); }
 
   /**
   virtual bool is_def()    const { return false; }
@@ -51,11 +58,22 @@ struct narg_func : public func_base {
   arity_t arity() const { return Arity; }
 };
 
+template<typename Type,arity_t Arity,const char* Name=lang_io::no_name>
+struct stateless_func : public narg_func<Arity> { 
+  static Type* instance() {
+    static Type t;
+    return &t;
+  }
+  std::ostream& operator<<(std::ostream& o) const { return o << Name; }
+ protected:
+  stateless_func() {}
+};
+
 struct func : public func_base {
   func(arity_t a) : _arity(a) {}
 
   arity_t arity() const { return _arity; }
-  void operator()(const_subvtree loc,subvtree dst) const {}
+  void operator()(context& c,const_subvtree loc,subvtree dst) const {}//fixme
 
   std::ostream& operator<<(std::ostream& out) const { return out << "func"; }
   

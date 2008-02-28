@@ -17,21 +17,45 @@
 #ifndef PLAP_LANG_CORE_H__
 #define PLAP_LANG_CORE_H__
 
-//#include "algorithm.h"
-//#include "cast.h"
-//#include "def.h"
-#include "vertex.h"
+#include <boost/bind.hpp>
+#include "algorithm.h"
+#include "context.h"
 
 namespace plap { namespace lang {
-namespace id {
-extern func_t lambda;
-extern func_t apply;
-extern func_t list;
-extern func_t def;
-extern func_t let;
-extern func_t decl;
-extern disc_t unit;
-} //namespace id
+
+template<typename T>
+struct lang_list
+    : public stateless_func<lang_list<T>,variadic_arity,lang_io::list_name> {
+  void operator()(context& c,const_subvtree s,subvtree d) const { 
+    assert(d.childless());
+    d.root()=func_t(this);
+    d.append(s.arity(),vertex());
+    util::for_each(s.begin_sub_child(),s.end_sub_child(),d.begin_sub_child(),
+                   boost::bind(&context::eval<T>,&c,_1,_2));
+  }
+};
+
+typedef lang_list<bool>           bool_list;
+typedef lang_list<char>           char_list;
+typedef lang_list<disc_t>         symbol_list;
+typedef lang_list<contin_t>       number_list;
+typedef lang_list<const_subvtree> any_list;
+
+struct nil : public stateless_func<nil,0,lang_io::nil_name> {
+  void operator()(context&,const_subvtree s,subvtree d) const { 
+    d.root()=any_list::instance();
+  }
+};
+
+struct arg_func : public narg_func<0> {
+  arg_func(arity_t i) : _idx(i) {}
+  void operator()(context& c,const_subvtree,subvtree d) const { 
+    d=c.lookup_arg(_idx); 
+  }
+  static arg_func* instance(arity_t);
+ protected:
+  arity_t _idx;
+};    
 
 //def(name list(arg1 arg2 ...) body)
 #if 0
@@ -40,9 +64,6 @@ struct def : public narg_func<3> {
     
   }
 };
-#endif
-
-/**
 template<typename T>
 struct eval : public func_base {
   void operator()(const_subvtree s,subvtree d) const {
@@ -53,19 +74,8 @@ struct eval : public func_base {
     (*vertex_cast<def_t>(s.root()))(s,d);
   }
 };
+#endif
 
-
-template<typename T>
-struct cons : public def {
-  void operator()(const_subvtree s,subvtree d) const {
-    assert(d.childless());
-    d.root()=def_t(this);
-    d.append(d.begin(),s.arity(),vertex());
-    util::for_each(s.begin_sub_child(),s.end_sub_child(),
-                   d.begin_sub_child(),eval<T>());
-  }
-};
-**/
 }} //namespace plap::lang
 
 #endif //PLAP_LANG_CORE_H__

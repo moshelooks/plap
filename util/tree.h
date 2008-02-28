@@ -50,7 +50,7 @@
      performed.
 
      If this turns out to be too big a nuisance, future versions may take a
-     more conservative approach to implicit iterator-type conversions.
+     more restrictive approach to implicit iterator-type conversions.
 ****/
 
 /****
@@ -209,12 +209,12 @@ struct sub_iter_base : public IterBase {
  protected:
   result_type dereference() const { return result_type(this->_node); }
 };
-template<typename T,typename NodePointer,typename IterBase>
+template<typename T,typename TRef,typename NodePointer,typename IterBase>
 struct value_iter_base : public IterBase {
-  typedef T             result_type;
-  typedef result_type&  reference;
+  typedef T    result_type;
+  typedef TRef reference;
  protected:
-  result_type& dereference() const { 
+  reference dereference() const { 
     return static_cast<NodePointer>(this->_node)->data; 
   }
 };
@@ -284,7 +284,7 @@ struct iter : public IterBase,
  protected:
   friend class boost::iterator_core_access;
 
-  bool equal(const iter& rhs) const { return this->_node==rhs._node; }
+  bool equal(iter rhs) const { return this->_node==rhs._node; }
 };
 
 /////////
@@ -302,7 +302,7 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
   typedef iter_base<const node_base*> const_node_iter_base;
   typedef sub_iter_base<const_subtree<value_type>,
                         const_node_iter_base>  const_sub_iter;
-  typedef value_iter_base<T,const node<T>*,
+  typedef value_iter_base<T,const T&,const node<T>*,
                           const_node_iter_base> const_value_iter;
  public:
   typedef iter<pre_iter_base<const_value_iter> > const_pre_iterator;
@@ -417,7 +417,7 @@ struct mutable_tr : public tr<T,Tree> {
 
   typedef iter_base<node_base*> node_iter_base;
   typedef sub_iter_base<subtree<value_type>,node_iter_base>  sub_iter;
-  typedef value_iter_base<T,node<T>*,node_iter_base> value_iter;
+  typedef value_iter_base<T,T&,node<T>*,node_iter_base> value_iter;
   typedef tr<T,Tree> super;
  public:
   typedef iter<pre_iter_base<value_iter> > pre_iterator;

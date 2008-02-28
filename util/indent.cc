@@ -18,6 +18,7 @@
 #include <string>
 #include <stack>
 #include <stdexcept>
+#include <cassert>
 #include "io.h"
 
 namespace plap { namespace util {

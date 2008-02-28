@@ -53,8 +53,8 @@ void io_loop(std::istream& in,std::ostream& out,ReadWrite rw,
   if (final_call)
     rw(in,out);
 }
-#undef UTIL_IO_begin_loop;
-#undef UTIL_IO_end_loop;
+#undef UTIL_IO_begin_loop
+#undef UTIL_IO_end_loop
 
 }} //namespace plap::util
 #endif //PLAP_UTIL_IO_H__

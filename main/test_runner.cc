@@ -26,6 +26,7 @@
 #include "parse.h"
 #include "cast.h"
 #include "analyze.h"
+#include "pretty_print.h"
 //#include "eager_def.h"
 //#include "builtin.h"
 

@@ -28,6 +28,11 @@
 
 namespace plap { namespace lang {
 
+template<typename T>
+bool is_arg(vertex v);
+template<typename T>
+inline arity_t arg_idx(vertex v);
+
 #ifdef PLAP_LANG_VERTEX_UNION
 
 #define LANG_CAST_vertex_cast(type,name)                                \
@@ -48,9 +53,25 @@ extern const disc_t arg_mask;
 extern const disc_t arg_idx_mask;
 } //namespace lang_private
 
-inline bool is_arg(vertex v) { return (v.d & lang_private::arg_mask); }
-inline arity_t arg_idx(vertex v) { return (v.d & lang_private::arg_idx_mask); }
-inline vertex arg(arity_t a) { return (disc_t(a) | lang_private::arg_mask); }
+template<typename T>
+inline vertex arg(arity_t a);
+
+template<>
+inline bool is_arg<disc_t>(vertex v) { return (v.d & lang_private::arg_mask); }
+template<>inline bool is_arg<func_t>(vertex v) { return v.f->is_arg(); };
+
+template<>inline arity_t arg_idx<disc_t>(vertex v) { 
+  return (v.d & lang_private::arg_idx_mask); 
+}
+template<>inline arity_t arg_idx<func_t>(vertex v) { return v.f->arg_idx(); }
+
+template<>inline vertex arg<disc_t>(arity_t a) { 
+  return (disc_t(a) | lang_private::arg_mask); 
+}
+template<>inline vertex arg<func_t>(arity_t a) { 
+  return arg_func::instance(a);
+}
+
 
 #else //ifdef PLAP_LANG_VERTEX_UNION
 
@@ -75,10 +96,12 @@ LANG_vertex_cast(,const)
 LANG_vertex_cast(&,)
 #undef LANG_vertex_cast
 
+template<typename T>
 inline bool is_arg(const vertex& v) { return boost::get<arg>(&v); }
+template<typename T>
 inline arity_t arg_idx(const vertex& v) { 
-    assert(is_arg(v));
-    return boost::get<arg>(v).idx; 
+  assert(is_arg<T>(v));
+  return boost::get<arg>(v).idx; 
 }
 
 #endif //ifdef PLAP_LANG_VERTEX_UNION ... else

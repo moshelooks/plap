@@ -34,8 +34,4 @@ void context::bind(func& f,def* d) {
 }
 #endif
 
-void context::init() {
-
-}
-
 }} //namespace plap::lang

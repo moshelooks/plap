@@ -23,6 +23,7 @@
 #include "algorithm.h"
 #include "tree.h"
 #include "operators.h"
+#include "names.h"
 #include "indent.h"
 
 #include <iostream>
@@ -68,7 +69,7 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
     } else {
       assert(d.arity()>1);
       d.root()=apply_name;
-      d.insert(d[1],list_name);
+      d.insert(d[1],string(list_name));
       d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
     }
   } else if (name==def_symbol) { //a definition (explicitly set up structure)
@@ -93,7 +94,8 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       def    = lambda   >> !(root_node_d[ch_p('=')] >>
                              eps_p(~ch_p('=') >> *anychar_p)       >> lambda);
       lambda = fact     |  lambdah;
-      fact   =             ! root_node_d[str_p("<-")]              >> arrow;
+      fact   =             ! root_node_d[str_p("<-")]              >> decl;
+      decl   = arrow    >> !(root_node_d[ch_p('^')]                >> int_p);
       arrow  = seq      >> *(root_node_d[str_p("->")]              >> lambda);
       seq    = or_op    >> *(lambdah|or_op);
       or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
@@ -106,7 +108,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       mlt    = neg      >> *(root_node_d[ch_p('*')|'/']            >> neg);
       neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
-      prime  = sexpr | term | listh | rangeh | "()";
+      prime  = sexpr | term | listh | rangeh;// | "()";
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
              | lexeme_d[token_node_d
                         [!ch_p('$') >> (alpha_p | '_') >> *(alnum_p | '_') 
@@ -126,10 +128,12 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       commah = (root_node_d[ch_p('(')] >> (list % no_node_d[ch_p(',')])
                 >> no_node_d[ch_p(')')]);
       lambdah= root_node_d[ch_p('\\')] >> arrow;
+      declh  = ((alpha_p | '_') >> *(alnum_p | '_') >> root_node_d[ch_p('^')] 
+                >> int_p);
     }
-    rule<Scanner> sexpr,list,range,comma,def,lambda,fact,arrow,seq;
+    rule<Scanner> sexpr,list,range,comma,def,lambda,fact,decl,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
-    rule<Scanner> prime,term,str,chr,listh,rangeh,commah,lambdah;
+    rule<Scanner> prime,term,str,chr,listh,rangeh,commah,lambdah,declh;
     const rule<Scanner>& start() const { return sexpr; }
   };
 };

@@ -14,6 +14,9 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+// Based on http://www.boost.org/libs/multi_index/example/bimap.cpp, 
+// by Joaquín M López Muñoz
+
 //bimap is actually a typedef - to use as foo, do:
 //  typedef bimap<l,r,ltag,rtag>::type foo;
 
