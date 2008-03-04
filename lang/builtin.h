@@ -21,14 +21,20 @@
 #define PLAP_LANG_BUILTIN_H__
 
 #include <numeric>
-//#include <iostream>//fixme
+#include "context.h"
 #include "type.h"
 
 namespace plap { namespace lang {
 
-struct context;
 void initialize_lib(context& c);
 
+//conditionals
+inline void lang_if(context& c,const_subvtree cond,
+                    const_subvtree if_br,const_subvtree else_br,subvtree dst) {
+  c.eval(c.eval_to<bool>(cond) ? if_br : else_br,dst);
+}  
+
+//arithmetic operators
 inline disc_t lang_plus(list_of<disc_t> l) { 
   return std::accumulate(l.begin(),l.end(),disc_t(0));
 }

@@ -56,6 +56,10 @@ extern const disc_t arg_idx_mask;
 template<typename T>
 inline vertex arg(arity_t a);
 
+
+bool is_arg(vertex v) {
+  (v.d & lang_private::arg_mask)
+
 template<>
 inline bool is_arg<disc_t>(vertex v) { return (v.d & lang_private::arg_mask); }
 template<>inline bool is_arg<func_t>(vertex v) { return v.f->is_arg(); };
@@ -97,11 +101,11 @@ LANG_vertex_cast(&,)
 #undef LANG_vertex_cast
 
 template<typename T>
-inline bool is_arg(const vertex& v) { return boost::get<arg>(&v); }
+inline bool is_arg(const vertex& v) { return boost::get<actual_arg>(&v); }
 template<typename T>
 inline arity_t arg_idx(const vertex& v) { 
   assert(is_arg<T>(v));
-  return boost::get<arg>(v).idx; 
+  return boost::get<actual_arg>(v).idx; 
 }
 
 #endif //ifdef PLAP_LANG_VERTEX_UNION ... else

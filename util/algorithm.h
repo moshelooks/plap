@@ -35,7 +35,7 @@ namespace plap { namespace util {
   template<typename It1,typename It2,typename F>
   F for_each(It1 from1,It1 to1,It2 from2,F f) {
     for (;from1!=to1;++from1,++from2)
-      f(*from1, *from2);
+      f(*from1,*from2);
     return f;
   }
   template<typename It1,typename It2,typename It3,typename F>

@@ -53,16 +53,19 @@ union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
   disc_t d; contin_t c; world_t w; func_t f; 
 };
 #else //ifndef PLAP_LANG_VERTEX_UNION
-struct arg { 
-  template<typename T>arg(arity_t a) : idx(a) {} 
+struct actual_arg { 
+  actual_arg(arity_t a) : idx(a) {} 
   arity_t idx; 
-  bool operator==(const arg& rhs) const { return idx==rhs.idx; }
+  bool operator==(const actual_arg& rhs) const { return idx==rhs.idx; }
 };
+template<typename T>
+actual_arg arg(arity_t a) { return actual_arg(a); }
+
 typedef boost::variant<disc_t,
                        contin_t,
                        world_t,
                        func_t,
-                       arg> vertex;
+                       actual_arg> vertex;
 #endif //ifdef PLAP_LANG_VERTEX_UNION
 
 }} //namespace plap::lang
@@ -70,7 +73,7 @@ typedef boost::variant<disc_t,
 //very nasty...
 namespace boost { namespace detail { namespace variant {
 inline std::ostream& operator<<(std::ostream& out,
-                                const plap::lang::arg& a) {
+                                const plap::lang::actual_arg& a) {
   return out << "#" << a.idx; 
 }
 }}}

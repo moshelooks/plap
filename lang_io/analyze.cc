@@ -69,14 +69,14 @@ make_exception(bad_def,
 make_exception(bad_decl_exists,
                "Bad declaration of function '"+str+"', which already exists.");
 make_exception(bad_arg_name,
-               "Bad argument name '"+str+"'");
+               "Bad argument of function name '"+str+"'");
 make_exception(arg_shadow,"Argument '"+str+"' shadows existing argument.");
 make_exception(arg_unbound,"Invalid reference to unbound argument '"+str+"'.");
 make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
 make_exception(bad_symbol,"Unrecognized symbol or function '"+str+"'.");
 
 #define process(name) \
-  void process_ ## name(const_subsexpr src,subvtree dst)
+  void process_ ## name(const_subsexpr src,subvtree dst,bool funcall=true)
 #define special_case(name,arity)                 \
   if (src.root()==name ## _name) {               \
     validate_arity(src,arity_t(arity));          \
@@ -109,7 +109,7 @@ struct semantic_analyzer {
 
   process(sexpr) {
     if (src.childless())
-      process_leaf(src,dst);
+      process_leaf(src,dst,funcall);
     else
       process_internal(src,dst);
   }
@@ -131,7 +131,7 @@ struct semantic_analyzer {
         dst.append(symbol2vertex(src.root()));
       }
     else
-      dst.root()=string2vertex(src.root());
+      dst.root()=string2vertex(src.root(),funcall);
   }
 
   process(internal) {
@@ -147,18 +147,29 @@ struct semantic_analyzer {
       dst.root()=f;
       process_children(src,dst);
     } else { //see if its a scalar - if so, need to introduce an apply node
-      dst.append(string2scalar(src.root()));
+      dst.root()=apply::instance();
+      dst.append(string2scalar(src.root(),true));
       dst.append(vertex());
-      process_children(src,dst.back_sub());
-      c.to_list(dst.back_sub());
-      c.to_apply(dst);
+      process_list(src,dst.back_sub());
     }
   }
 
   process(children) {
+    func_t f=vertex_cast<func_t>(dst.root());
+
+    if (f->vararg()) {
+      dst.append(vertex());
+      process_list(src,dst.front_sub());
+      return;
+    }
+
     dst.append(src.arity(),vertex());
-    for_each(src.begin_sub_child(),src.end_sub_child(),dst.begin_sub_child(),
-             bind(&semantic_analyzer::process_sexpr,this,_1,_2));
+
+    arity_t a=0;
+    sexpr::const_sub_child_iterator i=src.begin_sub_child();
+    for (vtree::sub_child_iterator j=dst.begin_sub_child();
+         j!=dst.end_sub_child();++a,++i,++j)
+      process_sexpr(*i,*j,c.func_arg_type(f,a));
   }
 
   process(def) { //def(name list(arg1 arg2 ...) body)
@@ -246,11 +257,11 @@ struct semantic_analyzer {
   if (i->childless() && predname(i->root())) {                  \
     dst.root()=typename ## _list::instance();                   \
     validate_range(i,src.end_child(),&predname,#typename);      \
-    return;                                                     \
+    break;                                                      \
   }
   
   process(list) { //list(arg arg arg ...)
-    process_children(src,dst);
+    dst.root()=any_list::instance();
     for (sexpr::const_sub_child_iterator i=src.begin_sub_child();
          i!=src.end_sub_child();++i) {
       LANG_ANALYZE_check(boolean,bool);
@@ -258,7 +269,7 @@ struct semantic_analyzer {
       LANG_ANALYZE_check(number,number);
       //fixme symbol
     }
-    dst.root()=any_list::instance();
+    process_children(src,dst);
   }
 
   process(pair) { //pair(arg arg arg ...)
@@ -302,13 +313,13 @@ struct semantic_analyzer {
   //parsing an individual node always unambiguous (i.e. can be done without any
   //context other than the given context+bindings)
   //throws if invalid
-  vertex string2vertex(const string& str) {
+  vertex string2vertex(const string& str,bool parentfunc) {
     if (func_t f=string2func(str))
       return f;
     if (number(str))
       return number2vertex(str);
     if (scalar(str))
-        return string2scalar(str);
+      return string2scalar(str,parentfunc);
     if (boolean(str))
       return bool2vertex(str);
     return symbol2vertex(str);
@@ -358,13 +369,15 @@ struct semantic_analyzer {
   }
 
   //returns a scalar if available, else throws
-  vertex string2scalar(const string& s) {
+  vertex string2scalar(const string& s,bool parentfunc) {
     if (!scalar(s))
       throw_bad_arg_name(s);
     scalar_map::const_iterator i=scalars.find(s.substr(1));
     if (i==scalars.end())
       throw_arg_unbound(s);
-    return arg(i->second);
+    if (parentfunc)
+      return arg<func_t>(i->second);
+    return arg<disc_t>(i->second);
   }
 
   const string& sexpr2identifier(const_subsexpr src) {
@@ -385,7 +398,8 @@ struct semantic_analyzer {
   }
 
   void validate_arity(const_subsexpr src,func_t f) {
-    validate_arity(src,f->arity());
+    if (!f->vararg())
+      validate_arity(src,f->arity());
   }
   void validate_arity(const_subsexpr src,arity_t a) {
     if (a!=variadic_arity && src.arity()!=a)

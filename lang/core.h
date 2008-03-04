@@ -31,20 +31,30 @@ struct lang_list
     d.root()=func_t(this);
     d.append(s.arity(),vertex());
     util::for_each(s.begin_sub_child(),s.end_sub_child(),d.begin_sub_child(),
-                   boost::bind(&context::eval<T>,&c,_1,_2));
+                   boost::bind(&context::eval,&c,_1,_2));
   }
+  func_t arg_type(arity_t a) const { return type_placeholder<T>::instance(); }
 };
 
 typedef lang_list<bool>           bool_list;
 typedef lang_list<char>           char_list;
 typedef lang_list<disc_t>         symbol_list;
 typedef lang_list<contin_t>       number_list;
-typedef lang_list<const_subvtree> any_list;
+typedef lang_list<func_t>         any_list;
 
 struct nil : public stateless_func<nil,0,lang_io::nil_name> {
   void operator()(context&,const_subvtree s,subvtree d) const { 
     d.root()=any_list::instance();
   }
+  virtual func_t arg_type(arity_t a) const { assert(false); }
+};
+
+struct apply : public stateless_func<apply,0,lang_io::apply_name> {
+  void operator()(context& c,const_subvtree s,subvtree d) const { 
+    c.eval(s.front_sub(),d);
+    d.append(s.begin_sub_child(),s.end_sub_child());
+  }
+  virtual func_t arg_type(arity_t a) const { return func_type::instance(); }
 };
 
 struct arg_func : public narg_func<0> {
@@ -52,6 +62,7 @@ struct arg_func : public narg_func<0> {
   void operator()(context& c,const_subvtree,subvtree d) const { 
     d=c.lookup_arg(_idx); 
   }
+  func_t arg_type(arity_t a) const { assert(false); }
   static arg_func* instance(arity_t);
  protected:
   arity_t _idx;

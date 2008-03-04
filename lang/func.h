@@ -40,6 +40,8 @@ struct func_base : boost::noncopyable {
   bool variadic() const { return arity()==variadic_arity; }
   virtual arity_t arity() const=0;
   virtual void operator()(context&,const_subvtree loc,subvtree dst) const=0;
+  virtual func_t arg_type(arity_t a) const=0;
+  virtual bool vararg() const { return false; }
   virtual std::ostream& operator<<(std::ostream&) const { assert(false); }
 
   /**
@@ -74,6 +76,8 @@ struct func : public func_base {
 
   arity_t arity() const { return _arity; }
   void operator()(context& c,const_subvtree loc,subvtree dst) const {}//fixme
+
+  func_t arg_type(arity_t a) const { return NULL; } //fixme
 
   std::ostream& operator<<(std::ostream& out) const { return out << "func"; }
   
