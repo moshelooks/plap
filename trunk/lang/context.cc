@@ -18,6 +18,7 @@
 #include "core.h"
 
 namespace plap { namespace lang {
+
 #if 0
 func& context::create_func(const std::string& name) { 
   func& f=create_func();

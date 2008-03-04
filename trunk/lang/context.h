@@ -88,10 +88,26 @@ struct context : public boost::noncopyable {
       return empty;
   }
   disc_t symbol2idx(const std::string& name) { return 0; }
+  const std::string& idx2symbol(disc_t idx) { return *func2name(NULL); }//fixme
 
   //evaluation
+  void eval(const_subvtree src,subvtree dst) {
+    (*vertex_cast<func_t>(src.root()))(*this,src,dst);
+  }
+
   template<typename T>
-  void eval(const_subvtree src,subvtree dst) {}
+  T eval_to(const_subvtree src) { 
+    vtree tmp;
+    eval(src,tmp);
+    assert(tmp.childless());
+    return vertex_cast<T>(tmp.root());
+  }  
+
+  //type lookups for arguments
+  func_t arg_type(func_t f,arity_t a) const { return f->arg_type(a); }
+  bool func_arg_type(func_t f,arity_t a) const { 
+    return arg_type(f,a)==func_type::instance(); 
+  }
 
   /* fixme
   what about different funcs pointing to different things in diferent contexts?
@@ -110,9 +126,11 @@ struct context : public boost::noncopyable {
   //  const func_name_map& name2func() const { return _name2func; }
 
 
-  void to_list(subvtree s) {}
+
+
+  /*  void to_list(subvtree s) {}
   void to_apply(subvtree s) {}
-  void to_tuple(subvtree s) {}
+  void to_tuple(subvtree s) {}*/
 
   friend void initialize_lib(context&);
   friend struct arg_func;

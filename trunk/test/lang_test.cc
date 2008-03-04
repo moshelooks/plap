@@ -28,7 +28,7 @@
     str2vtr(src,tmpYYY);                        \
     stringstream ss;                            \
     pretty_print(ss,tmpYYY,c);                  \
-    check_eq(ss.str(),goal+string(" \n"));      \
+    check_eq(ss.str(),goal+string(" \n"));       \
   }
 
 test_case(lang_def_examples) {
