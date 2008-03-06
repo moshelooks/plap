@@ -37,19 +37,12 @@ static const arity_t variadic_arity=255;//std::numeric_limits<arity_t>::max();
 struct func_base : boost::noncopyable {
   virtual ~func_base() {}
 
-  bool variadic() const { return arity()==variadic_arity; }
   virtual arity_t arity() const=0;
-  virtual void operator()(context&,const_subvtree loc,subvtree dst) const=0;
   virtual func_t arg_type(arity_t a) const=0;
-  virtual bool vararg() const { return false; }
+  virtual void operator()(context&,const_subvtree loc,subvtree dst) const=0;
   virtual std::ostream& operator<<(std::ostream&) const { assert(false); }
 
-  /**
-  virtual bool is_def()    const { return false; }
-  virtual bool is_lambda() const { return false; }
-  virtual bool is_let()    const { return false; }
-  virtual bool is_decl()   const { return false; }
-  **/
+  bool variadic() const { return arity()==variadic_arity; }
 };
 inline std::ostream& operator<<(std::ostream& out,const func_base& f) {
   return f.operator<<(out);

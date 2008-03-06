@@ -18,6 +18,7 @@
 #define PLAP_LANG_IO_OPERATORS_H__
 
 #include <vector>
+#include <set>
 #include "bimap.h"
 
 namespace plap { namespace lang_io {
@@ -27,7 +28,9 @@ struct op_name {};
 struct op_symbol {};
 typedef util::bimap<std::string,std::string,op_name,op_symbol>::type infix_map;
 extern const std::vector<infix_map> infix_by_arity;
-extern const infix_map infix_vararg;
+extern const infix_map infix_variadic;
+typedef std::set<std::string> vararg_set;
+extern vararg_set varargs;
 inline const std::string& name2symbol(const std::string& s,
                                       std::string::size_type a) {
   infix_map::index<op_name>::type::const_iterator i;
@@ -36,8 +39,8 @@ inline const std::string& name2symbol(const std::string& s,
     if (i!=infix_by_arity[a].get<op_name>().end())
       return i->second;
   }
-  i=infix_vararg.get<op_name>().find(s);
-  return i==infix_vararg.get<op_name>().end() ? s : i->second;
+  i=infix_variadic.get<op_name>().find(s);
+  return i==infix_variadic.get<op_name>().end() ? s : i->second;
 }
 inline const std::string& symbol2name(const std::string& s,
                                       std::string::size_type a) {
@@ -47,12 +50,20 @@ inline const std::string& symbol2name(const std::string& s,
     if (i!=infix_by_arity[a].get<op_symbol>().end())
       return i->first;
   }
-  i=infix_vararg.get<op_symbol>().find(s);
-  return i==infix_vararg.get<op_symbol>().end() ? s : i->first;
+  i=infix_variadic.get<op_symbol>().find(s);
+  return i==infix_variadic.get<op_symbol>().end() ? s : i->first;
+}
+inline bool vararg(const std::string& name) {
+  return varargs.find(name)!=varargs.end();
+}
+inline void set_vararg(const std::string& name) {
+  varargs.insert(name);
 }
 } //namespace lang_io_private
 using lang_io_private::name2symbol;
 using lang_io_private::symbol2name;
+using lang_io_private::vararg;
+using lang_io_private::set_vararg;
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_OPERATORS_H__

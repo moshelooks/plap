@@ -68,8 +68,7 @@ make_exception(bad_def,
                "Bad definition of function '"+str+"'");
 make_exception(bad_decl_exists,
                "Bad declaration of function '"+str+"', which already exists.");
-make_exception(bad_arg_name,
-               "Bad argument of function name '"+str+"'");
+make_exception(bad_arg_name,"Bad name '"+str+"'");
 make_exception(arg_shadow,"Argument '"+str+"' shadows existing argument.");
 make_exception(arg_unbound,"Invalid reference to unbound argument '"+str+"'.");
 make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
@@ -143,7 +142,7 @@ struct semantic_analyzer {
     special_case(pair,variadic_arity);
 
     if (func_t f=string2func(src.root())) {
-      validate_arity(src,f);
+      validate_arity(src,src.root(),f);
       dst.root()=f;
       process_children(src,dst);
     } else { //see if its a scalar - if so, need to introduce an apply node
@@ -157,7 +156,7 @@ struct semantic_analyzer {
   process(children) {
     func_t f=vertex_cast<func_t>(dst.root());
 
-    if (f->vararg()) {
+    if (vararg(src.root())) {
       dst.append(vertex());
       process_list(src,dst.front_sub());
       return;
@@ -189,7 +188,7 @@ struct semantic_analyzer {
     process_sexpr(src[2],body);
 
     if (func_t f=c.name2func(name)) { //an already-declared function?
-      validate_arity(src[1],f);
+      validate_arity(src[1],name,f);
       if (nested(src)) { //set to be created at runtime - def(func args body)
         assert(false && f); //fixme
 #if 0
@@ -397,8 +396,8 @@ struct semantic_analyzer {
     return arity_t(0);
   }
 
-  void validate_arity(const_subsexpr src,func_t f) {
-    if (!f->vararg())
+  void validate_arity(const_subsexpr src,const string& name,func_t f) {
+    if (!vararg(name))
       validate_arity(src,f->arity());
   }
   void validate_arity(const_subsexpr src,arity_t a) {
