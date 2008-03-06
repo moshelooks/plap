@@ -72,7 +72,7 @@ eager_func<Func,FuncOf,Name>* make_eager(const Func& f) {
 
 }} //namespace plap::lang
 
-//clean up our macro mess fixme
+//clean up our macro mess
 #undef PLAP_LANG_eager_func
 #undef PLAP_LANG_case
 #undef PLAP_LANG_call_arg

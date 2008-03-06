@@ -18,6 +18,9 @@
 #define PLAP_LANG_LAZY_FUNC_H__
 
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
+#define PLAP_LANG_vtree_decl(z,n,u) vtree tr ## n=vtree(vertex());
+#define PLAP_LANG_vtree_eval(z,n,u) c.eval(*child++,tr ## n);
+#define PLAP_LANG_call_arg(z,n,u) literal_cast<Input ## n>(tr ## n)
 #define PLAP_LANG_lazy_func(z,n,u)                                      \
   template<n,const char* Name>                                          \
   struct lazy_func<n,Name>                                              \
@@ -43,11 +46,22 @@ namespace plap { namespace lang {
 
 template<arity_t Arity,const char* Name>
 struct lazy_func;
-BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_eager_func,~);
+BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_lazy_func,~);
 
 //convenience caller, returns a new eager_func on the heap
-template<arity_t Arity,const char* Name>
+template<typename FuncOf,arity_t Arity,const char* Name>
 lazy_func* make_lazy(const Func& f) { return new lazy_func(f) }
 
 }} //namespace plap::lang
+
+//clean up our macro mess
+#undef PLAP_LANG_lazy_func
+#undef PLAP_LANG_case
+#undef PLAP_LANG_call_arg
+#undef PLAP_LANG_vtree_eval
+#undef PLAP_LANG_vtree_decl
+#undef PLAP_LANG_name
+#undef PLAP_LANG_type_params
+#undef PLAP_LANG_LIMIT_INC
+
 #endif //PLAP_LANG_LAZY_FUNC_H__
