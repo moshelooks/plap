@@ -66,9 +66,11 @@ struct indent_parser {
       ++indent;
       return true;
     } else if (newline(c)) {
-      if (mode!=commaed) {
+      if (mode!=commaed && mode!=escaped) {
         mode=indenting;
         indent=0;
+      } else {
+        return true;
       }
       return (whitespace(in.peek()) || !dump(out));
     } else if (eof(c)) {
@@ -91,12 +93,15 @@ struct indent_parser {
       out << '(';
     }
     
-    if (c==',')
+    if (c==',') {
       mode=commaed;
-    else if (c=='\\')
+    } else if (c=='\\') {
       mode=escaped;
-    else
+      if (newline(in.peek()))
+        c=' ';
+    } else {
       mode=normal;
+    }
 
     out << c;
     return true;

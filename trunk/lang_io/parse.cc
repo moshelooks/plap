@@ -26,15 +26,41 @@
 #include "names.h"
 #include "indent.h"
 
-#include <iostream>
-#include "tree_io.h"
-using namespace std;
-
 namespace plap { namespace lang_io {
 
 namespace {
 using namespace boost::spirit;
 using std::string;
+
+bool special_name(const string& s,subsexpr d) {
+  if (s==")") { //not used but needed to get parsing right
+    assert(!d.childless());
+    if (++d.begin_child()==d.end_child()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.flatten(d.begin_child()));
+    }
+    special_name(d.root(),d);
+    return true;
+  }
+  if (s=="") { //a potential apply-expression
+    if (d.front_sub().childless()) {
+      std::swap(d.root(),d.front());
+      d.erase(d.begin_child());
+    } else {
+      assert(d.arity()>1);
+      d.root()=apply_name;
+      d.insert(d[1],string(list_name));
+      d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
+    }
+  } else if (s==def_symbol) { //a definition (explicitly set up structure)
+      d.prepend(d[0].root());
+      d[1].root()=list_name;
+      d.root()=def_name;
+  } else {
+    return false;
+  }
+  return true;
+}
 
 void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d);
 
@@ -56,27 +82,10 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
 
   for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
 
-  if (name==")") { //not used but needed to get parsing right
-    assert(!d.childless());
-    if (++d.begin_child()==d.end_child()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.flatten(d.begin_child()));
-    }
-  } else if (name=="") { //a potential apply-expression
-    if (d.front_sub().childless()) {
-      std::swap(d.root(),d.front());
-      d.erase(d.begin_child());
-    } else {
-      assert(d.arity()>1);
-      d.root()=apply_name;
-      d.insert(d[1],string(list_name));
-      d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
-    }
-  } else if (name==def_symbol) { //a definition (explicitly set up structure)
-      d.prepend(d[0].root());
-      d[1].root()=list_name;
-      d.root()=def_name;
-  } else {
+  if (!special_name(name,d)) {
+    if (*name.rbegin()=='.' && name!="." && name!=".." && name!="...")
+      throw std::runtime_error
+          ("bad number literal '"+name+"' - can't have a trailing '.'.");
     d.root()=symbol2name(name,s.children.size());
   }
 }
@@ -100,7 +109,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       seq    = or_op    >> *(lambdah|or_op);
       or_op  = and_op   >> *(root_node_d[str_p("||")]              >> and_op);
       and_op = cons     >> *(root_node_d[str_p("&&")]              >> cons);
-      cons   = eq       >> *(root_node_d[ch_p(':')]                >> eq);
+      cons   = eq       >> !(root_node_d[ch_p(':')]                >> cons);
       eq     = cmp      >> *(root_node_d[str_p("==")|"!="]         >> cmp);
       cmp    = add      >> *(root_node_d[str_p("<=")|">="|'<'|'>'] >> add);
       add    = cat      >> *(root_node_d[ch_p('+')|'-']            >> cat);

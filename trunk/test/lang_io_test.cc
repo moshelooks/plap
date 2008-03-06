@@ -56,9 +56,10 @@ test_case(parse_infix) {
 
   check_parse("(a b:c d)","(a (cons b c) d)");
 
-  check_parse("([]:[]:(a b+d))","(cons (cons nil nil) (a (plus b d)))");
+  check_parse("([]:[]:(a b+d))","(cons nil (cons nil (a (plus b d))))");
   check_parse("([]:[]:a b+d)",
-              "(apply (cons (cons nil nil) a) (list (plus b d)))");
+              "(apply (cons nil (cons nil a)) (list (plus b d)))");
+  check_parse("a:b:c","(cons a (cons b c))");
 
   check_parse("(a+b)","(plus a b)");
   check_parse("(a==b)","(equal a b)");
@@ -93,6 +94,8 @@ test_case(parse_infix) {
   check_parse("(1,2)","(pair 1 2)");
   check_parse("([1,2])","(list 1 2)");
   check_parse("([1,2],3)","(pair (list 1 2) 3)");
+
+  check_parse("bla (a,b,c) 1+2","(bla (pair a b c) (plus 1 2))");
 }
 
 test_case(parse_fail_infix) {
@@ -115,6 +118,8 @@ test_case(parse_fail_infix) {
   check_parse_throw("a$b");
   check_parse_throw("a$");
   check_parse_throw("2$a");
+  
+  check_parse_throw("1.");
 }
 
 test_case(parse_comments) {
@@ -127,6 +132,8 @@ test_case(parse_indents) {
   check_parse("1 2 3\n 4 5\n 6","(1 2 3 (4 5) 6)");
   check_parse("[1,2,\n 3,4]","(list 1 2 3 4)");
   check_parse("a b [1,2,\n 3,4] c d\n e f","(a b (list 1 2 3 4) c d (e f))");
+  check_parse("a b c\\\nd e f","(a b c d e f)");
+  check_parse("(a b c,\nd e f)","(pair (a b c) (d e f))");
 }
 
 test_case(parse_quotes) {

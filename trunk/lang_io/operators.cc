@@ -37,7 +37,7 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
      ("div","/")
 
      ("equal","==")
-     ("nequal","!=")
+     ("not_equal","!=")
      ("less","<")
      ("less_equal","<=")
      ("greater",">")
@@ -58,8 +58,12 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
     (boost::assign::map_list_of    //ternary operators
      ("def","="));
 
-const infix_map infix_vararg=boost::assign::map_list_of   //variadic operators
+const infix_map infix_variadic=boost::assign::map_list_of   //variadic ops
     ("pair","(")
     ("list","[");
+
+vararg_set varargs=boost::assign::list_of
+    ("plus")
+    ("times");
 }}} //namespace plap::lang_io::lang_io_private
 

@@ -21,7 +21,9 @@ ul {margin-left: -10px}
   <li>A name is an identifier or a scalar.<ul>
 
     <li>An identifier is a nonempty sequences of digits, letters, and
-    underscores, not beginning with a digit, containing no whitespace.</li>
+    underscores, not beginning with a digit, containing no whitespace, that is
+    not a keyword. A keyword is any word appearing in <tt>codeface</tt> in this
+    document.</li>
 
     <li>A scalar is dollar sign (<tt>$</tt>) followed by an identifier, with no
     intervening whitespace.</li>
@@ -36,40 +38,41 @@ ul {margin-left: -10px}
 
 <h4>Core Syntax</h4>
 
-A program is a sequence of expressions, declarations, rewrites, and
-imports, each separated by one or more newlines.<ul>
+A program is a sequence of expressions and imports, each separated by one or
+more newlines.<ul>
 
-  <li>An expression is a name, a literal, a function application, a list
-  expression, or a let expression.<ul>
+  <li>An expression is a name, a literal, or a function application<ul>
 
-    <li>A literal is a Boolean literal, integer literal, float literal,
-    character literal, list literal, or the unit literal.<ul>
+    <li>A literal is a Boolean literal, number literal, character literal, or
+    nil.<ul>
 
       <li>A Boolean literal is <tt>true</tt> or <tt>false</tt>.</li>
 
-      <li>An integer literal is a nonempty sequence of digits (<tt>0-9</tt>),
-      optionally preceded by a minus sign (<tt>-</tt>), containing no
-      whitespace.
-      
-      <br><i>Examples:</i> <tt>42</tt>, <tt>109</tt>, <tt>-00</tt></li>
+      <li>A number literal is a nonempty sequence of digits (<tt>0-9</tt>),
+      optionally preceded by a minus sign (<tt>-</tt>), optionally containing 
+      exactly one period (<tt>.</tt>) in some position other than
+      the last, containing no whitespace.
 
-      <li>A float literal is a nonempty sequence of digits containing exactly
-      one period (<tt>.</tt>) in some position other than the last, optionally
-      preceded by a minus sign, containing no whitespace.
+      <br><i>Examples:</i> <tt>-3.14</tt>, <tt>2003.0</tt>, <tt>.5</tt>,
+      <tt>42</tt>, <tt>109</tt>, <tt>-00</tt></li>
 
-      <br><i>Examples:</i> <tt>-3.14</tt>, <tt>2003.0</tt>, <tt>.5</tt></li>
+      <li>A character literal is a normal character literal or an escaped
+      character literal.<ul>
+	
+	<li>A normal character literal is single quote (<tt>'</tt>), followed
+	by a single character other than a single quote or a hash (<tt>#</tt>),
+	followed by a single quote.</li>
 
-      <li>A character literal is any valid C character literal.
+	<li>An escaped character literal is a single quote, followed by a
+	backslash (<tt>\</tt>), followed by a <tt>t</tt> (tab), <tt>n</tt>
+	(newline), <tt>#</tt>, <tt>\</tt>, <tt>'</tt>, or <tt>"</tt>.
 
-      <br><i>Examples:</i> <tt>'a'</tt>, <tt>'\n'</tt>, <tt>'\\'</tt></li>
+	<br><i>Examples:</i> <tt>'a'</tt>, <tt>'\n'</tt>, <tt>'\\'</tt></li>
 
-      <li>A list literal is the empty list (<tt>[]</tt>), or a literal,
-      followed by a colon (<tt>:</tt>), followed by a list literal.
+      </ul></li>
 
-      <br><i>Examples:</i> <tt>1:2:3:[]</tt>, <tt> ([]:[]):[]</tt>,
-      <tt>'a':'b':[]</tt></li>
-
-      <li>The unit literal is an empty pair of parentheses (<tt>()</tt>).</li>
+      <li>Nil is an empty pair of brackets (<tt>[]</tt>), or the keyword
+      <tt>nil</tt>.</li>
     
     </ul></li>
 
@@ -77,7 +80,270 @@ imports, each separated by one or more newlines.<ul>
     sequence of expressions.
 
     <br><i>Examples:</i> <tt>foo 1 2 'x' (bar $x)</tt>, <tt>bla ()</tt>,
-    <tt>baz 3.4 [] 1:2:3:[]</tt></li>
+    <tt>baz 3.4 [] 1 2 3 []</tt></li>
+
+  </ul></li>
+
+  <li>An import is the keyword <tt>import</tt>, followed by an expression.
+
+  <br><i>Examples:</i> <tt>import ants</tt>, <tt>import blocksworld</tt></li>
+
+</ul>
+
+<h4>Syntactic Sugar</h4>
+
+<p>Every combo program may be expressed using nothing but the core syntax. For
+convenience however, the following syntactic sugar is provided. Every sugared
+program corresponds to exactly one unsugared program.</p>
+
+<h5>Special operators</h5>
+
+<p>A number of special operators (primaily infix, but some prefix as well) are
+provided; each is equivalent to some function application expression. The
+operators are listed in ascending order of precedence. The arity of an
+expression may be the same for both forms or may be different, as indicated in
+the table. Infix operations of equal precedence are left-associative, except
+for <tt>pair</tt> (<tt>,</tt>) and <tt>cons</tt> (<tt>:</tt>), which are
+right-associative.</p>
+
+<tt>
+<table cellpadding=5 border=1>
+  <tr>
+    <td><b>Infix</b></td>
+    <td><b>Arity</b></td>
+    <td><b>Example Special Expression</b></td>
+    <td><b>Equivalent Function Application Expression</b></td>
+  </tr>
+  
+  <tr>
+    <td>[,]</td>
+    <td>variadic</td>
+    <td>[a b c,[],foo (foo bar)]</td>
+    <td>(list (a b c) nil (foo (foo bar)))</td>
+  </tr>  
+
+  <tr>
+    <td>[..]</td>
+    <td>2</td>
+    <td>[foo bar..42]</td>
+    <td>(range (foo bar) 42)</td>
+  </tr>
+
+  <tr>
+    <td>[...]</td>
+    <td>2</td>
+    <td>[1...10]</td>
+    <td>(xrange 1 10)</td>
+  </tr>
+
+  <tr>
+    <td>(,)</td>
+    <td>variadic, 2</td>
+    <td>(a,b,c,d e f,[])</td>
+    <td>(pair a (pair b (pair c (pair (d e f) nil))))</td>
+  </tr>
+
+  <tr>
+    <td>=</td>
+    <td>variadic, 3</td>
+    <td>foo $x $y = bla bla</td>
+    <td>(def foo (list $x $y) (bla bla))</td>
+  </tr>
+  <tr>
+    <td>\</td>
+    <td>1</td>
+    <td>\foo bar baz</td>
+    <td>(lambda (foo bar baz))</td>
+  </tr>
+  <tr>
+    <td><-</td>
+    <td>1</td>
+    <td><- x y z</td>
+    <td>(fact (x y z))</td>
+  </tr>
+  <tr>
+    <td>^</td>
+    <td>2</td>
+    <td>foo^3</td>
+    <td>(decl foo 3)</td>
+  </tr>
+  <tr>
+    <td>-></td>
+    <td>2</td>
+    <td>foo bar -> baz bap</td>
+    <td>(arrow (foo bar) (baz bap))</td>
+  </tr>
+  <tr>
+    <td>||</td>
+    <td>variadic</td>
+    <td>a || b || c</td>
+    <td>(or a b c)</td>
+  </tr>
+  <tr>
+    <td>&&</td>
+    <td>variadic</td>
+    <td>a && b && c</td>
+    <td>(and a b c)</td>
+  </tr>
+    <tr>
+    <td>:</td>
+    <td>2</td>
+    <td></td>
+    <td>()</td>
+  </tr>
+  <tr>
+    <td>== !=</td>
+    <td>2</td>
+    <td>a==b && c!=d</td>
+    <td>(and (equal a b) (not_equal c d))</td>
+  </tr>
+    <tr>
+    <td><= >= < ></td>
+    <td>2</td>
+    <td>a<=b || x+y>d || q>=r</td>
+    <td>(or (less_equal a b) (greater (plus x y) d) (greater_equal q r))</td>
+  </tr>
+  <tr>
+    <td>+ -</td>
+    <td>variadic</td>
+    <td>a+b-c</td>
+    <td>(minus (plus a b) c)</td>
+  </tr>
+    <tr>
+    <td>~</td>
+    <td>variadic</td>
+    <td>a~b~c</td>
+    <td>(concat a b c)</td>
+  </tr>
+  <tr>
+    <td>*</td>
+    <td>variadic</td>
+    <td>a*b+c*d</td>
+    <td>(plus (times a b) (times c d))</td>
+  </tr>
+  <tr>
+    <td>/</td>
+    <td>2</td>
+    <td>a+b/c*d</td>
+    <td>(plus a (times (div b c) d))</td>
+  </tr>
+  <tr>
+    <td>! -</td>
+    <td>1</td>
+    <td>!a || -b<c</td>
+    <td>(or (not a) (less (negative b) c))</td>
+  </tr>
+</table>
+</tt>
+
+<h5>String literals</h5>
+
+<p>A string in double-quotes, with same escape-sequences recognized in
+character literals, is sugar for the equivalent list of characters. So for
+example <tt>"foobar"</tt> is equivalent to <tt>['f', 'o', 'o', 'b', 'a',
+'r']</tt>, and <tt>"b'la\"bla"</tt> is equivalent to <tt>['b' '\'', 'l', 'a',
+'"', 'b', 'l', 'a']</tt>, etc.</p>
+
+
+<h5>Comments</h5>
+
+<p>Comments begin with a <tt>#</tt> and run until a newline is reached, with
+the exception of escaped <tt>#</tt>s within string literals, which do not begin
+comments. Whenever a comment appears it is equivalent to the empty string.</p>
+
+<h5>Significant indentation</h5>
+
+<p>Note that since newlines are not considered whitespace, every expression
+that uses only the core syntax must be one a single line. To stretch an
+expression over multiple lines without otherwise affecting parsing, newlines
+may be escaped (i.e. ended with a backslash). An escaped newline is treated as
+a single character of whitespace.</p>
+
+<p>Indentation may also be used to control parsing and expression grouping,
+according to the following simple rules:
+
+<ol>
+
+  <li>A line that is indented at the same level or a level less than that of
+  the line above it creates <i>n+1</i> right-parens (<tt>)</tt>) at the
+  begining of the line, where <i>n</i> is the number of levels it decreases the
+  indentation by.</li>
+
+  <li>A line that is indented (and immediately below a line containing an
+  expression or part of an expression) is parsed as part of that expression,
+  and creates a left-paren (<tt>(</tt>) at the begining of the line. This
+  left-paren appears after any right-parens that might appear from applying
+  rules one and two.</li>
+
+  <li>Lines that end in a comma are have their newlines escaped in the same
+  manner as lines ending in a backslash, overriding the above rules. Note that
+  unlike a backslash, a comma ending a line is not ignored, but is considered
+  as part of the input.</li>
+
+  <li>If the final line in an expression is indented <i>n</i> levels, <i>n</i>
+  right-parens are created at the end of the line.</li>
+
+</ol>
+
+<p>Note that by rule one, indentation levels must match - if we first indent by
+two spaces, and then by two more, we can indent the following line by two or
+four spaces, or more than four spaces, but not by one or three spaces. Every
+increase in indentation corresponds to a single new indentation level,
+regardless of the number of whitespace characters it increases indentation
+by.</p>
+
+<p><i>Examples:</i><br><br>
+
+<tt>
+<table cellpadding=5 border=1>
+  <tr>
+    <td><b>Indented</b></td>
+    <td><b>Equvalent Unindented</b></td>
+  </tr>
+  <tr>
+    <td><pre>
+a
+ b
+  c
+ e
+  f
+</pre>
+    </td>
+    <td><pre>
+a (b (c)) (e (f))
+</pre></td>
+  </tr>
+  <tr>
+    <td><pre>
+foo (bar,
+     baz,
+     bap) buz [blub,
+               shlub] tub
+  a b
+  c d
+    e
+  f
+</pre>
+    </td>
+    <td><pre>
+foo (bar,baz,bap) buz [blub,shlub] tub (a b) (c d (e))
+</pre>
+    </td>
+  </tr>
+  <tr>
+    <td><pre>
+a b\
+c d
+</pre>
+    </td>
+    <td><pre>
+a b c d
+</pre>
+    </td>
+  </tr>
+</table></tt></p>
+
+<!--
 
     <li>A list expression is the empty list (<tt>[]</tt>), or an expression,
       followed by a colon (<tt>:</tt>), followed by a list expression.
@@ -143,9 +409,6 @@ imports, each separated by one or more newlines.<ul>
 add data declarations data foo = a | b | c
 and constants
 
-<h4>Syntactic Sugar</h4>
-
-bla
 
 <h4>Bound and Unbound Names</h4>
 
@@ -189,3 +452,6 @@ The return type for a
 
 problem: when can more than one decl be used? types given explicitly or
 implied? If implied, how can we tell when they are disjoint?
+ -->
+
+ 
