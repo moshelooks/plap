@@ -18,7 +18,6 @@
 #define PLAP_LANG_TYPE_H__
 
 #include "func.h"
-#include "names.h"
 
 namespace plap { namespace lang {
 

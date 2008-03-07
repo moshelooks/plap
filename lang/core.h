@@ -20,6 +20,7 @@
 #include <boost/bind.hpp>
 #include "algorithm.h"
 #include "context.h"
+#include "names.h"
 
 namespace plap { namespace lang {
 
@@ -63,6 +64,7 @@ struct arg_func : public narg_func<0> {
     d=c.lookup_arg(_idx); 
   }
   func_t arg_type(arity_t a) const { assert(false); }
+  std::ostream& operator<<(std::ostream& out) const { return out << "arg"; }
   static arg_func* instance(arity_t);
  protected:
   arity_t _idx;

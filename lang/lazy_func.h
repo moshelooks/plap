@@ -17,6 +17,7 @@
 #ifndef PLAP_LANG_LAZY_FUNC_H__
 #define PLAP_LANG_LAZY_FUNC_H__
 
+#if 0
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
 #define PLAP_LANG_vtree_decl(z,n,u) vtree tr ## n=vtree(vertex());
 #define PLAP_LANG_vtree_eval(z,n,u) c.eval(*child++,tr ## n);
@@ -63,5 +64,7 @@ lazy_func* make_lazy(const Func& f) { return new lazy_func(f) }
 #undef PLAP_LANG_name
 #undef PLAP_LANG_type_params
 #undef PLAP_LANG_LIMIT_INC
+
+#endif
 
 #endif //PLAP_LANG_LAZY_FUNC_H__

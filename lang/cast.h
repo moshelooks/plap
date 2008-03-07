@@ -28,10 +28,28 @@
 
 namespace plap { namespace lang {
 
+inline bool is_number(vertex v);
+inline bool is_symbol(vertex v);
+inline bool is_func(vertex v);
+
+bool is_arg(disc_t d);
+
 template<typename T>
-bool is_arg(vertex v);
-template<typename T>
-inline arity_t arg_idx(vertex v);
+struct vertex_visitor { typedef T result_type; };
+
+template<typename Visitor>
+typename Visitor::result_type leaf_visit(const Visitor& visit,vertex v) {
+  assert(false);
+}
+/** {
+  assert(!boost::get<func_t>(&v));
+
+  if (leaf_is_func(v))
+    return visit(vertex_cast<func_t>(v));
+  if (is_symbol(v))
+    return visit(vertex_cast<disc_t>(v));
+  return visit(vertex_cast<contin_t>(v));
+  }**/
 
 #ifdef PLAP_LANG_VERTEX_UNION
 

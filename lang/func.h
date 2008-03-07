@@ -19,9 +19,7 @@
 
 #include <ostream>
 #include <boost/noncopyable.hpp>
-#include <limits>
 #include "vtree.h"
-#include "names.h"
 
 //this determines the maximal arity of defs in the language
 #ifndef LANG_LIMIT_ARITY
@@ -32,7 +30,8 @@ namespace plap { namespace lang {
 
 struct context;
 
-static const arity_t variadic_arity=255;//std::numeric_limits<arity_t>::max();
+extern const char no_name[];
+static const arity_t variadic_arity=-1;
 
 struct func_base : boost::noncopyable {
   virtual ~func_base() {}
@@ -40,7 +39,7 @@ struct func_base : boost::noncopyable {
   virtual arity_t arity() const=0;
   virtual func_t arg_type(arity_t a) const=0;
   virtual void operator()(context&,const_subvtree loc,subvtree dst) const=0;
-  virtual std::ostream& operator<<(std::ostream&) const { assert(false); }
+  virtual std::ostream& operator<<(std::ostream&) const=0;
 
   bool variadic() const { return arity()==variadic_arity; }
 };
@@ -53,7 +52,7 @@ struct narg_func : public func_base {
   arity_t arity() const { return Arity; }
 };
 
-template<typename Type,arity_t Arity,const char* Name=lang_io::no_name>
+template<typename Type,arity_t Arity,const char* Name=no_name>
 struct stateless_func : public narg_func<Arity> { 
   static Type* instance() {
     static Type t;
@@ -74,12 +73,13 @@ struct func : public func_base {
 
   std::ostream& operator<<(std::ostream& out) const { return out << "func"; }
   
+  const_subvtree body() const { return _body; }
   friend struct context;
  protected:
   arity_t _arity;
   vtree _body;
 
-  void set_body(subvtree body) { _body.splice(_body.end(),body); }
+  void set_body(subvtree b) { _body.splice(_body.end(),b); }
 };
 
 }} //namespace plap::lang
