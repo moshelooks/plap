@@ -18,6 +18,12 @@
 
 namespace plap { namespace lang_io {
 
+namespace lang_io_private {
+func_index func_names;
+arg_index arg_names;
+symbol_index symbol_names;
+} //namespace lang_io_private
+
 const char def_symbol[]="=";
 const char strlit_symbol[]="\"";
 const char apply_symbol[]="(";
@@ -33,7 +39,6 @@ const char let_name[]="let";
 const char decl_name[]="decl";
 const char pair_name[]="pair";
 
-const char no_name[]="";
 const char nil_name[]="nil";
 const char true_name[]="true";
 const char false_name[]="false";
@@ -41,5 +46,7 @@ const char false_name[]="false";
 const char plus_name[]="plus";
 
 const char if_name[]="if";
+
+const char func_name[]="func";
 
 }} //namespace plap::lang_io

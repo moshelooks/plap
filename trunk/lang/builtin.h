@@ -32,7 +32,7 @@ void initialize_lib(context& c);
 inline void lang_if(context& c,const_subvtree cond,
                     const_subvtree if_br,const_subvtree else_br,subvtree dst) {
   c.eval(c.eval_to<bool>(cond) ? if_br : else_br,dst);
-}  
+}
 
 //arithmetic operators
 inline disc_t lang_plus(list_of<disc_t> l) { 

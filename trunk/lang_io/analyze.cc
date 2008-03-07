@@ -187,7 +187,7 @@ struct semantic_analyzer {
     vtree body=vtree(vertex());
     process_sexpr(src[2],body);
 
-    if (func_t f=c.name2func(name)) { //an already-declared function?
+    if (func_t f=name2func(name)) { //an already-declared function?
       validate_arity(src[1],name,f);
       if (nested(src)) { //set to be created at runtime - def(func args body)
         assert(false && f); //fixme
@@ -198,20 +198,20 @@ struct semantic_analyzer {
         dst.back_sub();//fixeme what do do with args???
         dst.splice(dst.end_child(),body);
 #endif
-      } else { //create it now and return unit
-        c.define_func(src[1].begin_child(),src[1].end_child(),
-                        body,f);
+      } else { //create it now
+        c.define_func(body,f);
+        name_args(f,src[1].begin_child(),src[1].end_child());
       }
     } else {
       //a new function
       if (nested(src)) //error - defs must first be declared at global scope
         throw_undeclared_name(name);
       //otherwise, create a new function and return unit
-      c.define_func(transform_it(src[1].begin_child(),&scalar_name),
-                    transform_it(src[1].end_child(),&scalar_name),
-                    body,sexpr2identifier(src[0]));
+      func_t f=c.define_func(body,src[1].arity());
+      name_func(f,sexpr2identifier(src[0]));
+      name_args(f,transform_it(src[1].begin_child(),&scalar_name),
+                  transform_it(src[1].end_child(),&scalar_name));
     }
-
     arg_idx-=a;
     for (sexpr::const_child_iterator i=src[1].begin_child();
          i!=src[1].end_child();++i)
@@ -238,9 +238,9 @@ struct semantic_analyzer {
 
   process(decl) { //decl(name arity)
     const string& name=sexpr2identifier(src[0]);
-    if (c.name2func(name))
+    if (name2func(name))
       throw_bad_decl_exists(name);
-    c.declare_func(sexpr2arity(src[1]),name);
+    name_func(c.declare_func(sexpr2arity(src[1])),name);
     dst.root()=nil::instance();
   }
 
@@ -333,7 +333,7 @@ struct semantic_analyzer {
   }
 
   vertex symbol2vertex(const string& str) {
-    if (disc_t d=c.symbol2idx(str))
+    if (disc_t d=name2symbol(str))
       return vertex(d);
     throw_bad_symbol(str);
     assert(false);
@@ -362,9 +362,8 @@ struct semantic_analyzer {
     if (i!=lets.end())
       return i->second;
 #endif
-    if (func_t f=c.name2func(str))
-      return f;
-    return NULL;
+    //fixme is this correct?
+    return name2func(str);
   }
 
   //returns a scalar if available, else throws

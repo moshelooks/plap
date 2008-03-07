@@ -23,11 +23,11 @@
     indent_parse(ss,tmpXXX);                            \
     analyze(tmpXXX,vtr,c);                              \
   }
-#define check_anal(src,goal) {                  \
-    vtree tmpYYY;                               \
-    str2vtr(src,tmpYYY);                        \
-    stringstream ss;                            \
-    pretty_print(ss,tmpYYY,c);                  \
+#define check_anal(src,goal) {                   \
+    vtree tmpYYY;                                \
+    str2vtr(src,tmpYYY);                         \
+    stringstream ss;                             \
+    pretty_print(ss,tmpYYY);                     \
     check_eq(ss.str(),goal+string(" \n"));       \
   }
 
