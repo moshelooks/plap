@@ -17,7 +17,6 @@ lang/builtin.cc
 lang/cast.cc
 lang/context.cc
 lang/core.cc
-lang/func.cc
 lang_io/analyze.cc
 lang_io/names.cc
 lang_io/operators.cc

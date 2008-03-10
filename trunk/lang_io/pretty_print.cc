@@ -25,8 +25,7 @@
 #include "vtree.h"
 #include "dorepeat.h"
 #include "cast.h"
-#include "func.h"
-#include "names.h"
+#include "func_io.h"
 
 namespace plap { namespace lang_io {
 
@@ -158,9 +157,7 @@ void pretty_print(ostream& o,const_subvtree s,size_t indent,size_t linemax) {
 
 void pretty_print(ostream& o,func_t f,size_t indent,size_t linemax) {
   std::string name=lexical_cast<std::string>(*f);
-  if (name==func_name) {
-    assert(dynamic_cast<const func*>(f));
-    
+  if (const vtree* body=f->body()) {
     std::stringstream ss;
     ss << name << " ";
     foreach (const std::string& s,func2arg_names(f))
@@ -168,7 +165,7 @@ void pretty_print(ostream& o,func_t f,size_t indent,size_t linemax) {
     ss << "= ";
     
     pretty_printer pp(o,indent,linemax,func2arg_names(f));
-    pp(static_cast<const func*>(f)->body(),ss.str());
+    pp(*body,ss.str());
   } else {
     o << name << "{built-in function}";
   }

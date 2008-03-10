@@ -21,6 +21,7 @@
 
 namespace plap { namespace lang {
 
+#if 0
 template<typename T>
 struct type_placeholder : public stateless_func<type_placeholder<T>,1> {
   void operator()(context&,const_subvtree s,subvtree d) const { 
@@ -37,6 +38,7 @@ typedef type_placeholder<bool>                     bool_type;
 typedef type_placeholder<char>                     char_type;
 typedef type_placeholder<disc_t>                   symbol_type;
 typedef type_placeholder<func_t>                   func_type;
+#endif
 
 template<typename>
 struct list_of;
@@ -56,10 +58,10 @@ struct core_type {
   BOOST_STATIC_ASSERT(sizeof(T)==0);
 };
 
-template<>struct core_type<bool> {};
-template<>struct core_type<char> {};
-template<>struct core_type<disc_t> {};
-template<>struct core_type<contin_t> {};
+template<>struct core_type<bool>     {};
+template<>struct core_type<char>     {};
+template<>struct core_type<id_t>     {};
+template<>struct core_type<number_t> {};
 
 template<typename T>
 struct core_type<list_of<T> > : core_type<T> {};

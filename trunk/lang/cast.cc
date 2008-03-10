@@ -15,6 +15,7 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "vertex.h"
+#if 0
 
 #ifndef PLAP_LANG_VERTEX_UNION
 #include <boost/lexical_cast.hpp>
@@ -64,3 +65,4 @@ std::string type_value(const vertex& v) {
 } //namespace plap::lang_private
 }} //namespace plap::lang
 
+#endif

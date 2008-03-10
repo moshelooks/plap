@@ -19,12 +19,12 @@
 #include <vector>
 
 namespace plap { namespace lang {
-
+/***
 arg_func* arg_func::instance(arity_t i) {
   static std::vector<arg_func> args(util::count_it(0),
                                     util::count_it(LANG_LIMIT_ARITY));
   return &args[i];
 }
 
-
+**/
 }} //namespace plap::lang

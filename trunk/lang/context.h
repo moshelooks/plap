@@ -20,7 +20,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/noncopyable.hpp>
-#include "type.h"
+#include "func.h"
 
 namespace plap { namespace lang {
 
@@ -50,7 +50,10 @@ struct context : public boost::noncopyable {
 
   //evaluation
   void eval(const_subvtree src,subvtree dst) {
-    (*vertex_cast<func_t>(src.root()))(*this,src,dst);
+    if (src.childless())
+      dst.root()=src.root();
+    else
+      (*call_cast(src.root()))(*this,src,dst);
   }
 
   template<typename T>
@@ -58,21 +61,10 @@ struct context : public boost::noncopyable {
     vtree tmp;
     eval(src,tmp);
     assert(tmp.childless());
-    return vertex_cast<T>(tmp.root());
-  }  
-
-  //type creation
-  template<typename Type>
-  func_t get_type() { return Type::instance(); }//fixme get rid of this
-
-  //type lookups for arguments fixme
-  func_t arg_type(func_t f,arity_t a) const { return f->arg_type(a); }
-  bool func_arg_type(func_t f,arity_t a) const { 
-    return arg_type(f,a)==func_type::instance(); 
-  }
+    return arg_cast<T>(tmp.root());
+  } 
 
   friend void initialize_lib(context&);
-  friend struct arg_func;//fixme get rig
  protected:
   typedef boost::ptr_vector<func_base> func_vector;
   context* _parent;

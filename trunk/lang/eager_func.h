@@ -26,7 +26,7 @@
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
 #define PLAP_LANG_type_params(n) BOOST_PP_ENUM_PARAMS(n,typename Input)
 #define PLAP_LANG_name(n) \
-  eager_func<Func,func_of<Return(BOOST_PP_ENUM_PARAMS(n,Input))>,Name>
+  eager_func<Func,func_of<Return(BOOST_PP_ENUM_PARAMS(n,Input))> >
 #define PLAP_LANG_vtree_decl(z,n,u) vtree tr ## n=vtree(vertex());
 #define PLAP_LANG_vtree_eval(z,n,u) c.eval(*child++,tr ## n);
 #define PLAP_LANG_call_arg(z,n,u) literal_cast<Input ## n>(tr ## n)
@@ -36,9 +36,9 @@
 //generates an eager_func struct for some arity
 #define PLAP_LANG_eager_func(z,n,u)                                     \
   template<typename Func,typename Return,                               \
-           PLAP_LANG_type_params(n),const char* Name>                   \
+           PLAP_LANG_type_params(n)>                                    \
   struct PLAP_LANG_name(n)                                              \
-      : public stateless_func<PLAP_LANG_name(n),n,Name> {               \
+      : public stateless_func<PLAP_LANG_name(n),n> {                    \
     eager_func(const Func& f) : _base(f) {}                             \
     void operator()(context& c,const_subvtree loc,subvtree dst) const { \
       assert(loc.arity()==n);                                           \
@@ -60,14 +60,14 @@
 
 namespace plap { namespace lang { //the actual code generation occurs here
 
-template<typename Func,typename FuncOf,const char* Name>
+template<typename Func,typename FuncOf>
 struct eager_func;
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_eager_func,~);
 
 //convenience caller, returns a new eager_func on the heap
-template<typename FuncOf,const char* Name,typename Func>
-eager_func<Func,FuncOf,Name>* make_eager(const Func& f) { 
-  return new eager_func<Func,FuncOf,Name>(f);
+template<typename FuncOf,typename Func>
+eager_func<Func,FuncOf>* make_eager(const Func& f) { 
+  return new eager_func<Func,FuncOf>(f);
 }
 
 }} //namespace plap::lang
