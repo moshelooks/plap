@@ -17,65 +17,74 @@
 #ifndef PLAP_LANG_VERTEX_H__
 #define PLAP_LANG_VERTEX_H__
 
-//if assertions are enabled then vertices (individual nodes in program trees)
-//are implemented using boost::variant, which allows for runtime
-//type-checking. Otherwise, a union is used, which will fail nastily in the
-//case of a bug or a syntactically incorrect program, but is faster and uses
-//less memory (1-4 bytes less per program tree node)
-#ifdef NDEBUG
-#  define PLAP_LANG_VERTEX_UNION
-#else //ifndef NDEBUG
-#  include <boost/variant.hpp>
-#  include <ostream>
-#endif //ifdef NDEBUG
+#include "func_base.h"
 
 namespace plap { namespace lang {
 
-struct world;
-struct func_base;
-
-typedef int              disc_t;
-typedef float            contin_t;
-typedef world*           world_t;
 typedef const func_base* func_t;
+typedef float            number_t;
 
-typedef unsigned char arity_t;
+struct vertex {
+  vertex() {  //junk
+#ifndef NDEBUG
+    v.f=NULL;
+#endif
+  }
+  friend vertex call(func_t); //factories
+  friend vertex arg(func_t);
+  friend vertex arg(id_t);
+  friend vertex arg(number_t);
 
-#ifdef PLAP_LANG_VERTEX_UNION
-union vertex { //we mirror the behavior of the boost::variant 1-arg ctors
-  vertex(disc_t d_)   : d(d_) {}
-  vertex(contin_t c_) : c(c_) {}
-  vertex(world_t w_)  : w(w_) {}
-  vertex(func_t f_)    : f(f_) {}
-
-  vertex() {} //junk
-
-  disc_t d; contin_t c; world_t w; func_t f; 
+  friend func_t call_cast(vertex v); //accessors
+  template<typename T>
+  friend T arg_cast(vertex v);
+ protected:
+  vertex(func_t f_)   { v.f=f_; }
+  vertex(id_t d_)   { v.d=d_; }
+  vertex(number_t n_) { v.n=n_; }
+  union { func_t f; id_t d; number_t n;  } v;
+  
+  static const id_t funcarg_mask;
+  static const id_t symbolarg_mask;
 };
-#else //ifndef PLAP_LANG_VERTEX_UNION
-struct actual_arg { 
-  actual_arg(arity_t a) : idx(a) {} 
-  arity_t idx; 
-  bool operator==(const actual_arg& rhs) const { return idx==rhs.idx; }
-};
-template<typename T>
-actual_arg arg(arity_t a) { return actual_arg(a); }
 
-typedef boost::variant<disc_t,
-                       contin_t,
-                       world_t,
-                       func_t,
-                       actual_arg> vertex;
-#endif //ifdef PLAP_LANG_VERTEX_UNION
+inline vertex call(func_t f) { return vertex(f); }
+inline vertex arg(func_t f) { return vertex(f->id() | vertex::funcarg_mask); }
+inline vertex arg(id_t d)   { return vertex(d | vertex::symbolarg_mask); }
+inline vertex arg(number_t n) { return vertex(n); }
+
+inline func_t call_cast(vertex v) { 
+  assert(v.v.f);
+  return v.v.f;
+}
+
+template<>
+inline func_t arg_cast<func_t>(vertex v) { 
+  assert((v.v.d & vertex::funcarg_mask)==vertex::funcarg_mask);
+  return id2func(v.v.d ^ vertex::funcarg_mask);
+}
+template<>
+inline id_t arg_cast<id_t>(vertex v) {
+  assert(v.v.d & vertex::symbolarg_mask);
+  return (v.v.d ^ vertex::symbolarg_mask);
+}
+template<>
+inline number_t arg_cast<number_t>(vertex v) {
+  assert(!(v.v.d & vertex::funcarg_mask) && !(v.v.d & vertex::symbolarg_mask));
+  return v.v.n;
+}
+
+template<>
+inline bool arg_cast<bool>(vertex v) { 
+  assert(arg_cast<id_t>(v)==0 || arg_cast<id_t>(v)==LANG_ARG_MAX+1);
+  return arg_cast<id_t>(v);
+}
+template<>
+inline char arg_cast<char>(vertex v) {
+  assert(arg_cast<id_t>(v)>LANG_ARG_MAX+1 &&
+         arg_cast<id_t>(v)<LANG_ARG_MAX+258);
+  return arg_cast<id_t>(v)-LANG_ARG_MAX-129;
+}
 
 }} //namespace plap::lang
-#ifndef PLAP_LANG_VERTEX_UNION
-//very nasty...
-namespace boost { namespace detail { namespace variant {
-inline std::ostream& operator<<(std::ostream& out,
-                                const plap::lang::actual_arg& a) {
-  return out << "#" << a.idx; 
-}
-}}}
-#endif //ifndef PLAP_LANG_VERTEX_UNION
 #endif //PLAP_LANG_VERTEX_H__

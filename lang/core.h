@@ -20,13 +20,12 @@
 #include <boost/bind.hpp>
 #include "algorithm.h"
 #include "context.h"
-#include "names.h"
 
 namespace plap { namespace lang {
 
 template<typename T>
 struct lang_list
-    : public stateless_func<lang_list<T>,variadic_arity,lang_io::list_name> {
+    : public stateless_func<lang_list<T>,variadic_arity> {
   void operator()(context& c,const_subvtree s,subvtree d) const { 
     assert(d.childless());
     d.root()=func_t(this);
@@ -34,60 +33,31 @@ struct lang_list
     util::for_each(s.begin_sub_child(),s.end_sub_child(),d.begin_sub_child(),
                    boost::bind(&context::eval,&c,_1,_2));
   }
-  func_t arg_type(arity_t a) const { return type_placeholder<T>::instance(); }
 };
 
 typedef lang_list<bool>           bool_list;
 typedef lang_list<char>           char_list;
-typedef lang_list<disc_t>         symbol_list;
-typedef lang_list<contin_t>       number_list;
+typedef lang_list<id_t>           symbol_list;
+typedef lang_list<number_t>       number_list;
 typedef lang_list<func_t>         any_list;
 
-struct nil : public stateless_func<nil,0,lang_io::nil_name> {
-  void operator()(context&,const_subvtree s,subvtree d) const { 
-    d.root()=any_list::instance();
-  }
-  virtual func_t arg_type(arity_t a) const { assert(false); }
-};
+typedef any_list nil;
 
-struct apply : public stateless_func<apply,0,lang_io::apply_name> {
-  void operator()(context& c,const_subvtree s,subvtree d) const { 
-    c.eval(s.front_sub(),d);
-    d.append(s.begin_sub_child(),s.end_sub_child());
-  }
-  virtual func_t arg_type(arity_t a) const { return func_type::instance(); }
-};
+#define LANG_CORE_make_func(name,arity)                                   \
+  struct name : public stateless_func<name,arity> {                       \
+    inline void operator()(context& c,const_subvtree s,subvtree d) const; \
+  };                                                                      \
+  void name::operator()(context& c,const_subvtree s,subvtree d) const
 
-struct arg_func : public narg_func<0> {
-  arg_func(arity_t i) : _idx(i) {}
-  void operator()(context& c,const_subvtree,subvtree d) const { 
-    d=c.lookup_arg(_idx); 
-  }
-  func_t arg_type(arity_t a) const { assert(false); }
-  std::ostream& operator<<(std::ostream& out) const { return out << "arg"; }
-  static arg_func* instance(arity_t);
- protected:
-  arity_t _idx;
-};    
+LANG_CORE_make_func(apply,2) {
+  c.eval(s.front_sub(),d);
+  d.append(s.begin_sub_child(),s.end_sub_child());
+}
 
-//def(name list(arg1 arg2 ...) body)
-#if 0
-struct def : public narg_func<3> {
-  void operator()(const_subvtree s,subvtree d) const {
-    
-  }
-};
-template<typename T>
-struct eval : public func_base {
-  void operator()(const_subvtree s,subvtree d) const {
-    assert(d.childless());
-    if (s.childless())
-      d.root()=s.root();
-    else
-    (*vertex_cast<def_t>(s.root()))(s,d);
-  }
-};
-#endif
+LANG_CORE_make_func(def,3) {}
+//LANG_CORE_make_func(,);
+
+#undef LANG_CORE_make_func
 
 }} //namespace plap::lang
 

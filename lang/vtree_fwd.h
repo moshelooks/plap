@@ -17,9 +17,6 @@
 #ifndef PLAP_LANG_VTREE_FWD_H__
 #define PLAP_LANG_VTREE_FWD_H__
 
-#include "vertex.h"
-
-//fwd declarations
 namespace plap { namespace util { 
 template<typename>
 struct tree;
@@ -30,6 +27,7 @@ struct const_subtree;
 }} //namespace plap::util
 
 namespace plap { namespace lang {
+struct vertex;
 typedef util::tree<vertex>               vtree;
 typedef util::subtree<vertex>            subvtree;
 typedef util::const_subtree<vertex>      const_subvtree;

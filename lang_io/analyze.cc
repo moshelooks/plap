@@ -26,8 +26,8 @@
 #include "context.h"
 #include "core.h"
 #include "operators.h"
+#include "names.h"
 
-#include "algorithm.h"
 #include "tree_iterator.h"
 
 #include <iostream>
@@ -75,7 +75,7 @@ make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
 make_exception(bad_symbol,"Unrecognized symbol or function '"+str+"'.");
 
 #define process(name) \
-  void process_ ## name(const_subsexpr src,subvtree dst,bool funcall=true)
+  void process_ ## name(const_subsexpr src,subvtree dst)
 #define special_case(name,arity)                 \
   if (src.root()==name ## _name) {               \
     validate_arity(src,arity_t(arity));          \
@@ -108,12 +108,12 @@ struct semantic_analyzer {
 
   process(sexpr) {
     if (src.childless())
-      process_leaf(src,dst,funcall);
+      process_leaf(src,dst);
     else
       process_internal(src,dst);
   }
 
-  process(leaf) { 
+  process(leaf) { //fixme no longer needed
     //avoid creating a singleton leaf that's not a func_t
     if (src.begin()==root.begin()) 
       if (func_t f=string2func(src.root())) {
@@ -129,8 +129,10 @@ struct semantic_analyzer {
         dst.root()=symbol_type::instance();
         dst.append(symbol2vertex(src.root()));
       }
-    else
+    else {
+      bool funcall=false;//fixme!!!
       dst.root()=string2vertex(src.root(),funcall);
+    }
   }
 
   process(internal) {
@@ -168,7 +170,7 @@ struct semantic_analyzer {
     sexpr::const_sub_child_iterator i=src.begin_sub_child();
     for (vtree::sub_child_iterator j=dst.begin_sub_child();
          j!=dst.end_sub_child();++a,++i,++j)
-      process_sexpr(*i,*j,c.func_arg_type(f,a));
+      process_sexpr(*i,*j);//fixme,c.func_arg_type(f,a));
   }
 
   process(def) { //def(name list(arg1 arg2 ...) body)
@@ -373,9 +375,10 @@ struct semantic_analyzer {
     scalar_map::const_iterator i=scalars.find(s.substr(1));
     if (i==scalars.end())
       throw_arg_unbound(s);
-    if (parentfunc)
+    /*(if (parentfunc)
       return arg<func_t>(i->second);
-    return arg<disc_t>(i->second);
+      return arg<disc_t>(i->second);*/
+    return arg(i->second);
   }
 
   const string& sexpr2identifier(const_subsexpr src) {

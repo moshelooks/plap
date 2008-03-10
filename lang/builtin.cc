@@ -54,8 +54,8 @@ struct eager_func<Op,T(U)>
 void initialize_lib(context& c) {
   //c.insert_builtin(nil::instance(),false);
   //c.insert_builtin(lang_list<const_subvtree>::instance(),false);
-  c.insert_builtin(make_eager<func_of<disc_t(list_of<disc_t>)>,
-                              lang_io::plus_name>(&lang_plus));
+  //c.insert_builtin(make_eager<func_of<disc_t(list_of<disc_t>)>,
+  //fixme                          lang_io::plus_name>(&lang_plus));
   //c.insert_builtin(make_lazy(&lang_if,lang_io::if_name));
 
 

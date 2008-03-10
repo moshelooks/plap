@@ -15,38 +15,46 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "names.h"
+#include <boost/assign/list_of.hpp>
+#include "core.h"
+#include "builtin.h"
+
+//nil is its own thing - not a func (no arguments), 
+//fixme  not a symbol - or should it be? $nil <-> []?
 
 namespace plap { namespace lang_io {
 
-namespace lang_io_private {
-func_index func_names;
-arg_index arg_names;
-symbol_index symbol_names;
-} //namespace lang_io_private
-
+//fixme put in parse
 const char def_symbol[]="=";
 const char strlit_symbol[]="\"";
 const char apply_symbol[]="(";
 const char cons_symbol[]=":";
 
-const char def_name[]="def";
-const char strlit_name[]="strlit";
-const char apply_name[]="apply";
+namespace lang_io_private {
+func_index func_names=boost::assign::map_list_of
+    //("list",any_list::instance())
 
-const char list_name[]="list";
-const char lambda_name[]="lambda";
-const char let_name[]="let";
-const char decl_name[]="decl";
-const char pair_name[]="pair";
+    ("apply",apply::instance())
+    /*    ("def",def::instance())
+    ("lambda",lambda::instance())
+    ("let",let::instance())
+    ("nil",nil::instance())
+    ("pair",pair::instance())
 
-const char nil_name[]="nil";
-const char true_name[]="true";
-const char false_name[]="false";
+    ("plus",lang_plus::instance())
+    ("if",lang_if::instance())
 
-const char plus_name[]="plus";
+    ("decl",decl::instance())*/;
 
-const char if_name[]="if";
+arg_index arg_names; //core & builtin functions don't need arg names
+symbol_index symbol_names=boost::assign::list_of
+    ("true")
+#define NAMES_arg(z,n,u) ("arg")
+    BOOST_PP_REPEAT(LANG_ARG_MAX,NAMES_arg,~)
+    ("false");
 
-const char func_name[]="func";
+
+
+} //namespace lang_io_private
 
 }} //namespace plap::lang_io

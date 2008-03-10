@@ -14,6 +14,8 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+#if 0
+
 #ifndef PLAP_LANG_CAST_H__
 #define PLAP_LANG_CAST_H__
 
@@ -164,3 +166,5 @@ inline const_subvtree literal_cast<const_subvtree>(const_subvtree s) {
 
 }} //namespace plap::lang
 #endif //PLAP_LANG_CAST_H__
+
+#endif

@@ -27,22 +27,31 @@
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/random_access_index.hpp>
 
 namespace plap { namespace util {
 
-template<typename Left,typename Right,
-         typename LeftTag,typename RightTag>
+//two-way hashing
+template<typename Left,typename Right>
 struct bimap {
   typedef std::pair<Left,Right> pair_t;
   typedef boost::multi_index_container
   <pair_t,
    boost::multi_index::indexed_by<
      boost::multi_index::hashed_non_unique<
-       boost::multi_index::tag<LeftTag>,
        boost::multi_index::member<pair_t,Left,&pair_t::first> >,
      boost::multi_index::hashed_non_unique<
-       boost::multi_index::tag<RightTag>,
        boost::multi_index::member<pair_t,Right,&pair_t::second> > > > type;
+};
+
+//one-way vector lookup (left) and one-way hashing (right)
+template<typename Right>
+struct vector_bimap {
+  typedef boost::multi_index_container
+  <Right,boost::multi_index::indexed_by<
+           boost::multi_index::random_access<>,
+           boost::multi_index::hashed_non_unique<
+             boost::multi_index::identity<Right> > > > type;
 };
 
 }} //namespace plap::util

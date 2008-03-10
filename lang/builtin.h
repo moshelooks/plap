@@ -35,8 +35,8 @@ inline void lang_if(context& c,const_subvtree cond,
 }
 
 //arithmetic operators
-inline disc_t lang_plus(list_of<disc_t> l) { 
-  return std::accumulate(l.begin(),l.end(),disc_t(0));
+inline number_t lang_plus(list_of<number_t> l) { 
+  return std::accumulate(l.begin(),l.end(),number_t(0));
 }
 
 #if 0

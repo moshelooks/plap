@@ -27,11 +27,12 @@ nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
 
 sub $list $indices = 
   let 
-    helper $list $indices $offset =
+    (helper $list $indices $offset =
       if (empty $indices) [] 
          if (hd $indices)=$offset 
             (hd $list):(helper (tl $list) (tl $indices) $offset+1)
             helper (tl $list) $indices $offset
+    )
     helper $list $indices 0
 
 subs $list $from $len = sub $list [$from..$from+$len-1]
