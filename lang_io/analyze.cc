@@ -114,9 +114,8 @@ struct semantic_analyzer {
       dst.root()=string2arg(src.root());
       return;
     }
-    cout << "XX" << endl;
+
     special_case(def,3);
-    cout << "YY" << endl;
     /**    special_case(lambda,2);
            special_case(let,variadic_arity);**/
     special_case(decl,2);
@@ -148,8 +147,6 @@ struct semantic_analyzer {
   }
 
   process(def) { //def(name list(arg1 arg2 ...) body)
-    cout << "proc def" << endl;
-
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
 
@@ -195,7 +192,6 @@ struct semantic_analyzer {
          i!=src[1].end_child();++i)
       scalars.erase(scalar_name(*i));
     dst.root()=nil();
-    cout << "pdf bot" << endl;
   }
   
   process(lambda) { //lambda(args body)

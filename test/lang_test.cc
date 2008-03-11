@@ -53,6 +53,7 @@ test_case(lang_def_examples) {
   check_anal("blub $x $y $z $q = moo","[]");
 }
 
+//test_case(lang_if_examples) {
 
 
 #if 0
