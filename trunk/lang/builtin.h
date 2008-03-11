@@ -22,26 +22,84 @@
 
 #include <numeric>
 #include "context.h"
-#include "type.h"
+#include "cast.h"
 
 namespace plap { namespace lang {
 
 void initialize_lib(context& c);
 
+typedef const_subvtree   any;
+typedef list_of<any> any_list;
+
+template<typename>
+struct builtin;
+
+//generates a builtin struct for some arity
+#define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
+#define PLAP_LANG_type_params(n) BOOST_PP_ENUM_PARAMS(n,typename Input)
+#define PLAP_LANG_name(n) builtin<Subtype(BOOST_PP_ENUM_PARAMS(n,Input))>
+#define PLAP_LANG_vtree_decl(z,n,u) vtree tr ## n=vtree(vertex());
+#define PLAP_LANG_vtree_eval(z,n,u) c.eval(*child++,tr ## n);
+#define PLAP_LANG_call_arg(z,n,u) literal_cast<Input ## n>(tr ## n)
+#define PLAP_LANG_builtin(z,n,u)                                        \
+  template<typename Subtype,PLAP_LANG_type_params(n) >                  \
+  struct PLAP_LANG_name(n)                                              \
+      : public stateless_func<Subtype,n> {                              \
+    void operator()(context& c,const_subvtree loc,subvtree dst) const { \
+      assert(loc.arity()==n);                                           \
+      BOOST_PP_REPEAT(n,PLAP_LANG_vtree_decl,~);                        \
+      const_vsub_child_it child=loc.begin_sub_child();                  \
+      c.eval(*child,tr0);                                               \
+      BOOST_PP_REPEAT_FROM_TO(1,n,PLAP_LANG_vtree_eval,~);              \
+      (*static_cast<Subtype*>(this))                                    \
+          (c,BOOST_PP_ENUM(n,PLAP_LANG_call_arg,~),dst);                \
+    }                                                                   \
+    template<BOOST_PP_ENUM_PARAMS(n,typename T)>                        \
+    void operator()(context&,BOOST_PP_ENUM_BINARY_PARAMS(n,const T,&t), \
+                    subvtree dst) const {                               \
+      (*static_cast<Subtype*>(this))(BOOST_PP_ENUM_PARAMS(n,t),dst);    \
+    }                                                                   \
+  };
+BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_builtin,~)
+
+template<typename>
+struct builtin_vararg;
+
+template<typename Subtype,typename Argtype>
+struct builtin_vararg<Subtype(Argtype)> :public builtin<Subtype(Argtype)> {
+  arity_t arity() const { return variadic_arity; }
+  void operator()(context& c,const_subvtree loc,subvtree dst) const {
+    (*static_cast<Subtype*>(this))(c,list_of<Argtype>(loc),dst);
+  }
+};
+  
+
 //conditionals
-inline void lang_if(context& c,const_subvtree cond,
-                    const_subvtree if_br,const_subvtree else_br,subvtree dst) {
-  c.eval(c.eval_to<bool>(cond) ? if_br : else_br,dst);
-}
+struct lang_if : public builtin<lang_if(bool,any,any)> {
+  void operator()(context& c,bool cond,any if_br,any else_br,subvtree dst) {
+    c.eval(cond ? if_br : else_br,dst);
+  }
+};
 
 //arithmetic operators
-inline number_t lang_plus(list_of<number_t> l) { 
-  return std::accumulate(l.begin(),l.end(),number_t(0));
-}
+struct lang_plus : public builtin_vararg<lang_plus(number_t)> {
+  void operator()(list_of<number_t> l,subvtree dst) const {
+    dst.root()=arg(std::accumulate(l.begin(),l.end(),number_t(0)));
+  }
+};
 
+//list operators
+struct lang_concat : public builtin<lang_concat(any_list,any_list)> {
+  void operator()(any_list a,any_list b,subvtree dst) const {
+    assert(a.root()==b.root());
+    dst=a;
+    dst.append(b.begin_sub_child(),b.end_sub_child());
+  }
+};    
 #if 0
+//functional programming constructs
 inline disc_t lang_foreach(list_of<const_subvtree> l,
-                         func_of<const_subvtree(const_subvtree)> f) {
+                           func_of<const_subvtree(const_subvtree)> f) {
   //fixmestd::for_each(l.begin(),l.end(),f);
   return 0;
 }

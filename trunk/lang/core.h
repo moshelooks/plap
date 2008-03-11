@@ -50,10 +50,21 @@ typedef lang_list<func_t>         any_list;
   };                                                                      \
   void name::operator()(context& c,const_subvtree s,subvtree d) const
 
+
+void lang_apply2(const_subvtree l,list_of<const_subtree> r) {
+  
+
 LANG_CORE_make_func(apply,2) {
-  c.eval(s.front_sub(),d);
-  d.append(s.begin_sub_child(),s.end_sub_child());
+  vtree tmp=vtree(vertex());
+  c.eval(s.front_sub(),tmp);
+  util::foreach
+  tmp.append(s.back_sub().begin_sub_child(),s.back_sub().end_sub_child());
 }
+
+{
+  
+  func_of<T(U)> l=get_type(s[0]);
+  
 
 LANG_CORE_make_func(def,3) {}
 

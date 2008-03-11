@@ -47,7 +47,8 @@ struct func_of;
 template<typename,typename>
 struct pair_of;
 
-//core types are bool, char, disc_t (for symbol), and contin_t
+//core types are bool, char, id_t (for symbol), and contin_t
+//a core type of const_subvtree may be used for laziness
 //a valid type is a core type or list_of<Type> or func_of<Type(Type,...,Type)>
 //or pair_of<Type,...,Type> where all Type are valid types
 namespace lang_private {
@@ -62,6 +63,8 @@ template<>struct core_type<bool>     {};
 template<>struct core_type<char>     {};
 template<>struct core_type<id_t>     {};
 template<>struct core_type<number_t> {};
+
+template<>struct core_type<const_subvtree> {};
 
 template<typename T>
 struct core_type<list_of<T> > : core_type<T> {};

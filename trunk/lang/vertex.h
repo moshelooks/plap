@@ -133,7 +133,9 @@ inline bool is_func(vertex v) {
 inline bool is_symbol(vertex v) { 
   return ((v.v.d & vertex::symbolarg_mask)==vertex::symbolarg_mask);
 }
-inline  bool is_number(vertex v) { return (!(v.v.d & vertex::funcarg_mask)); }
+inline  bool is_number(vertex v) { 
+  return ((v.v.d & vertex::funcarg_mask)!=vertex::funcarg_mask); 
+}
 
 }} //namespace plap::lang
 #endif //PLAP_LANG_VERTEX_H__
