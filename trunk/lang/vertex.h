@@ -30,14 +30,26 @@ struct vertex {
     v.f=NULL;
 #endif
   }
-  friend vertex call(func_t); //factories
+  friend vertex call(func_t); //creators
   friend vertex arg(func_t);
   friend vertex arg(id_t);
   friend vertex arg(number_t);
 
-  friend func_t call_cast(vertex v); //accessors
+  friend vertex arg(bool);
+  friend vertex nil();
+  friend vertex lang_arg(arity_t);
+  friend vertex arg(char);
+
+  friend func_t call_cast(vertex); //accessors
   template<typename T>
-  friend T arg_cast(vertex v);
+  friend T arg_cast(vertex);
+  friend bool is_lang_arg(id_t);
+  friend arity_t lang_arg_cast(id_t);
+
+  //important: these don't work on calls, only args
+  friend bool is_func(vertex);
+  friend bool is_symbol(vertex);
+  friend bool is_number(vertex);
  protected:
   vertex(func_t f_)   { v.f=f_; }
   vertex(id_t d_)   { v.d=d_; }
@@ -46,6 +58,17 @@ struct vertex {
   
   static const id_t funcarg_mask;
   static const id_t symbolarg_mask;
+
+  static const id_t false_id;
+  static const id_t true_id;
+  static const id_t nil_id;
+
+  static const id_t smallest_lang_arg;
+  static const id_t largest_lang_arg;
+
+  static const id_t smallest_char;
+  static const id_t largest_char;
+  static const id_t char_offset;
 };
 
 inline vertex call(func_t f) { return vertex(f); }
@@ -53,38 +76,64 @@ inline vertex arg(func_t f) { return vertex(f->id() | vertex::funcarg_mask); }
 inline vertex arg(id_t d)   { return vertex(d | vertex::symbolarg_mask); }
 inline vertex arg(number_t n) { return vertex(n); }
 
-inline func_t call_cast(vertex v) { 
+inline vertex arg(bool b) { 
+  return arg(b ? vertex::true_id : vertex::false_id);
+}
+inline vertex nil() { return arg(vertex::nil_id); }
+inline vertex lang_arg(arity_t a) { 
+  assert(a<LANG_ARG_MAX);
+  return arg(a+vertex::smallest_lang_arg);
+}
+inline vertex arg(char c) { return arg(id_t(c)+vertex::char_offset); }
+
+inline func_t call_cast(vertex v) {
   assert(v.v.f);
   return v.v.f;
 }
 
 template<>
 inline func_t arg_cast<func_t>(vertex v) { 
-  assert((v.v.d & vertex::funcarg_mask)==vertex::funcarg_mask);
+  assert(is_func(v));
   return id2func(v.v.d ^ vertex::funcarg_mask);
 }
 template<>
 inline id_t arg_cast<id_t>(vertex v) {
-  assert(v.v.d & vertex::symbolarg_mask);
+  assert(is_symbol(v));
   return (v.v.d ^ vertex::symbolarg_mask);
 }
 template<>
 inline number_t arg_cast<number_t>(vertex v) {
-  assert(!(v.v.d & vertex::funcarg_mask) && !(v.v.d & vertex::symbolarg_mask));
+  assert(is_number(v));
   return v.v.n;
 }
 
 template<>
 inline bool arg_cast<bool>(vertex v) { 
-  assert(arg_cast<id_t>(v)==0 || arg_cast<id_t>(v)==LANG_ARG_MAX+1);
+  assert(arg_cast<id_t>(v)==0 || arg_cast<id_t>(v)==vertex::true_id);
   return arg_cast<id_t>(v);
+}
+inline bool is_lang_arg(id_t d) { 
+  return (d>=vertex::smallest_lang_arg && 
+          d<=vertex::largest_lang_arg);
+}
+inline arity_t lang_arg_cast(id_t d) {
+  assert(is_lang_arg(d));
+  return (d-vertex::smallest_lang_arg);
 }
 template<>
 inline char arg_cast<char>(vertex v) {
-  assert(arg_cast<id_t>(v)>LANG_ARG_MAX+1 &&
-         arg_cast<id_t>(v)<LANG_ARG_MAX+258);
-  return arg_cast<id_t>(v)-LANG_ARG_MAX-129;
+  assert(arg_cast<id_t>(v)>=vertex::smallest_char &&
+         arg_cast<id_t>(v)<=vertex::largest_char);
+  return arg_cast<id_t>(v)-vertex::char_offset;
 }
+
+inline bool is_func(vertex v) { 
+  return ((v.v.d & vertex::symbolarg_mask)==vertex::funcarg_mask);
+}
+inline bool is_symbol(vertex v) { 
+  return ((v.v.d & vertex::symbolarg_mask)==vertex::symbolarg_mask);
+}
+inline  bool is_number(vertex v) { return (!(v.v.d & vertex::funcarg_mask)); }
 
 }} //namespace plap::lang
 #endif //PLAP_LANG_VERTEX_H__

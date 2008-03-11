@@ -25,7 +25,8 @@
 #include "vtree.h"
 #include "dorepeat.h"
 #include "cast.h"
-#include "func_io.h"
+#include "operators.h"
+#include "names.h"
 
 namespace plap { namespace lang_io {
 
@@ -44,33 +45,35 @@ struct directive {
       prefix="[";
       infix=",";
       suffix="]";
-    } else if (s==plus_name) {//fixme
-      infix="+";
-      assert(loc.arity()==1);
-      f=vertex_cast<func_t>(loc.front());
-      loc=loc.front_sub();
-    } else if (const string* name=func2name(f)) {
-      prefix=*name+" ";
-      infix=" ";
-    } else {
-      prefix=lexical_cast<string>(*f)+"_"+
-          lexical_cast<string>((unsigned int)f)+" ";
-      infix=" ";
+      return;
     }
+    
+    infix=operator2name(s,2);
+    if (infix!=s) { //infix binary operator
+      if (vararg(s)) {
+        assert(loc.arity()==1);//this probably will need to be fixed - fixme
+        f=call_cast(loc.front());
+        loc=loc.front_sub();
+      }
+      return;
+    }
+    //prefix operator
+    prefix=lexical_cast<string>(*f)+" ";
+    infix=" ";
   }
 };
 
-struct vertex_name_visitor : public vertex_visitor<string> {
-  vertex_name_visitor(const argname_seq& a) : args(a) {}
+struct name_visitor : public arg_visitor<string> {
+  name_visitor(const argname_seq& a) : args(a) {}
   const argname_seq& args;
 
-  string operator()(contin_t c) const { return lexical_cast<string>(c); }
-  string operator()(disc_t d) const { 
-    if (is_arg(d))
-      return '$'+args[d];
+  string operator()(func_t f) const { return lexical_cast<string>(*f); }
+  string operator()(id_t d) const { 
+    if (is_lang_arg(d))
+      return '$'+args[lang_arg_cast(d)];
     return symbol2name(d); 
   }
-  string operator()(func_t f) const { return *func2name(f); }
+  string operator()(number_t n) const { return lexical_cast<string>(n); }
 };
 
 struct pretty_printer {
@@ -99,11 +102,11 @@ struct pretty_printer {
       dorepeat(indent) (*o) << ' ';
 
     if (s.childless()) {
-      (*o) << prefix << leaf_visit(vertex_name_visitor(args),s.root()) << endl;
+      (*o) << prefix << arg_visit(name_visitor(args),s.root()) << endl;
       return;
     }
 
-    func_t f=NULL;//fixmevleaf_cast<func_t>(s.root());
+    func_t f=call_cast(s.root());
     directive d=directive(s,f);
 
     if (sexpr && d.prefix!="" && d.prefix!="[") {

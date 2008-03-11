@@ -25,12 +25,16 @@
 #include "operators.h"
 #include "names.h"
 #include "indent.h"
+#include "core.h"
 
 namespace plap { namespace lang_io {
 
 namespace {
 using namespace boost::spirit;
 using std::string;
+using namespace lang;
+
+const char strlit_symbol[]="\"";
 
 bool special_name(const string& s,subsexpr d) {
   if (s==")") { //not used but needed to get parsing right
@@ -48,14 +52,14 @@ bool special_name(const string& s,subsexpr d) {
       d.erase(d.begin_child());
     } else {
       assert(d.arity()>1);
-      d.root()=apply_name;
+      d.root()=*func2name(apply::instance());
       d.insert(d[1],string(list_name));
       d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
     }
   } else if (s==def_symbol) { //a definition (explicitly set up structure)
       d.prepend(d[0].root());
       d[1].root()=list_name;
-      d.root()=def_name;
+      d.root()=operator2name(def_symbol,3);
   } else {
     return false;
   }
@@ -86,7 +90,7 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
     if (*name.rbegin()=='.' && name!="." && name!=".." && name!="...")
       throw std::runtime_error
           ("bad number literal '"+name+"' - can't have a trailing '.'.");
-    d.root()=symbol2name(name,s.children.size());
+    d.root()=operator2name(name,s.children.size());
   }
 }
 

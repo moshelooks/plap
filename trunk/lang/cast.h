@@ -14,10 +14,52 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#if 0
-
 #ifndef PLAP_LANG_CAST_H__
 #define PLAP_LANG_CAST_H__
+
+#include "type.h"
+
+namespace plap { namespace lang {
+
+//needed to do template partial specialization
+template<typename T>
+struct literal_caster { 
+  T operator()(const_subvtree s) { 
+    assert(s.childless());
+    return arg_cast<T>(s.root());
+  }
+};
+template<typename T>
+struct literal_caster<list_of<T> > {
+  list_of<T> operator()(const_subvtree s) { return list_of<T>(s); }
+};
+template<typename T>
+struct literal_caster<func_of<T> > {
+  func_of<T> operator()(const_subvtree s) { 
+    assert(s.childless());
+    return func_of<T>(arg_cast<func_t>(s.root()));
+  }
+};
+
+template<typename T> //for convenience
+T literal_cast(const_subvtree s) { return literal_caster<T>()(s); }
+
+template<typename T>
+struct arg_visitor { typedef T result_type; };
+
+template<typename Visitor>
+typename Visitor::result_type arg_visit(const Visitor& visit,vertex v) {
+  if (is_func(v))
+    return visit(arg_cast<func_t>(v));
+  if (is_symbol(v))
+    return visit(arg_cast<id_t>(v));
+  return visit(arg_cast<number_t>(v));
+}
+
+}} //namespace plap::lang
+#endif //PLAP_LANG_CAST_H__
+
+#if 0
 
 #include <boost/static_assert.hpp>
 #include "vtree.h"
@@ -36,22 +78,6 @@ inline bool is_func(vertex v);
 
 bool is_arg(disc_t d);
 
-template<typename T>
-struct vertex_visitor { typedef T result_type; };
-
-template<typename Visitor>
-typename Visitor::result_type leaf_visit(const Visitor& visit,vertex v) {
-  assert(false);
-}
-/** {
-  assert(!boost::get<func_t>(&v));
-
-  if (leaf_is_func(v))
-    return visit(vertex_cast<func_t>(v));
-  if (is_symbol(v))
-    return visit(vertex_cast<disc_t>(v));
-  return visit(vertex_cast<contin_t>(v));
-  }**/
 
 #ifdef PLAP_LANG_VERTEX_UNION
 
@@ -130,41 +156,10 @@ inline arity_t arg_idx(const vertex& v) {
 
 #endif //ifdef PLAP_LANG_VERTEX_UNION ... else
 
-namespace lang_private {
-template<typename T>
-struct literal_caster { 
-  T operator()(const_subvtree s) { 
-    assert(s.childless());
-    return vertex_cast<T>(s.root()); 
-  }
-};
-template<typename T>
-struct literal_caster<list_of<T> > {
-  list_of<T> operator()(const_subvtree s) { 
-    assert(type_name(s.root())==type_name(func_t()));
-    return list_of<T>(s);
-  }
-};
-template<typename T>
-struct literal_caster<func_of<T> > {
-  func_of<T> operator()(const_subvtree s) { 
-    assert(type_name(s.root())==type_name(func_t()));
-    return func_of<T>(s);
-  }
-};
-} //namespace lang_private
-
-template<typename T>
-T literal_cast(const_subvtree s) { 
-  return lang_private::literal_caster<T>()(s); 
-}
 
 template<>
 inline const_subvtree literal_cast<const_subvtree>(const_subvtree s) { 
   return s; 
 }
-
-}} //namespace plap::lang
-#endif //PLAP_LANG_CAST_H__
 
 #endif

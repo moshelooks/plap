@@ -16,44 +16,48 @@
 
 #include "names.h"
 #include <boost/assign/list_of.hpp>
+#include "iterator_shorthands.h"
 #include "core.h"
 #include "builtin.h"
 
-//nil is its own thing - not a func (no arguments), 
-//fixme  not a symbol - or should it be? $nil <-> []?
-
 namespace plap { namespace lang_io {
 
-//fixme put in parse
 const char def_symbol[]="=";
-const char strlit_symbol[]="\"";
+const char anon_func_name[]="anonymous_function";
+const char list_name[]="list";
+
+/*
 const char apply_symbol[]="(";
-const char cons_symbol[]=":";
+const char cons_symbol[]=":";*/
 
 namespace lang_io_private {
 func_index func_names=boost::assign::map_list_of
     //("list",any_list::instance())
 
-    ("apply",apply::instance())
-    /*    ("def",def::instance())
-    ("lambda",lambda::instance())
+    ("apply",(func_t)apply::instance())
+    ("def",def::instance())
+    /**("lambda",lambda::instance())
     ("let",let::instance())
-    ("nil",nil::instance())
+
     ("pair",pair::instance())
 
-    ("plus",lang_plus::instance())
-    ("if",lang_if::instance())
+    ("plus",lang_plus::instance())**/
+    //("if",lang_if::instance())
 
-    ("decl",decl::instance())*/;
+    ("decl",decl::instance());
 
 arg_index arg_names; //core & builtin functions don't need arg names
-symbol_index symbol_names=boost::assign::list_of
+
+using namespace util;
+std::string tostr(char c) { return std::string(1,c); }
+symbol_index symbol_names=boost::assign::list_of<std::string>
+    ("false")
     ("true")
-#define NAMES_arg(z,n,u) ("arg")
-    BOOST_PP_REPEAT(LANG_ARG_MAX,NAMES_arg,~)
-    ("false");
-
-
+    ("[]").
+    repeat(LANG_ARG_MAX,"arg").
+    range(
+        transform_it(count_it(boost::integer_traits<char>::const_min),&tostr),
+        transform_it(count_it(boost::integer_traits<char>::const_max),&tostr));
 
 } //namespace lang_io_private
 

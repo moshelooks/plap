@@ -16,13 +16,12 @@
 
 #include "operators.h"
 #include <boost/assign/list_of.hpp>
-#include "names.h"
 
 namespace plap { namespace lang_io { namespace lang_io_private {
 bool sexpr_io=false;
 const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
     (boost::assign::map_list_of     //nullary operators
-     (nil_name,"[]"))
+     ("[]","[]"))//fixme
 
     (boost::assign::map_list_of     //unary operators
      ("not","!")
@@ -66,4 +65,3 @@ vararg_set varargs=boost::assign::list_of
     ("plus")
     ("times");
 }}} //namespace plap::lang_io::lang_io_private
-

@@ -14,9 +14,10 @@ opt_levels={'coverage' : ['-fprofile-arcs -ftest-coverage',
 	    'ultra'    : ['-O2 -DNDEBUG -DNLOGGING','-O2']}
 src='''
 lang/builtin.cc
-lang/cast.cc
 lang/context.cc
 lang/core.cc
+lang/func_base.cc
+lang/vertex.cc
 lang_io/analyze.cc
 lang_io/names.cc
 lang_io/operators.cc
