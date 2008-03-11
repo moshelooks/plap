@@ -20,6 +20,7 @@
 #include <string>
 #include <tr1/unordered_map>
 #include <vector>
+#include <ostream>
 #include "bimap.h"
 #include "func.h"
 
@@ -64,34 +65,40 @@ inline const argname_seq& func2arg_names(lang::func_t f) {
   return arg_names.find(f)->second;
 }
 
-inline lang::disc_t name_symbol(const std::string& name) {
+inline lang::id_t name_symbol(const std::string& name) {
   using namespace lang_io_private;
+  assert(symbol_names.size()<boost::integer_traits<lang::id_t>::max());
   get<0>(symbol_names).push_back(name);
   return symbol_names.size()-1;
 }
 
-inline lang::disc_t name2symbol(const std::string& name) { 
+inline bool names_symbol(const std::string& name) { 
   using namespace lang_io_private;
-  assert(get<1>(symbol_names).find(name)!=get<1>(symbol_names).end());
+  return (get<1>(symbol_names).find(name)!=get<1>(symbol_names).end());
+}
+inline lang::id_t name2symbol(const std::string& name) { 
+  using namespace lang_io_private;
+  assert(names_symbol(name));
   return distance(get<0>(symbol_names).begin(),
                   symbol_names.project<0>(get<1>(symbol_names).find(name)));
 }
-inline const std::string& symbol2name(lang::disc_t s) {
+inline const std::string& symbol2name(lang::id_t s) {
   using namespace lang_io_private;
   assert(s<symbol_names.size());
   return get<0>(symbol_names)[s];
 }
 
+extern const char list_name[];
 extern const char def_symbol[];
+/**
 extern const char strlit_symbol[];
 extern const char apply_symbol[];
 extern const char cons_symbol[];
 
 extern const char def_name[];
-extern const char strlit_name[];
 extern const char apply_name[];
 
-extern const char list_name[];
+
 extern const char lambda_name[];
 extern const char let_name[];
 extern const char decl_name[];
@@ -101,11 +108,23 @@ extern const char nil_name[];
 extern const char true_name[];
 extern const char false_name[];
 
-extern const char plus_name[];
+extern const char if_name[];**/
 
-extern const char if_name[];
-
-extern const char func_name[];
+extern const char anon_func_name[];
 
 }} //namespace plap::lang_io
+
+//this allows lexical_casts to work properly - blech
+namespace boost { namespace detail {
+inline std::ostream& operator<<(std::ostream& out,
+                                const plap::lang::func_base& f) {
+  if (const std::string* s=plap::lang_io::func2name(&f))
+    out << *s;
+  else
+    out << plap::lang_io::anon_func_name << "#" << f.id();
+  return out;
+}
+}}
+using boost::detail::operator<<;
+
 #endif //PLAP_LANG_IO_NAMES_H__

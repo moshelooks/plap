@@ -28,7 +28,7 @@
     str2vtr(src,tmpYYY);                         \
     stringstream ss;                             \
     pretty_print(ss,tmpYYY);                     \
-    check_eq(ss.str(),goal+string(" \n"));       \
+    check_eq(ss.str(),goal+string("\n"));       \
   }
 
 test_case(lang_def_examples) {
@@ -41,16 +41,16 @@ test_case(lang_def_examples) {
   check_throw(str2vtr("def x (list ($a $b $c)) d",v));
   check_throw(str2vtr("def x (list $a $b $c) d e",v));
 
-  check_anal("foo $x = []","nil");
-  check_anal("goo $x = foo","nil");
+  check_anal("foo $x = []","[]");
+  check_anal("goo $x = foo","[]");
   check_throw(str2vtr("moo $x = blablabla",v));
   
-  check_anal("blub^4","nil");
-  check_anal("moo $x = blub","nil");
+  check_anal("blub^4","[]");
+  check_anal("moo $x = blub","[]");
   check_throw(str2vtr("blub $x = moo",v));
   check_throw(str2vtr("moo^1",v));
   check_throw(str2vtr("blub $x $y $z $q $m= moo",v));
-  check_anal("blub $x $y $z $q = moo","nil");
+  check_anal("blub $x $y $z $q = moo","[]");
 }
 
 

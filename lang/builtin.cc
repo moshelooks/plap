@@ -16,8 +16,8 @@
 
 #include "builtin.h"
 #include "core.h"
-#include "eager_func.h"
-#include "lazy_func.h"
+//#include "eager_func.h"
+//fixme#include "lazy_func.h"
 
 namespace plap { namespace lang {
 

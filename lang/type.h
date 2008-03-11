@@ -72,10 +72,6 @@ struct core_type<func_of<T(U)> > : core_type<T>,core_type<U> {};
 //fwd declarations needed for list_of, func_of, pair_of
 template<typename T>
 T literal_cast(const_subvtree);
-template<typename T>
-T vertex_cast(const vertex&);
-template<typename T>
-T& vertex_cast(vertex&);
 
 template<typename T>
 struct list_of : lang_private::core_type<T> {

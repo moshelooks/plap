@@ -18,6 +18,7 @@
 #define PLAP_LANG_IO_PRETTY_PRINT_H__
 
 #include <ostream>
+#include "vertex.h"
 #include "vtree_fwd.h"
 
 namespace plap { namespace lang_io {

@@ -27,8 +27,9 @@ template<typename T>
 struct lang_list
     : public stateless_func<lang_list<T>,variadic_arity> {
   void operator()(context& c,const_subvtree s,subvtree d) const { 
+    assert(s.childless());
     assert(d.childless());
-    d.root()=func_t(this);
+    d.root()=call(this);
     d.append(s.arity(),vertex());
     util::for_each(s.begin_sub_child(),s.end_sub_child(),d.begin_sub_child(),
                    boost::bind(&context::eval,&c,_1,_2));
@@ -41,7 +42,7 @@ typedef lang_list<id_t>           symbol_list;
 typedef lang_list<number_t>       number_list;
 typedef lang_list<func_t>         any_list;
 
-typedef any_list nil;
+//typedef any_list nil;
 
 #define LANG_CORE_make_func(name,arity)                                   \
   struct name : public stateless_func<name,arity> {                       \
@@ -55,6 +56,10 @@ LANG_CORE_make_func(apply,2) {
 }
 
 LANG_CORE_make_func(def,3) {}
+
+LANG_CORE_make_func(decl,2) {}
+
+
 //LANG_CORE_make_func(,);
 
 #undef LANG_CORE_make_func
