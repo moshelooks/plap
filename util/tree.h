@@ -366,9 +366,9 @@ struct tr : boost::equality_comparable<tr<T,Tree> >,
       return false;
 
     for (const_pre_iterator i=this->begin(),j=rhs.begin();;) {
-      if (lt(*j++,*i++))
+      if (lt(*j,*i))
         return false;
-      else if (lt(*i,*j))
+      else if (lt(*i++,*j++))
         return true;
 
       if (i==this->end())
@@ -385,9 +385,9 @@ struct tr : boost::equality_comparable<tr<T,Tree> >,
 
       if (i._node->next->dereferenceable()) {
         if (!j._node->next->dereferenceable())
-          return true;
-      } else if (j._node->childless()) {
-        return false;
+          return false;
+      } else if (j._node->next->dereferenceable()) {
+        return true;
       }
     }
   }
