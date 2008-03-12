@@ -70,22 +70,22 @@ struct list_of : lang_private::core_type<T> {
                                     const_vsub_child_it> const_iterator;
   typedef const_iterator iterator;
 
-  list_of(const_subvtree s) : _s(s) {}
+  list_of(const_subvtree s) : src(s) {}
 
   const_iterator begin() const { 
-    return util::transform_it(this->_s.begin_sub_child(),&literal_cast<T>);
+    return util::transform_it(this->src.begin_sub_child(),&literal_cast<T>);
   }
   const_iterator end() const { 
-    return util::transform_it(this->_s.end_sub_child(),&literal_cast<T>);
+    return util::transform_it(this->src.end_sub_child(),&literal_cast<T>);
   }
 
-  size_type size() const { return this->_s.arity(); }
-  bool empty() const { return this->_s.childless(); }
+  size_type size() const { return this->src.arity(); }
+  bool empty() const { return this->src.childless(); }
   
-  const T& front() const { return literal_cast<T>(this->_s.front_sub()); }
-  const T& back() const { return literal_cast<T>(this->_s.back_sub()); }
- protected:
-  const_subvtree _s;
+  const T& front() const { return literal_cast<T>(this->src.front_sub()); }
+  const T& back() const { return literal_cast<T>(this->src.back_sub()); }
+
+  const_subvtree src;
 };
 
 template<typename T>

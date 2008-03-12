@@ -63,19 +63,16 @@ struct builtin;
       : public stateless_func<Subtype,n> {                              \
     void operator()(context& c,const_subvtree loc,subvtree dst) const { \
       assert(loc.arity()==n);                                           \
-      this->proc(c,loc.begin_sub_child(),dst);                          \
+      const_vsub_child_it child=loc.begin_sub_child();                  \
+      arg_helper<Input0> arg0=arg_helper<Input0>(c,*child);             \
+      BOOST_PP_REPEAT_FROM_TO(1,n,PLAP_LANG_arg_helper,~);              \
+      static_cast<const Subtype*>(this)->eval                           \
+          (c,BOOST_PP_ENUM(n,PLAP_LANG_call_arg,~),dst);                \
     }                                                                   \
     void eval(context&,BOOST_PP_ENUM_BINARY_PARAMS(n,Input,t),          \
               subvtree dst) const {                                     \
       static_cast<const Subtype*>(this)->cfeval                         \
           (BOOST_PP_ENUM_PARAMS(n,t),dst);                              \
-    }                                                                   \
-   protected:                                                           \
-    void proc(context& c,const_vsub_child_it child,subvtree dst) const {\
-      arg_helper<Input0> arg0=arg_helper<Input0>(c,*child);             \
-      BOOST_PP_REPEAT_FROM_TO(1,n,PLAP_LANG_arg_helper,~);              \
-      static_cast<const Subtype*>(this)->eval                           \
-          (c,BOOST_PP_ENUM(n,PLAP_LANG_call_arg,~),dst);                \
     }                                                                   \
   };
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_builtin,~)
@@ -87,7 +84,10 @@ struct builtin_variadic<Subtype(Argtype)>
     : public builtin<Subtype(list_of<Argtype>)> {
   arity_t arity() const { return variadic_arity; }
   void operator()(context& c,const_subvtree loc,subvtree dst) const {
-    this->proc(c,loc.begin(),dst);
+    vtree tmp=vtree(vertex());
+    (*lang_list::instance())(c,loc,tmp);
+    static_cast<const Subtype*>(this)->eval
+        (c,literal_cast<list_of<Argtype> >(tmp),dst);
   }
 };
 
@@ -102,6 +102,8 @@ struct lang_if : public builtin<lang_if(bool,any,any)> {
 template<typename Func,int Init>
 struct lang_acc : public builtin_variadic<lang_acc<Func,Init>(number_t)> {
   void cfeval(list_of<number_t> l,subvtree dst) const {
+    std::cout << "XX" << std::endl;
+    std::cout << "XX" << l.size() << std::endl;
     dst.root()=arg(std::accumulate(l.begin(),l.end(),number_t(Init),Func()));
   }
 };
@@ -139,8 +141,20 @@ struct lang_concat : public builtin<lang_concat(any_list,any_list)> {
   }
 };
 
-#if 0
 //functional programming constructs
+struct lang_apply : public builtin<lang_apply(any,any_list)> {
+  void eval(context& c,any f,any_list args,subvtree dst) const {
+    if (f.childless()) {
+      (*arg_cast<func_t>(f.root()))(c,args.src,dst);
+    } else {
+      assert(false);
+      //vtree tmp=vtree(vertex());
+      //c.eval(f,tmp);
+    }
+  }
+};
+
+#if 0
 inline disc_t lang_foreach(list_of<const_subvtree> l,
                            func_of<const_subvtree(const_subvtree)> f) {
   //fixmestd::for_each(l.begin(),l.end(),f);

@@ -26,7 +26,7 @@ namespace plap { namespace lang {
 
 struct lang_list : public stateless_func<lang_list,variadic_arity> {
   void operator()(context& c,const_subvtree s,subvtree d) const { 
-    assert(s.childless());
+    assert(!s.childless());
     assert(d.childless());
     d.root()=call(this);
     d.append(s.arity(),vertex());
@@ -41,8 +41,6 @@ struct lang_list : public stateless_func<lang_list,variadic_arity> {
   };                                                                      \
   void lang_ ## name::operator()(context& c,const_subvtree s,subvtree d) const
 
-
-LANG_CORE_make_func(apply,2) {}
 
 LANG_CORE_make_func(def,3) {}
 

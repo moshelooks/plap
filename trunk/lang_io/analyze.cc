@@ -25,6 +25,7 @@
 #include "tree_io.h"
 #include "context.h"
 #include "core.h"
+#include "builtin.h"
 #include "operators.h"
 #include "names.h"
 
@@ -123,7 +124,7 @@ struct semantic_analyzer {
     special_case(pair,variadic_arity);
     **/
     if (func_t f=string2func(src.root())) {
-      validate_arity(src,src.root(),f);
+      validate_arity(src,f);
       dst.root()=call(f);
       process_children(src,dst);
     } else { //see if its a scalar - if so, need to introduce an apply node
@@ -136,14 +137,9 @@ struct semantic_analyzer {
 
   process(children) {
     assert(!src.childless());
-    if (vararg(src.root())) {
-      dst.append(vertex());
-      process_list(src,dst.front_sub());
-    } else {
-      dst.append(src.arity(),vertex());
-      for_each(src.begin_sub_child(),src.end_sub_child(),dst.begin_sub_child(),
-               bind(&semantic_analyzer::process_sexpr,this,_1,_2));
-    }
+    dst.append(src.arity(),vertex());
+    for_each(src.begin_sub_child(),src.end_sub_child(),dst.begin_sub_child(),
+             bind(&semantic_analyzer::process_sexpr,this,_1,_2));
   }
 
   process(lang_def) { //def(name list(arg1 arg2 ...) body)
@@ -163,7 +159,7 @@ struct semantic_analyzer {
     process_sexpr(src[2],body);
 
     if (func_t f=name2func(name)) { //an already-declared function?
-      validate_arity(src[1],name,f);
+      validate_arity(src[1],f);
       if (nested(src)) { //set to be created at runtime - def(func args body)
         assert(false && f); //fixme
 #if 0
@@ -351,9 +347,8 @@ struct semantic_analyzer {
     return arity_t(0);
   }
 
-  void validate_arity(const_subsexpr src,const string& name,func_t f) {
-    if (!vararg(name))
-      validate_arity(src,f->arity());
+  void validate_arity(const_subsexpr src,func_t f) {
+    validate_arity(src,f->arity());
   }
   void validate_arity(const_subsexpr src,arity_t a) {
     if (a!=variadic_arity && src.arity()!=a)
