@@ -50,6 +50,7 @@ void eval_print(std::ostream& out,const_subsexpr s,lang::context& c) {
 
   vtree expr=vtree(vertex());
   analyze(s,expr,c);
+  out << "analyzed" << std::endl;
   pretty_print(out,expr);
   vtree res=vtree(vertex());
   out << "evals to" << std::endl;

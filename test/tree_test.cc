@@ -248,6 +248,10 @@ test_case(tree_equality) {
   }
             
   check(!tr[0].equal(tr[0],!bind(always_true)));
+
+  itree a=tree_of(1)(tree_of(2)(3,4,5));
+  itree b=tree_of(1)(tree_of(2)(tree_of(3)(4,5)));
+  check(a[0][0]!=b[0][0]);
 }
 
 test_case(tree_less) {

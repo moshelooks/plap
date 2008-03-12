@@ -93,7 +93,7 @@ bool number(const string& s) {
 }
 bool identifier(const string& s) { return (!scalar(s) && !number(s)); }
 bool boolean(const string& s) { 
-  return (names_symbol(s) && name2symbol(s)==true || name2symbol(s)==false);
+  return (names_symbol(s) && (name2symbol(s)==true || name2symbol(s)==false));
 }
 bool character(const string& s) { return (s=="'"); }
 string scalar_name(const string& s) { return s.substr(1); }
