@@ -339,7 +339,7 @@ struct tr : boost::equality_comparable<tr<T,Tree> >,
       return false;
 
     for (const_pre_iterator i=this->begin(),j=rhs.begin();;) {
-      if (!eq(*i++,*j++))
+      if (i._node->childless()!=j._node->childless() || !eq(*i++,*j++))
         return false;
 
       if (i==this->end())
@@ -347,8 +347,7 @@ struct tr : boost::equality_comparable<tr<T,Tree> >,
       if (j==rhs.end())
         return false;   
 
-      if (i._node->next->dereferenceable()!=j._node->next->dereferenceable() ||
-          i._node->childless()!=j._node->childless())
+      if (i._node->next->dereferenceable()!=j._node->next->dereferenceable())
         return false;
     }
   }
@@ -366,6 +365,13 @@ struct tr : boost::equality_comparable<tr<T,Tree> >,
       return false;
 
     for (const_pre_iterator i=this->begin(),j=rhs.begin();;) {
+      if (i._node->childless()) {
+        if (!j._node->childless())
+          return true;
+      } else if (j._node->childless()) {
+        return false;
+      }
+
       if (lt(*j,*i))
         return false;
       else if (lt(*i++,*j++))
@@ -375,13 +381,6 @@ struct tr : boost::equality_comparable<tr<T,Tree> >,
         return j!=rhs.end();
       if (j==rhs.end())
         return false;
-
-      if (i._node->childless()) {
-        if (!j._node->childless())
-          return true;
-      } else if (j._node->childless()) {
-        return false;
-      }
 
       if (i._node->next->dereferenceable()) {
         if (!j._node->next->dereferenceable())

@@ -43,7 +43,13 @@ func_index func_names=boost::assign::map_list_of
     ("times",lang_times::instance())
 
     //comparison operators
-    //    ("less",lang_less::instance())
+    ("less",lang_less::instance())
+    ("less_equal",lang_less_equal::instance())
+    ("greater",lang_greater::instance())
+    ("greater_equal",lang_greater_equal::instance())
+
+    ("equal",lang_equal::instance())
+    ("not_equal",lang_not_equal::instance())
 
 
     /**("lambda",lambda::instance())

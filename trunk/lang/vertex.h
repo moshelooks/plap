@@ -50,6 +50,9 @@ struct vertex {
   friend bool is_func(vertex);
   friend bool is_symbol(vertex);
   friend bool is_number(vertex);
+  
+  bool operator<(vertex rhs) const { return v.d<rhs.v.d; }
+  bool operator==(vertex rhs) const { return v.d==rhs.v.d; }
  protected:
   vertex(func_t f_)   { v.f=f_; }
   vertex(id_t d_)   { v.d=d_; }

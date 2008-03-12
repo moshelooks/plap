@@ -44,7 +44,7 @@ struct arg_helper<any> {
 };
 
 // every builtin function should be a class C that inherits from 
-// builtin<C(Arg0,Arg1,...,ArgN)>, or from builtin_vararg<C(Argtype)>,
+// builtin<C(Arg0,Arg1,...,ArgN)>, or from builtin_varidatic<C(Argtype)>,
 // and defines either eval(context&,Arg0,...,ArgN,subvtree) or
 // cfeval(Arg0,...,ArgN,subvtree) (cf = context-free)
 
@@ -81,9 +81,9 @@ struct builtin;
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_builtin,~)
 
 template<typename>
-struct builtin_vararg;
+struct builtin_variadic;
 template<typename Subtype,typename Argtype>
-struct builtin_vararg<Subtype(Argtype)>
+struct builtin_variadic<Subtype(Argtype)>
     : public builtin<Subtype(list_of<Argtype>)> {
   arity_t arity() const { return variadic_arity; }
   void operator()(context& c,const_subvtree loc,subvtree dst) const {
@@ -100,7 +100,7 @@ struct lang_if : public builtin<lang_if(bool,any,any)> {
 
 //arithmetic operators
 template<typename Func,int Init>
-struct lang_acc : public builtin_vararg<lang_acc<Func,Init>(number_t)> {
+struct lang_acc : public builtin_variadic<lang_acc<Func,Init>(number_t)> {
   void cfeval(list_of<number_t> l,subvtree dst) const {
     dst.root()=arg(std::accumulate(l.begin(),l.end(),number_t(Init),Func()));
   }
@@ -112,10 +112,10 @@ typedef lang_acc<std::multiplies<number_t>,1> lang_times;
 template<typename Func>
 struct lang_cmp : public builtin<lang_cmp<Func>(any,any)> {
   void eval(context& c,any a,any b,subvtree dst) const {
-    vtree tmp1(vertex()),tmp2(vertex());
+    vtree tmp1=vtree(vertex()),tmp2=vtree(vertex(vertex()));
     c.eval(a,tmp1);
     c.eval(b,tmp2);
-    dst.root()=any(Func()(tmp1,tmp2));
+    dst.root()=arg(Func()(tmp1,tmp2));
   }
 };
 typedef lang_cmp<std::less<any> >          lang_less;
