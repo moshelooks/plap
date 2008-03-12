@@ -28,6 +28,16 @@
     str2vtr(src,tmpYYY);                         \
     stringstream ss;                             \
     pretty_print(ss,tmpYYY);                     \
+    check_eq(ss.str(),goal+string("\n"));        \
+  }
+#define check_eval(src,goal) {                  \
+    context c;                                  \
+    vtree expr;                                 \
+    str2vtr(src,expr);                          \
+    vtree res=vtree(vertex());                  \
+    c.eval(expr,res);                           \
+    stringstream ss;                            \
+    pretty_print(ss,res);                       \
     check_eq(ss.str(),goal+string("\n"));       \
   }
 
@@ -53,8 +63,18 @@ test_case(lang_def_examples) {
   check_anal("blub $x $y $z $q = moo","[]");
 }
 
-//test_case(lang_if_examples) {
+test_case(lang_if_examples) {
+  check_eval("if true 0 1","0");
+  check_eval("if false 0 1","1");
+#if 0
+  check_eval("if 0<1 0 1","0");
+  check_eval("if 1<0 0 1","1");
+  check_eval("if 1<1 0 1","1");
 
+  check_eval("if 1+1==2 0 1","0");
+  check_eval("if 1+1!=2 0 1","1");
+#endif
+}
 
 #if 0
 

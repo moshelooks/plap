@@ -115,10 +115,10 @@ struct semantic_analyzer {
       return;
     }
 
-    special_case(def,3);
+    special_case(lang_def,3);
     /**    special_case(lambda,2);
            special_case(let,variadic_arity);**/
-    special_case(decl,2);
+    special_case(lang_decl,2);
     /**special_case(list,variadic_arity);
     special_case(pair,variadic_arity);
     **/
@@ -127,7 +127,7 @@ struct semantic_analyzer {
       dst.root()=call(f);
       process_children(src,dst);
     } else { //see if its a scalar - if so, need to introduce an apply node
-      dst.root()=call(apply::instance());
+      dst.root()=call(lang_apply::instance());
       dst.append(string2scalar(src.root()));
       dst.append(vertex());
       process_list(src,dst.back_sub());
@@ -146,11 +146,11 @@ struct semantic_analyzer {
     }
   }
 
-  process(def) { //def(name list(arg1 arg2 ...) body)
+  process(lang_def) { //def(name list(arg1 arg2 ...) body)
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
 
-    if (src[1].root()!=list_name)
+    if (src[1].root()!=*func2name(lang_list::instance()))
       throw_bad_def(name);
     arity_t a=src[1].arity();
     if (src[1].size()!=a+1u)
@@ -211,7 +211,7 @@ struct semantic_analyzer {
 #endif
   }
 
-  process(decl) { //decl(name arity)
+  process(lang_decl) { //decl(name arity)
     const string& name=sexpr2identifier(src[0]);
     if (name2func(name))
       throw_bad_decl_exists(name);
@@ -229,13 +229,12 @@ struct semantic_analyzer {
 
 #define LANG_ANALYZE_check(predname,typename)                   \
   if (i->childless() && predname(i->root())) {                  \
-    dst.root()=call(typename ## _list::instance());             \
     validate_range(i,src.end_child(),&predname,#typename);      \
     break;                                                      \
   }
   
   process(list) { //list(arg arg arg ...)
-    dst.root()=call(any_list::instance());
+    dst.root()=call(lang_list::instance());
     for (sexpr::const_sub_child_iterator i=src.begin_sub_child();
          i!=src.end_sub_child();++i) {
       LANG_ANALYZE_check(boolean,bool);

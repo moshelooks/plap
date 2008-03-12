@@ -27,21 +27,22 @@
 #include "cast.h"
 #include "operators.h"
 #include "names.h"
+#include "core.h"
 
 namespace plap { namespace lang_io {
 
 namespace {
 using namespace lang;
 using namespace util;
-using namespace std;
 using namespace boost;
+using namespace std;
 
 struct directive {
   string prefix,infix,suffix;
     
   directive(const_subvtree& loc,func_t& f) {
     string s=lexical_cast<string>(*f);
-    if (s==list_name) {
+    if (s==*func2name(lang_list::instance())) {
       prefix="[";
       infix=",";
       suffix="]";
@@ -142,11 +143,11 @@ struct pretty_printer {
                sexprs.front().size()+d.prefix.size()+indent<linemax) { 
       (*o) << sexprs.front() << endl;
       indent+=d.prefix.size();
-      for_each(++s.begin_sub_child(),s.end_sub_child(),*this);
+      std::for_each(++s.begin_sub_child(),s.end_sub_child(),*this);
     } else {
       (*o) << endl;
       indent+=indent_incr;
-      for_each(s.begin_sub_child(),s.end_sub_child(),*this);
+      std::for_each(s.begin_sub_child(),s.end_sub_child(),*this);
       //bind(&pretty_printer::operator(),this,_1));
     }
   }

@@ -88,7 +88,6 @@ inline const std::string& symbol2name(lang::id_t s) {
   return get<0>(symbol_names)[s];
 }
 
-extern const char list_name[];
 extern const char def_symbol[];
 /**
 extern const char strlit_symbol[];
@@ -104,7 +103,6 @@ extern const char let_name[];
 extern const char decl_name[];
 extern const char pair_name[];
 
-extern const char nil_name[];
 extern const char true_name[];
 extern const char false_name[];
 
