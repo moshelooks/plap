@@ -256,13 +256,17 @@ test_case(tree_less) {
       itree(),
       tree_of(1),
       tree_of(1)(2,3,tree_of(4)(5),6),
-      tree_of(1)(2,tree_of(3)(tree_of(0)(5)),6),
       tree_of(1)(2,tree_of(3)(tree_of(4)),5,6),
+      tree_of(1)(2,tree_of(3)(tree_of(0)(5)),6),
       tree_of(1)(2,tree_of(3)(tree_of(4)(0)),6),
       tree_of(1)(2,tree_of(3)(tree_of(4)(5)),0),
       tree_of(1)(2,tree_of(3)(tree_of(4)(5)),6),
       tree_of(1)(2,tree_of(3)(tree_of(4)(5)),6,7),
       tree_of(1)(2,tree_of(3)(tree_of(4)(5,7)),6);
+
+  tr[3].append(42);
+  tr[3].erase(--tr[3].end_child());
+  tr[1][0].begin_child();
 
   foreach (int i,tr.size())
     foreach (int j,tr.size())
@@ -270,24 +274,12 @@ test_case(tree_less) {
         itree tmp(tr[i]);
         check(!(tr[i]<tmp));
         check(!(tmp<tr[i]));
+        check(!tr[i].less(tmp,!bind(always_true)));
       } else {
-        cout << i << "," << j << "," 
-             << tr[i] << "," << tr[j] << endl; 
         check_eq((tr[i]<tr[j]),i<j);
+        check_eq(tr[i].less(tr[j],!bind(always_true)),
+                 i<j && !tr[i].equal(tr[j],bind(always_true)));
       }
-        /*
-  check(tr[0].equal(tr[1],bind(always_true)));
-  check(tr[1].equal(tr[2],bind(always_true)));
-  check(tr[0].equal(tr[2],bind(always_true)));
-
-  foreach (int i,tr.size()) {
-    check(i<=3 ? //tr[0..3] have the same structure
-          tr[0].equal(tr[i],bind(always_true)) :
-          !tr[0].equal(tr[i],bind(always_true))); 
-  }
-            
-  check(!tr[0].equal(tr[0],!bind(always_true)));
-        */
 }
 
 template<typename It1,typename It2>
