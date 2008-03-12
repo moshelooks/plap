@@ -61,7 +61,4 @@ const infix_map infix_variadic=boost::assign::map_list_of   //variadic ops
     ("pair","(")
     ("list","[");
 
-vararg_set varargs=boost::assign::list_of
-    ("plus")
-    ("times");
 }}} //namespace plap::lang_io::lang_io_private

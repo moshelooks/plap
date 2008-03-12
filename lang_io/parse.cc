@@ -25,7 +25,7 @@
 #include "operators.h"
 #include "names.h"
 #include "indent.h"
-#include "core.h"
+#include "builtin.h"
 
 namespace plap { namespace lang_io {
 

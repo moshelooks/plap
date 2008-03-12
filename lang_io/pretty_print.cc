@@ -46,21 +46,13 @@ struct directive {
       prefix="[";
       infix=",";
       suffix="]";
-      return;
-    }
-    
-    infix=operator2name(s,2);
-    if (infix!=s) { //infix binary operator
-      if (vararg(s)) {
-        assert(loc.arity()==1);//this probably will need to be fixed - fixme
-        f=call_cast(loc.front());
-        loc=loc.front_sub();
+    } else {
+      infix=operator2name(s,2);
+      if (infix==s) { //infix binary operator, or prefix operator?
+        prefix=lexical_cast<string>(*f)+" ";
+        infix=" ";
       }
-      return;
     }
-    //prefix operator
-    prefix=lexical_cast<string>(*f)+" ";
-    infix=" ";
   }
 };
 

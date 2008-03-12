@@ -18,7 +18,6 @@
 #define PLAP_LANG_IO_OPERATORS_H__
 
 #include <vector>
-#include <set>
 #include "bimap.h"
 
 namespace plap { namespace lang_io {
@@ -28,8 +27,6 @@ namespace lang_io_private {
 typedef util::bimap<std::string,std::string>::type infix_map;
 extern const std::vector<infix_map> infix_by_arity;
 extern const infix_map infix_variadic;
-typedef std::set<std::string> vararg_set;
-extern vararg_set varargs;
 inline const std::string& name2operator(const std::string& s,
                                         std::string::size_type a) {
   infix_map::nth_index<0>::type::const_iterator i;
@@ -52,17 +49,9 @@ inline const std::string& operator2name(const std::string& s,
   i=infix_variadic.get<1>().find(s);
   return i==infix_variadic.get<1>().end() ? s : i->first;
 }
-inline bool vararg(const std::string& name) {
-  return varargs.find(name)!=varargs.end();
-}
-inline void set_vararg(const std::string& name) {
-  varargs.insert(name);
-}
 } //namespace lang_io_private
 using lang_io_private::name2operator;
 using lang_io_private::operator2name;
-using lang_io_private::vararg;
-using lang_io_private::set_vararg;
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_OPERATORS_H__
