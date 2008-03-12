@@ -29,6 +29,11 @@ struct literal_caster {
     return arg_cast<T>(s.root());
   }
 };
+
+template<>
+struct literal_caster<const_subvtree> {
+  const_subvtree operator()(const_subvtree s) { return s; }
+};
 template<typename T>
 struct literal_caster<list_of<T> > {
   list_of<T> operator()(const_subvtree s) { return list_of<T>(s); }

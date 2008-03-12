@@ -224,6 +224,10 @@ test_case(tree_equality) {
       itree(),
       tree_of(1);
 
+  tr[0].append(42);
+  tr[0].erase(--tr[0].end_child());
+  tr[1][0].begin_child();
+
   foreach (int i,tr.size())
     foreach (int j,tr.size())
       if (i==j) {
@@ -244,6 +248,46 @@ test_case(tree_equality) {
   }
             
   check(!tr[0].equal(tr[0],!bind(always_true)));
+}
+
+test_case(tree_less) {
+  vector<itree> tr;
+  tr+=
+      itree(),
+      tree_of(1),
+      tree_of(1)(2,3,tree_of(4)(5),6),
+      tree_of(1)(2,tree_of(3)(tree_of(0)(5)),6),
+      tree_of(1)(2,tree_of(3)(tree_of(4)),5,6),
+      tree_of(1)(2,tree_of(3)(tree_of(4)(0)),6),
+      tree_of(1)(2,tree_of(3)(tree_of(4)(5)),0),
+      tree_of(1)(2,tree_of(3)(tree_of(4)(5)),6),
+      tree_of(1)(2,tree_of(3)(tree_of(4)(5)),6,7),
+      tree_of(1)(2,tree_of(3)(tree_of(4)(5,7)),6);
+
+  foreach (int i,tr.size())
+    foreach (int j,tr.size())
+      if (i==j) {
+        itree tmp(tr[i]);
+        check(!(tr[i]<tmp));
+        check(!(tmp<tr[i]));
+      } else {
+        cout << i << "," << j << "," 
+             << tr[i] << "," << tr[j] << endl; 
+        check_eq((tr[i]<tr[j]),i<j);
+      }
+        /*
+  check(tr[0].equal(tr[1],bind(always_true)));
+  check(tr[1].equal(tr[2],bind(always_true)));
+  check(tr[0].equal(tr[2],bind(always_true)));
+
+  foreach (int i,tr.size()) {
+    check(i<=3 ? //tr[0..3] have the same structure
+          tr[0].equal(tr[i],bind(always_true)) :
+          !tr[0].equal(tr[i],bind(always_true))); 
+  }
+            
+  check(!tr[0].equal(tr[0],!bind(always_true)));
+        */
 }
 
 template<typename It1,typename It2>

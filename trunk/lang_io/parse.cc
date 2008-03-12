@@ -52,13 +52,13 @@ bool special_name(const string& s,subsexpr d) {
       d.erase(d.begin_child());
     } else {
       assert(d.arity()>1);
-      d.root()=*func2name(apply::instance());
-      d.insert(d[1],string(list_name));
+      d.root()=*func2name(lang_apply::instance());
+      d.insert(d[1],*func2name(lang_list::instance()));
       d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
     }
   } else if (s==def_symbol) { //a definition (explicitly set up structure)
       d.prepend(d[0].root());
-      d[1].root()=list_name;
+      d[1].root()=*func2name(lang_list::instance());
       d.root()=operator2name(def_symbol,3);
   } else {
     return false;

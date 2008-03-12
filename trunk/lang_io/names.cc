@@ -24,7 +24,6 @@ namespace plap { namespace lang_io {
 
 const char def_symbol[]="=";
 const char anon_func_name[]="anonymous_function";
-const char list_name[]="list";
 
 /*
 const char apply_symbol[]="(";
@@ -32,19 +31,27 @@ const char cons_symbol[]=":";*/
 
 namespace lang_io_private {
 func_index func_names=boost::assign::map_list_of
-    //("list",any_list::instance())
+    ("apply",(func_t)lang_apply::instance())
+    ("list",lang_list::instance())
+    ("def",lang_def::instance())
 
-    ("apply",(func_t)apply::instance())
-    ("def",def::instance())
+    //conditionals
+    ("if",lang_if::instance())
+
+    //arithmetic operators
+    ("plus",lang_plus::instance())
+    ("times",lang_times::instance())
+
+    //comparison operators
+    //("less",lang_less::instance())
+
+
     /**("lambda",lambda::instance())
     ("let",let::instance())
 
-    ("pair",pair::instance())
+    ("pair",pair::instance())**/
 
-    ("plus",lang_plus::instance())**/
-    //("if",lang_if::instance())
-
-    ("decl",decl::instance());
+    ("decl",lang_decl::instance());
 
 arg_index arg_names; //core & builtin functions don't need arg names
 

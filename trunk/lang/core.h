@@ -20,12 +20,11 @@
 #include <boost/bind.hpp>
 #include "algorithm.h"
 #include "context.h"
+#include "cast.h"
 
 namespace plap { namespace lang {
 
-template<typename T>
-struct lang_list
-    : public stateless_func<lang_list<T>,variadic_arity> {
+struct lang_list : public stateless_func<lang_list,variadic_arity> {
   void operator()(context& c,const_subvtree s,subvtree d) const { 
     assert(s.childless());
     assert(d.childless());
@@ -36,25 +35,29 @@ struct lang_list
   }
 };
 
-typedef lang_list<bool>           bool_list;
-typedef lang_list<char>           char_list;
-typedef lang_list<id_t>           symbol_list;
-typedef lang_list<number_t>       number_list;
-typedef lang_list<func_t>         any_list;
-
-//typedef any_list nil;
-
 #define LANG_CORE_make_func(name,arity)                                   \
-  struct name : public stateless_func<name,arity> {                       \
+  struct lang_ ## name : public stateless_func<lang_ ## name,arity> {     \
     inline void operator()(context& c,const_subvtree s,subvtree d) const; \
   };                                                                      \
-  void name::operator()(context& c,const_subvtree s,subvtree d) const
+  void lang_ ## name::operator()(context& c,const_subvtree s,subvtree d) const
 
 
-void lang_apply2(const_subvtree l,list_of<const_subtree> r) {
-  
+LANG_CORE_make_func(apply,2) {}
 
-LANG_CORE_make_func(apply,2) {
+LANG_CORE_make_func(def,3) {}
+
+LANG_CORE_make_func(decl,2) {}
+
+#undef LANG_CORE_make_func
+
+}} //namespace plap::lang
+
+#endif //PLAP_LANG_CORE_H__
+
+#if 0
+void lang_apply2(const_subvtree l,list_of<const_subvtree> r) {
+
+
   vtree tmp=vtree(vertex());
   c.eval(s.front_sub(),tmp);
   util::foreach
@@ -64,17 +67,4 @@ LANG_CORE_make_func(apply,2) {
 {
   
   func_of<T(U)> l=get_type(s[0]);
-  
-
-LANG_CORE_make_func(def,3) {}
-
-LANG_CORE_make_func(decl,2) {}
-
-
-//LANG_CORE_make_func(,);
-
-#undef LANG_CORE_make_func
-
-}} //namespace plap::lang
-
-#endif //PLAP_LANG_CORE_H__
+#endif  

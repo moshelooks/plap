@@ -21,25 +21,6 @@
 
 namespace plap { namespace lang {
 
-#if 0
-template<typename T>
-struct type_placeholder : public stateless_func<type_placeholder<T>,1> {
-  void operator()(context&,const_subvtree s,subvtree d) const { 
-    d.root()=s.front();
-  }
-  func_t arg_type(arity_t a) const {
-    assert(a==0);
-    return this;
-  }
-};
-
-typedef type_placeholder<contin_t>                 number_type;
-typedef type_placeholder<bool>                     bool_type;
-typedef type_placeholder<char>                     char_type;
-typedef type_placeholder<disc_t>                   symbol_type;
-typedef type_placeholder<func_t>                   func_type;
-#endif
-
 template<typename>
 struct list_of;
 template<typename>

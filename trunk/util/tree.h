@@ -70,6 +70,18 @@
      const_sub_post_iterator
 ****/
 
+/****
+     Comparison Operators
+
+     Trees holding an equality-comparable, less-than-comparable, etc. type
+     themselves support the corresponding operators. Comparison is according to
+     the following rules:
+
+     1) A smaller tree is always less-than a larger tree
+     2) 
+
+****/
+
 #ifndef PLAP_UTIL_TREE_H__
 #define PLAP_UTIL_TREE_H__
 
@@ -291,7 +303,8 @@ struct iter : public IterBase,
 // tree base classes
 
 template<typename T,typename Tree>
-struct tr : boost::equality_comparable<tr<T,Tree> > {
+struct tr : boost::equality_comparable<tr<T,Tree> >,
+            boost::less_than_comparable<tr<T,Tree> > {
   typedef T                          value_type;
   typedef value_type*                pointer;
   typedef value_type&                reference;
@@ -318,7 +331,6 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
   bool operator==(const OtherTr& rhs) const { 
     return this->equal(rhs,std::equal_to<value_type>());
   }
-
   template<typename OtherTr,typename NodeEq>
   bool equal(const OtherTr& rhs,NodeEq eq) const {
     if (empty())
@@ -333,12 +345,48 @@ struct tr : boost::equality_comparable<tr<T,Tree> > {
       if (i==this->end())
         return j==rhs.end();
       if (j==rhs.end())
-        return false;
+        return false;   
 
       if (i._node->next->dereferenceable()!=j._node->next->dereferenceable() ||
-          i._node->childless()!=j._node->childless()) {
-        if (++i==this->end())
-          return ++j==rhs.end();
+          i._node->childless()!=j._node->childless())
+        return false;
+    }
+  }
+
+  template<typename OtherTr>
+  bool operator<(const OtherTr& rhs) const { 
+    return this->less(rhs,std::less<value_type>());
+  }
+
+  template<typename OtherTr,typename NodeLess>
+  bool less(const OtherTr& rhs,NodeLess lt) const {
+    if (empty())
+      return !rhs.empty();
+    if (rhs.empty())
+      return false;
+
+    for (const_pre_iterator i=this->begin(),j=rhs.begin();;) {
+      if (lt(*j++,*i++))
+        return false;
+      else if (lt(*i,*j))
+        return true;
+
+      if (i==this->end())
+        return j!=rhs.end();
+      if (j==rhs.end())
+        return false;
+
+      if (i._node->childless()) {
+        if (!j._node->childless())
+          return true;
+      } else if (j._node->childless()) {
+        return false;
+      }
+
+      if (i._node->next->dereferenceable()) {
+        if (!j._node->next->dereferenceable())
+          return true;
+      } else if (j._node->childless()) {
         return false;
       }
     }
