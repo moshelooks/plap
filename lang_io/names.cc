@@ -30,34 +30,46 @@ const char apply_symbol[]="(";
 const char cons_symbol[]=":";*/
 
 namespace lang_io_private {
+#define namef(name) (#name,(func_t)lang_ ## name :: instance())
 func_index func_names=boost::assign::map_list_of
-    ("apply",(func_t)lang_apply::instance())
-    ("list",lang_list::instance())
-    ("def",lang_def::instance())
-
     //conditionals
-    ("if",lang_if::instance())
+    namef(if)
 
     //arithmetic operators
-    ("plus",lang_plus::instance())
-    ("times",lang_times::instance())
+    namef(plus)
+    namef(times)
+    namef(minus)
+    namef(div)
+    namef(negative)
 
     //comparison operators
-    ("less",lang_less::instance())
-    ("less_equal",lang_less_equal::instance())
-    ("greater",lang_greater::instance())
-    ("greater_equal",lang_greater_equal::instance())
+    namef(less)
+    namef(less_equal)
+    namef(greater)
+    namef(greater_equal)
+    namef(equal)
+    namef(not_equal)
 
-    ("equal",lang_equal::instance())
-    ("not_equal",lang_not_equal::instance())
+    //logical operators
+    namef(and)
+    namef(or)
+    namef(not)
 
+    //list operators
+    namef(cons)
+    namef(concat)
+
+    //fp constructs
+    namef(apply)
 
     /**("lambda",lambda::instance())
     ("let",let::instance())
 
     ("pair",pair::instance())**/
-
-    ("decl",lang_decl::instance());
+    //core
+    namef(list)
+    namef(def)
+    namef(decl);
 
 arg_index arg_names; //core & builtin functions don't need arg names
 

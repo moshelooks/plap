@@ -50,6 +50,7 @@ struct vertex {
   friend bool is_func(vertex);
   friend bool is_symbol(vertex);
   friend bool is_number(vertex);
+  friend arity_t test_lang_arg_cast(vertex);
   
   bool operator<(vertex rhs) const { return v.d<rhs.v.d; }
   bool operator==(vertex rhs) const { return v.d==rhs.v.d; }
@@ -138,6 +139,16 @@ inline bool is_symbol(vertex v) {
 }
 inline  bool is_number(vertex v) { 
   return ((v.v.d & vertex::funcarg_mask)!=vertex::funcarg_mask); 
+}
+
+//returns index if a lang_arg, else varidic_arity
+inline arity_t test_lang_arg_cast(vertex v) {
+  if (is_symbol(v)) {
+    id_t d=arg_cast<id_t>(v)-vertex::smallest_lang_arg;
+    if (d<=vertex::largest_lang_arg)
+      return d;
+  }
+  return variadic_arity;
 }
 
 }} //namespace plap::lang

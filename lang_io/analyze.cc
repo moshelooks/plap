@@ -74,6 +74,7 @@ make_exception(arg_shadow,"Argument '"+str+"' shadows existing argument.");
 make_exception(arg_unbound,"Invalid reference to unbound argument '"+str+"'.");
 make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
 make_exception(bad_symbol,"Unrecognized symbol or function '"+str+"'.");
+make_exception(bad_redef,"Cannot redifine existing function '"+str+"'.");
 
 #define process(name) \
   void process_ ## name(const_subsexpr src,subvtree dst)
@@ -155,13 +156,44 @@ struct semantic_analyzer {
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
     arg_idx+=a;
 
+    func_t f=name2func(name);
+    if (f) {
+      validate_arity(src[1],f);
+      if (const vtree* v=f->body()) {
+        if (!v->empty())
+          throw_bad_redef(name);
+      } else {
+        throw_bad_redef(name);
+      }
+      make_def(src,f);
+    } else {
+      //a new function
+      if (nested(src)) //error - defs must first be declared at global scope
+        throw_undeclared_name(name);
+      f=c.declare_func(a);
+      name_func(f,sexpr2identifier(src[0]));
+      try {
+        make_def(src,f);
+      } catch (std::runtime_error e) {
+        erase_func_name(f);
+        c.erase_last_func();
+        throw e;
+      }
+    }
+    arg_idx-=a;
+    name_args(f,transform_it(src[1].begin_child(),&scalar_name),
+              transform_it(src[1].end_child(),&scalar_name));
+    for (sexpr::const_child_iterator i=src[1].begin_child();
+         i!=src[1].end_child();++i)
+      scalars.erase(scalar_name(*i));
+    dst.root()=nil();
+  }
+
+  void make_def(const_subsexpr src,func_t f) {
     vtree body=vtree(vertex());
     process_sexpr(src[2],body);
-
-    if (func_t f=name2func(name)) { //an already-declared function?
-      validate_arity(src[1],f);
-      if (nested(src)) { //set to be created at runtime - def(func args body)
-        assert(false && f); //fixme
+    if (nested(src)) { //set to be created at runtime - def(func args body)
+      assert(false); //fixme
 #if 0
         dst.root()=id::def;
         dst.append(i->second);
@@ -169,25 +201,9 @@ struct semantic_analyzer {
         dst.back_sub();//fixeme what do do with args???
         dst.splice(dst.end_child(),body);
 #endif
-      } else { //create it now
-        c.define_func(body,f);
-        name_args(f,src[1].begin_child(),src[1].end_child());
-      }
-    } else {
-      //a new function
-      if (nested(src)) //error - defs must first be declared at global scope
-        throw_undeclared_name(name);
-      //otherwise, create a new function and return unit
-      func_t f=c.define_func(body,src[1].arity());
-      name_func(f,sexpr2identifier(src[0]));
-      name_args(f,transform_it(src[1].begin_child(),&scalar_name),
-                  transform_it(src[1].end_child(),&scalar_name));
+    } else { //create it now
+      c.define_func(body,f);
     }
-    arg_idx-=a;
-    for (sexpr::const_child_iterator i=src[1].begin_child();
-         i!=src[1].end_child();++i)
-      scalars.erase(scalar_name(*i));
-    dst.root()=nil();
   }
   
   process(lambda) { //lambda(args body)

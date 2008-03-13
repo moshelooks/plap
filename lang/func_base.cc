@@ -14,28 +14,15 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#ifndef PLAP_LANG_FUNC_H__
-#define PLAP_LANG_FUNC_H__
-
 #include "func_base.h"
-#include "vtree.h"
 
 namespace plap { namespace lang {
 
-struct func : public func_base {
-  func(arity_t a) : _arity(a) { assert(_arity>0); }
-  const vtree* body() const { return &_body; }
-
-  arity_t arity() const { return _arity; }
-  void operator()(context& c,const_subvtree loc,subvtree dst) const;
-
-  friend struct context;
- protected:
-  arity_t _arity;
-  vtree _body;
-
-  void set_body(subvtree b) { _body.splice(_body.end(),b); }
-};
+namespace lang_private { //global repo mapping functions to ids
+std::vector<func_base*>& ids() {
+  static std::vector<func_base*> id_repo;
+  return id_repo;
+}
+} //namespace lang_private
 
 }} //namespace plap::lang
-#endif //PLAP_LANG_FUNCTION_H__
