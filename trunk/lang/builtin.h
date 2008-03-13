@@ -25,8 +25,6 @@
 
 namespace plap { namespace lang {
 
-void initialize_lib(context& c);
-
 typedef const_subvtree   any;
 typedef list_of<any> any_list;
 
@@ -91,6 +89,15 @@ struct builtin_variadic<Subtype(Argtype)>
   }
 };
 
+template<typename Func,typename T>
+struct lang_unary : public builtin<lang_unary<Func,T>(T)> {
+  void cfeval(T a,subvtree dst) const { dst.root()=arg(Func()(a)); }
+};
+template<typename Func,typename T>
+struct lang_binary : public builtin<lang_binary<Func,T>(T,T)> {
+  void cfeval(T a,T b,subvtree dst) const { dst.root()=arg(Func()(a,b)); }
+};
+
 //conditionals
 struct lang_if : public builtin<lang_if(bool,any,any)> {
   void eval(context& c,bool cond,any if_br,any else_br,subvtree dst) const {
@@ -102,13 +109,16 @@ struct lang_if : public builtin<lang_if(bool,any,any)> {
 template<typename Func,int Init>
 struct lang_acc : public builtin_variadic<lang_acc<Func,Init>(number_t)> {
   void cfeval(list_of<number_t> l,subvtree dst) const {
-    std::cout << "XX" << std::endl;
-    std::cout << "XX" << l.size() << std::endl;
     dst.root()=arg(std::accumulate(l.begin(),l.end(),number_t(Init),Func()));
   }
 };
 typedef lang_acc<std::plus<number_t>,0>       lang_plus;
 typedef lang_acc<std::multiplies<number_t>,1> lang_times;
+
+typedef lang_binary<std::minus<number_t>,number_t>   lang_minus;
+typedef lang_binary<std::divides<number_t>,number_t> lang_div;
+
+typedef lang_unary<std::negate<number_t>,number_t> lang_negative;
 
 //comparison operators - can take any type
 template<typename Func>
@@ -128,7 +138,20 @@ typedef lang_cmp<std::greater_equal<any> > lang_greater_equal;
 typedef lang_cmp<std::equal_to<any> >      lang_equal;
 typedef lang_cmp<std::not_equal_to<any> >  lang_not_equal;
 
+//logical operators
+typedef lang_binary<std::logical_and<bool>,bool> lang_and;
+typedef lang_binary<std::logical_or<bool>,bool>  lang_or;
+typedef lang_unary<std::logical_not<bool>,bool>  lang_not;
+
 //list operators
+struct lang_cons : public builtin<lang_cons(any,any_list)> {
+  void eval(context& c,any a,any_list b,subvtree dst) const {
+    dst=b.src;
+    dst.root()=call(lang_list::instance());
+    dst.prepend(vertex());
+    c.eval(a,dst[0]);
+  }
+};
 struct lang_concat : public builtin<lang_concat(any_list,any_list)> {
   void cfeval(any_list a,any_list b,subvtree dst) const {
     if (a.empty() && b.empty()) {

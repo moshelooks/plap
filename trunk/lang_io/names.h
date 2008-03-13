@@ -42,6 +42,12 @@ extern symbol_index symbol_names;
 inline void name_func(lang::func_t f,const std::string& name) {
   lang_io_private::func_names.insert(make_pair(name,f));
 }
+
+inline void erase_func_name(lang::func_t f) {
+  using namespace lang_io_private;
+  get<1>(func_names).erase(f);
+}
+  
 template<typename Iterator>
 inline void name_args(lang::func_t f,Iterator name_f,Iterator name_l) {
   lang_io_private::arg_names.insert(make_pair(f,argname_seq(name_f,name_l)));

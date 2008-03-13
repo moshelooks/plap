@@ -49,6 +49,7 @@ struct eager_func<Op,T(U)>
     : public stateless_func<eager_func<Op,T(U)>,1,Name> {
   void operator()(context& c,const_subvtree loc,subvtree dst) const {
 */   
+#if 0 
     
 
 void initialize_lib(context& c) {
@@ -60,7 +61,6 @@ void initialize_lib(context& c) {
 
   
 
-#if 0 
 foo
 fixme
   //arithmetic functions
@@ -77,7 +77,8 @@ fixme
   LANG_LIB_comparison(greater_equal);
 
   //
-#endif  
 }
+#endif  
+
 
 }} //namespace plap::lang

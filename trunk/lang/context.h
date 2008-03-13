@@ -20,6 +20,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/noncopyable.hpp>
+#include "slist.h"
 #include "func.h"
 
 namespace plap { namespace lang {
@@ -27,7 +28,7 @@ namespace plap { namespace lang {
 struct context : public boost::noncopyable {
 
   //create a parent context
-  context() : _parent(this),_root(this) { initialize_lib(*this); }
+  context() : _parent(this),_root(this) {}
 
   //create a child context
   context(context& p) : _parent(&p),_root(_parent->_root) {}
@@ -47,24 +48,44 @@ struct context : public boost::noncopyable {
   func_t define_func(subvtree body,arity_t a) {
     return define_func(body,declare_func(a));
   }
+  void erase_last_func() { _funcs.pop_back(); } //needed for error recovery
 
   //evaluation
   void eval(const_subvtree src,subvtree dst) {
-    if (src.childless())
-      dst.root()=src.root();
-    else
+    if (src.childless()) {
+      arity_t a=test_lang_arg_cast(src.root());
+      if (a!=variadic_arity) {
+        assert(a<bindings().size());
+        assert(!bindings()[a].empty());
+        dst=bindings()[a];
+      } else {
+        dst.root()=src.root();
+      }
+    } else {
       (*call_cast(src.root()))(*this,src,dst);
+    }
   }
 
   template<typename T>
   T eval_to(const_subvtree src) { 
-    vtree tmp;
+    vtree tmp=vtree(vertex());
     eval(src,tmp);
     assert(tmp.childless());
     return arg_cast<T>(tmp.root());
-  } 
+  }
 
-  friend void initialize_lib(context&);
+  typedef std::vector<vtree> bind_seq;
+  void pop_bindings() { 
+    assert(!_bindings.empty());
+    _bindings.pop_front();
+  }
+  bind_seq& push_bindings(bind_seq& b) {
+    _bindings.push_front(bind_seq());
+    b.swap(_bindings.front());
+    return _bindings.front();
+  }
+  bind_seq& bindings() { return _bindings.front(); }
+  const bind_seq& bindings() const { return _bindings.front(); }
  protected:
   typedef boost::ptr_vector<func_base> func_vector;
   context* _parent;
@@ -76,6 +97,8 @@ struct context : public boost::noncopyable {
   void insert_builtin(Func* f) { _funcs.push_back(f); }
 
   const_subvtree lookup_arg(arity_t i) const;
+
+  util::slist<bind_seq> _bindings;
 };
 
 }} //namespace plap::lang
