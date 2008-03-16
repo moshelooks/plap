@@ -15,70 +15,34 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "builtin.h"
-#include "core.h"
-//#include "eager_func.h"
-//fixme#include "lazy_func.h"
+#include "foreach.h"
+#include "checkpoint.h"
 
 namespace plap { namespace lang {
 
-#define LANG_LIB_cf(name) func& name=c.create_func(#name);
-#define LANG_LIB_arithmetic_nary(name) {                                \
-    LANG_LIB_cf(name);                                                  \
-    c.bind(name,make_eager_def<                                         \
-             list_of<int_t> >(&lang_ ## name<disc_t>));                 \
-    c.bind(name,make_eager_def<                                         \
-             list_of<float_t> >(&lang_ ## name<contin_t>));             \
+void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
+  if (f.childless()) {
+    (*arg_cast<func_t>(f.root()))(c,args.src,dst);
+  } else {
+    assert(false);
+    //vtree tmp=vtree(vertex());
+    //c.eval(f,tmp);
   }
-#define LANG_LIB_arithmetic_binary(name) {                              \
-    LANG_LIB_cf(name);                                                  \
-    bind(name,make_eager_def<                                           \
-         int_t,int_t>(&lang_ ## name<disc_t>));                         \
-    bind(name,make_eager_def<float_t,                                   \
-         float_t>(&lang_ ## name<contin_t>));                           \
-  }
-#define LANG_LIB_comparison(name) {                                     \
-    LANG_LIB_cf(name);                                                  \
-    bind(name,make_eager_def<                                           \
-         int_t,int_t>(&lang_ ## name<disc_t>));                         \
-    bind(name,make_eager_def<float_t,                                   \
-         float_t>(&lang_ ## name<contin_t>));                           \
-  }
-
-/*template<typename Op,typename T,typename U,const char* Name>
-struct eager_func<Op,T(U)>
-    : public stateless_func<eager_func<Op,T(U)>,1,Name> {
-  void operator()(context& c,const_subvtree loc,subvtree dst) const {
-*/   
-#if 0 
-    
-
-void initialize_lib(context& c) {
-  //c.insert_builtin(lang_list<const_subvtree>::instance(),false);
-  //c.insert_builtin(make_eager<func_of<disc_t(list_of<disc_t>)>,
-  //fixme                          lang_io::plus_name>(&lang_plus));
-  //c.insert_builtin(make_lazy(&lang_if,lang_io::if_name));
-
-
-  
-
-foo
-fixme
-  //arithmetic functions
-  LANG_LIB_arithmetic_nary(plus);
-  LANG_LIB_arithmetic_nary(times);
-  LANG_LIB_arithmetic_binary(minus);
-  LANG_LIB_arithmetic_binary(div);
-
-  //comparison operators
-  LANG_LIB_comparison(equal);
-  LANG_LIB_comparison(less);
-  LANG_LIB_comparison(less_equal);
-  LANG_LIB_comparison(greater);
-  LANG_LIB_comparison(greater_equal);
-
-  //
 }
-#endif  
 
+void lang_accumulate::eval(context& c,
+                          any ft,any_list l,any a,subvtree dst) const {
+  func_t f=c.eval_to<func_t>(ft);
+  vtree tmp=util::tree_of(vertex())(vertex(),vertex());
+  c.eval(a,dst);
+  foreach(const_subvtree s,l) {
+    tmp[0]=s;
+    assert(!tmp[1].empty());
+    assert(!dst.empty());
+    std::swap(tmp[1],dst);
+    std::swap(tmp[0],tmp[1]);
+    (*f)(c,tmp,dst);
+  }
+}
 
 }} //namespace plap::lang

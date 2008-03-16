@@ -21,6 +21,7 @@
 #define PLAP_LANG_BUILTIN_H__
 
 #include <numeric>
+#include "iterator_shorthands.h"
 #include "core.h"
 
 namespace plap { namespace lang {
@@ -163,18 +164,42 @@ struct lang_concat : public builtin<lang_concat(any_list,any_list)> {
     }
   }
 };
+struct lang_hd : public builtin<lang_hd(any_list)> {
+  void cfeval(any_list a,subvtree dst) const { dst=a.front(); }
+};
+struct lang_tl : public builtin<lang_tl(any_list)> {
+  void cfeval(any_list a,subvtree dst) const { 
+    assert(!a.empty());
+    any_list::iterator i=a.begin();
+    dst.root()=(++i==a.end()) ? nil() : call(lang_list::instance());
+    dst.append(i,a.end());
+  }
+};
+
+template<long X>
+struct lang_range_op : public builtin<lang_range_op<X>(number_t,number_t)> {
+  void cfeval(number_t lhs,number_t rhs,subvtree dst) const {
+    using namespace util;
+    if (lhs+1-X>rhs) {
+      dst.root()=nil();
+    } else {
+      dst.root()=call(lang_list::instance());
+      dst.append(transform_it(count_it(long(lhs)),&lang_range_op::tovertex),
+                 transform_it(count_it(long(rhs)+X),&lang_range_op::tovertex));
+    }
+  }
+ private:
+  static vertex tovertex(long int x) { return arg(number_t(x)); }
+};
+typedef lang_range_op<1> lang_range;
+typedef lang_range_op<0> lang_xrange;
 
 //functional programming constructs
 struct lang_apply : public builtin<lang_apply(any,any_list)> {
-  void eval(context& c,any f,any_list args,subvtree dst) const {
-    if (f.childless()) {
-      (*arg_cast<func_t>(f.root()))(c,args.src,dst);
-    } else {
-      assert(false);
-      //vtree tmp=vtree(vertex());
-      //c.eval(f,tmp);
-    }
-  }
+  void eval(context& c,any f,any_list args,subvtree dst) const;
+};
+struct lang_accumulate : public builtin<lang_accumulate(any,any_list,any)> {
+  void eval(context& c,any ft,any_list l,any a,subvtree dst) const;
 };
 
 #if 0
