@@ -102,6 +102,15 @@ test_case(tree_assignment) {
   check_eq(tr,tr3);
 }
 
+test_case(tree_subtr_assignment) {
+  itree tr=tree_of(5)(6,tree_of(7)(8));
+  itree tr2=tree_of(1)(2,3);
+  tr[0]=tr[1];
+  check_tree(tr,5,"5(7(8) 7(8))");
+  tr[1]=tr2;
+  check_tree(tr,6,"5(7(8) 1(2 3))");  
+}
+
 test_case(tree_arity) {
   itree tr=tree_of(1)(2,3,tree_of(4)(5));
   check_tree(tr,5,"1(2 3 4(5))");
@@ -748,6 +757,24 @@ test_case(tree_splice2) {
   tr3.splice(tr3.end_child(),++tr1.begin_child(),--tr1.end_child());
   check_tree(tr1,4,"1(2 7(8))");
   check_tree(tr3,3,"5(3 6)");
+}
+
+test_case(tree_swap) {
+  vector<itree> foo,goo;
+  foo+=tree_of(1)(2,3),tree_of(4),tree_of(5)(tree_of(6)(7)),itree();
+  goo=foo;
+  for (unsigned int i=0;i<foo.size();++i)
+    for (unsigned int j=0;j<foo.size();++j) {
+      foo[i].swap(foo[j]);
+      check_eq(foo[i],goo[j]);
+      check_eq(foo[j],goo[i]);
+
+      foo[i].swap(foo[j]);
+      check_eq(foo[i],goo[i]);
+      check_eq(foo[j],goo[j]);
+    }
+  std::swap(foo[0],foo[1]);
+  std::swap(foo[2],foo[3]);
 }
 
 #define check_parse(src,goal)                      \

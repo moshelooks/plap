@@ -82,8 +82,8 @@ struct list_of : lang_private::core_type<T> {
   size_type size() const { return this->src.arity(); }
   bool empty() const { return this->src.childless(); }
   
-  const T& front() const { return literal_cast<T>(this->src.front_sub()); }
-  const T& back() const { return literal_cast<T>(this->src.back_sub()); }
+  const T front() const { return literal_cast<T>(this->src.front_sub()); }
+  const T back() const { return literal_cast<T>(this->src.back_sub()); }
 
   const_subvtree src;
 };
@@ -94,7 +94,7 @@ struct func_of;
 template<typename T,typename U>
 struct func_of<T(U)> : lang_private::core_type<T>,lang_private::core_type<U> {
   func_of(const_subvtree s) : _s(s) {}
-  T operator()(const U& u) {
+  T operator()(context& c,const U& u) {
 #if 0
      //break constness to add args
     subvtree sub=*reinterpret_cast<subvtree*>(&this->_s);

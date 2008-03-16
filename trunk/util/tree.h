@@ -54,7 +54,7 @@
 ****/
 
 /****
-     Iterator Types
++     Iterator Types
 
      pre_iterator
      const_pre_iterator
@@ -836,7 +836,7 @@ struct const_subtree
     assert(!rhs.empty());
     this->_node=rhs.root_node();
   }
-
+  
  protected:
   template<typename,typename>
   friend struct util_private::sub_iter_base;
@@ -858,10 +858,13 @@ struct subtree
     assert(!rhs.empty());
     if (static_cast<const void*>(&rhs)!=static_cast<const void*>(this)) {
       this->root()=rhs.root();
+      this->prune();
       this->append(rhs.begin_sub_child(),rhs.end_sub_child());
     }
     return *this;
   }
+
+  subtree& operator=(subtree rhs) { return this->operator=<subtree>(rhs); }
 
   subtree& operator=(const T& t) { 
     this->prune();
@@ -869,6 +872,16 @@ struct subtree
     return *this;
   }
 
+  void swap(tree<T>& rhs) { swap(subtree(rhs)); }
+  void swap(subtree rhs) {
+    assert (!rhs.empty());
+    if (this->root_node()!=rhs.root_node()) {
+      std::swap(this->root(),rhs.root());
+      typename super::sub_child_iterator tmp=this->begin_sub_child();
+      this->splice(tmp,rhs.begin_sub_child(),rhs.end_sub_child());
+      rhs.splice(rhs.begin_sub_child(),tmp,this->end_sub_child());
+    }
+  }
  protected:
   template<typename,typename>
   friend struct util_private::tr;
@@ -915,6 +928,28 @@ struct tree : public util_private::mutable_tr<T,tree<T> > {
       }
     }
     return *this;
+  }
+
+  void swap(subtree<T> rhs) { rhs.swap(*this); }
+  void swap(tree& rhs) { 
+    if (this->empty()) {
+      if (!rhs.empty()) {
+        rhs._end.next->next=rhs._end.next->prev=&this->_end;
+        this->_end.next=rhs._end.next;
+        this->_end.prev=rhs._end.prev;
+        rhs._end.next=rhs._end.prev=&rhs._end;
+      }
+    } else if (rhs.empty()) {
+      this->_end.next->next=this->_end.next->prev=&rhs._end;
+      rhs._end.next=this->_end.next;
+      rhs._end.prev=this->_end.prev;
+      this->_end.next=this->_end.prev=&this->_end;
+    } else {
+      std::swap(this->_end.next->next,rhs._end.next->next);
+      std::swap(this->_end.next->prev,rhs._end.next->prev);
+      std::swap(this->_end.prev,rhs._end.prev);
+      std::swap(this->_end.next,rhs._end.next);
+    }
   }
 
   bool empty() const { return this->_end.next==&this->_end; } 
@@ -1018,4 +1053,16 @@ template<typename T>
 tree_placeholder<T> tree_of(const T t) { return tree_placeholder<T>(t); }
 
 }} //namespace plap::util
+
+namespace std {
+template<typename T>
+void swap(plap::util::subtree<T> l,plap::util::subtree<T> r) { l.swap(r); }
+template<typename T>
+void swap(plap::util::subtree<T> l,plap::util::tree<T>& r)   { l.swap(r); }
+template<typename T>
+void swap(plap::util::tree<T>& l,plap::util::subtree<T> r)   { l.swap(r); }
+template<typename T>
+void swap(plap::util::tree<T>& l,plap::util::tree<T>& r)     { l.swap(r); }
+
+} //namespace stl
 #endif //PLAP_UTIL_TREE_H__

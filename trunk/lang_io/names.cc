@@ -58,9 +58,14 @@ func_index func_names=boost::assign::map_list_of
     //list operators
     namef(cons)
     namef(concat)
+    namef(range)
+    namef(xrange)
 
     //fp constructs
     namef(apply)
+    namef(accumulate)
+    namef(hd)
+    namef(tl)
 
     /**("lambda",lambda::instance())
     ("let",let::instance())
@@ -70,6 +75,7 @@ func_index func_names=boost::assign::map_list_of
     namef(list)
     namef(def)
     namef(decl);
+#undef namef
 
 arg_index arg_names; //core & builtin functions don't need arg names
 

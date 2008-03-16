@@ -16,7 +16,7 @@ S $x = \$y -> \$z -> ($x $z) ($y $z)
 K $x = \$y -> $x
 I $x = $x
 # Note that you can't do much with these, because every expression must have a
-  definite type (maybe)
+#  definite type (maybe)
 
 # The following is loosely based on http://merd.sourceforge.net/cookbook.html,
 # which is in turn based on examples from the Perl Cookbook
@@ -26,6 +26,8 @@ I $x = $x
 ##
 
 nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
+
+empty $l = $l==[]
 
 sub $list $indices = 
   let 
@@ -39,11 +41,11 @@ sub $list $indices =
 
 subs $list $from $len = sub $list [$from..$from+$len-1]
 
-last $l = if (empty (tl $x)) (hd $x) last (tl $x)
+last $l = if (empty (tl $l)) (hd $l) (last (tl $l))
 
 length $l = if (empty $l) 0 1+(length (tl $l))
 
-lasts $l $n = if (length $list)<=$n $list (lasts (tl $l) $n-1)
+lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n-1)
 
 s = "This is what you have"
 first = nth s 0                         # "T"
@@ -135,16 +137,11 @@ max_elem $l $cmp =
 most_common $l =
   let most_common_helper $l =
     let group $n $x $l =
-      if (empty $l) [[$n+1,$x]]
+      if (empty $l) [($n+1,$x)]
         if ($x==(hd $l)) (group ($n+1) $x (tl $l))
-          [$n,$x]:(group 0 (hd $l) (tl $l))
+          ($n,$x):(group 0 (hd $l) (tl $l))
     group 0 (hd $l) (tl $l)
-  hd (tl max_elem (most_common_helper (sort $l)) \$l1 $l2 -> (hd $l1)<(hd $l2))
-
-#hetrogenous lists are damn convenient, and the type inference code is a pain in
-#the ass and probably requires function synthesis - how is < supposed to work on
-#anything, otherwise?
-#most_common ['a','b',c']
+  right (max_elem (most_common_helper (sort $l)) \$x $y -> (left $x)<(left $y))
 
 # Representing Relationships Between Data
 <- father Cain  Adam
