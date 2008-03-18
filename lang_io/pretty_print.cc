@@ -17,6 +17,7 @@
 #include "pretty_print.h"
 #include <stdexcept>
 #include <sstream>
+#include <limits>
 #include <numeric>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
@@ -95,7 +96,7 @@ struct pretty_printer {
       dorepeat(indent) (*o) << ' ';
 
     if (s.childless()) {
-      (*o) << prefix << arg_visit(name_visitor(args),s.root()) << endl;
+      (*o) << prefix << arg_visit(name_visitor(args),s.root());
       return;
     }
 
@@ -130,7 +131,7 @@ struct pretty_printer {
         if (i+1!=sexprs.size())
           (*o) << d.infix;
       }
-      (*o) << d.suffix << endl;
+      (*o) << d.suffix;
     } else if (d.prefix.size()<indent_max &&  //print first expr inline?
                sexprs.front().size()+d.prefix.size()+indent<linemax) { 
       (*o) << sexprs.front() << endl;
@@ -149,6 +150,7 @@ struct pretty_printer {
 void pretty_print(ostream& o,const_subvtree s,size_t indent,size_t linemax) {
   pretty_printer pp(o,indent,linemax);
   pp(s);
+  o << endl;
 }
 
 void pretty_print(ostream& o,func_t f,size_t indent,size_t linemax) {
@@ -163,8 +165,21 @@ void pretty_print(ostream& o,func_t f,size_t indent,size_t linemax) {
     pretty_printer pp(o,indent,linemax,func2arg_names(f));
     pp(*body,ss.str());
   } else {
-    o << name << "{built-in function}";
+    o << name << "{built-in function}" << endl;
   }
+}
+
+std::ostream& operator<<(std::ostream& o,lang::const_subvtree s) {
+  pretty_printer pp(o,0,std::numeric_limits<size_t>::max());
+  pp(s);
+  return o;
+}
+
+std::ostream& operator<<(std::ostream& o,lang::subvtree s) { 
+  return operator<<(o,lang::const_subvtree(s));
+}
+std::ostream& operator<<(std::ostream& o,const lang::vtree& v) { 
+  return operator<<(o,lang::const_subvtree(v));
 }
 
 }} //namespace plap::lang_io

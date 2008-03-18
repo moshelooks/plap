@@ -75,6 +75,8 @@ make_exception(arg_unbound,"Invalid reference to unbound argument '"+str+"'.");
 make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
 make_exception(bad_symbol,"Unrecognized symbol or function '"+str+"'.");
 make_exception(bad_redef,"Cannot redifine existing function '"+str+"'.");
+make_exception(bad_lambda,"Malformed lambda expression '"+str+
+               "' - should be (lambda (arrow (arg1 arg2 ..) body)).");
 
 #define process(name) \
   void process_ ## name(const_subsexpr src,subvtree dst)
@@ -101,10 +103,9 @@ bool character(const string& s) { return (s=="'"); }
 string scalar_name(const string& s) { return s.substr(1); }
 
 struct semantic_analyzer {
-  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r),arg_idx(0) {}
+  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r) {}
   context& c;
   const_subsexpr root;
-  arity_t arg_idx;
 
   typedef std::tr1::unordered_map<string,arity_t> scalar_map;
   scalar_map scalars;
@@ -118,11 +119,10 @@ struct semantic_analyzer {
     }
 
     special_case(lang_def,3);
-    /**    special_case(lambda,2);
-           special_case(let,variadic_arity);**/
+    special_case(lang_lambda,1);
+    //special_case(let,variadic_arity);**/
     special_case(lang_decl,2);
-    /**special_case(list,variadic_arity);
-    special_case(pair,variadic_arity);
+    /**special_case(pair,variadic_arity);
     **/
     if (func_t f=string2func(src.root())) {
       validate_arity(src,f);
@@ -152,9 +152,8 @@ struct semantic_analyzer {
     arity_t a=src[1].arity();
     if (src[1].size()!=a+1u)
       throw_bad_def(name);
-    for_each(src[1].begin_child(),src[1].end_child(),count_it(arg_idx),
+    for_each(src[1].begin_child(),src[1].end_child(),count_it(0),
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
-    arg_idx+=a;
 
     func_t f=name2func(name);
     if (f) {
@@ -165,7 +164,7 @@ struct semantic_analyzer {
       } else {
         throw_bad_redef(name);
       }
-      make_def(src,f);
+      make_def(src[2],nested(src),f);
     } else {
       //a new function
       if (nested(src)) //error - defs must first be declared at global scope
@@ -173,14 +172,14 @@ struct semantic_analyzer {
       f=c.declare_func(a);
       name_func(f,sexpr2identifier(src[0]));
       try {
-        make_def(src,f);
+        make_def(src[2],nested(src),f);
       } catch (std::runtime_error e) {
         erase_func_name(f);
         c.erase_last_func();
         throw e;
       }
     }
-    arg_idx-=a;
+
     name_args(f,transform_it(src[1].begin_child(),&scalar_name),
               transform_it(src[1].end_child(),&scalar_name));
     for (sexpr::const_child_iterator i=src[1].begin_child();
@@ -189,10 +188,10 @@ struct semantic_analyzer {
     dst.root()=nil();
   }
 
-  void make_def(const_subsexpr src,func_t f) {
+  void make_def(const_subsexpr src,bool nested,func_t f) {
     vtree body=vtree(vertex());
-    process_sexpr(src[2],body);
-    if (nested(src)) { //set to be created at runtime - def(func args body)
+    process_sexpr(src,body);
+    if (nested) { //set to be created at runtime - def(func args body)
       assert(false); //fixme
 #if 0
         dst.root()=id::def;
@@ -205,16 +204,31 @@ struct semantic_analyzer {
       c.define_func(body,f);
     }
   }
+
+  process(closure) {
+    assert(false);
+  }
   
-  process(lambda) { //lambda(args body)
-#if 0
-    //fixme - create a closure if variables are included
-    argument_list args=bind_arguments(src[0],scalars); //fixme
-    vtree body(vertex());
-    process_sexpr(src[1],body);
-    scalars.pop(args); //fixme
-    dst.root()=c.create_func(args,body);
-#endif
+  process(lang_lambda) { //lambda(arrow((args),body))
+    if (src.front()!=*func2name(lang_arrow::instance()))
+      throw_bad_lambda(lexical_cast<string>(src));
+    foreach (const string& s,src) {
+      if (scalar(s) && scalars.find(scalar_name(s))!=scalars.end()) {
+        process_closure(src,dst);
+        return;
+      }
+    }
+    //no variable capture, easy!
+    func_t f=c.declare_func(src[0][0].arity()+1);
+    for_each(src[0][0].begin(),src[0][0].end(),count_it(0),
+             bind(&semantic_analyzer::index_scalar,this,_1,_2));
+    try {
+      make_def(src[0][1],nested(src),f);
+    } catch (std::runtime_error e) {
+      c.erase_last_func();
+      throw e;
+    }
+    dst.root()=arg(f);
   }
 
   process(let) { //let(list(def1 ...) body)

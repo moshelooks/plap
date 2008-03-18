@@ -15,19 +15,22 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "builtin.h"
+#include <iostream>
 #include "foreach.h"
 #include "checkpoint.h"
+#include "pretty_print.h"
 
 namespace plap { namespace lang {
+  
+void lang_do::eval(context& c,any_list l,subvtree dst) const {
+  foreach(any a,l) {
+    dst.prune();
+    c.eval(a,dst);
+  }
+}
 
 void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
-  if (f.childless()) {
-    (*arg_cast<func_t>(f.root()))(c,args.src,dst);
-  } else {
-    assert(false);
-    //vtree tmp=vtree(vertex());
-    //c.eval(f,tmp);
-  }
+  (*c.eval_to<func_t>(f))(c,args.src,dst);
 }
 
 void lang_accumulate::eval(context& c,
@@ -44,5 +47,28 @@ void lang_accumulate::eval(context& c,
     (*f)(c,tmp,dst);
   }
 }
+
+void lang_assert::eval(context& c,any a,subvtree dst) const {
+  using boost::lexical_cast;
+  using std::string;
+  if (a.root()==call(lang_equal::instance())) {
+    vtree tmp=vtree(vertex());
+    c.eval(a[0],tmp);
+    c.eval(a[1],dst);
+    if (tmp!=dst)
+      throw std::runtime_error("Failed equality assertion: "+
+                               lexical_cast<string>(tmp)+" doesn't equal "+
+                               lexical_cast<string>(dst)+".");
+  } else {
+    c.eval(a,dst);
+    if (!dst.childless() || !arg_cast<bool>(dst.root()))
+      throw std::runtime_error("Failed assertion: "+
+                               lexical_cast<string>(a)+".");
+  }
+  dst.prune();
+  dst.root()=nil();
+}
+
+std::ostream* lang_print::print_to=&std::cout;
 
 }} //namespace plap::lang

@@ -14,41 +14,22 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-// All library functions should appear in initialize_lib, which is called to
-// add library functions to an context.
+// Every builtin function should be a class C that inherits from 
+// builtin<C(Arg0,Arg1,...,ArgN)>, or from builtin_varidatic<C(Argtype)>,
+// and defines either eval(context&,Arg0,...,ArgN,subvtree) or
+// cfeval(Arg0,...,ArgN,subvtree) (cf = context-free)
+//
+// the actual builtin class template is generated up to a predefined arity
+// using macro magic
 
 #ifndef PLAP_LANG_BUILTIN_H__
 #define PLAP_LANG_BUILTIN_H__
 
 #include <numeric>
+#include <ostream>
 #include "iterator_shorthands.h"
 #include "core.h"
 
-namespace plap { namespace lang {
-
-typedef const_subvtree   any;
-typedef list_of<any> any_list;
-
-template<typename T>
-struct arg_helper {
-  vtree arg;
-  arg_helper(context& c,const_subvtree s) : arg(vertex()) { c.eval(s,arg); }
-  T operator()() const { return literal_cast<T>(arg); }
-};
-template<>
-struct arg_helper<any> {
-  any arg;
-  arg_helper(context& c,const_subvtree s) : arg(s) {}
-  any operator()() const { return arg; }
-};
-
-// every builtin function should be a class C that inherits from 
-// builtin<C(Arg0,Arg1,...,ArgN)>, or from builtin_varidatic<C(Argtype)>,
-// and defines either eval(context&,Arg0,...,ArgN,subvtree) or
-// cfeval(Arg0,...,ArgN,subvtree) (cf = context-free)
-
-template<typename>
-struct builtin;
 //generates a builtin struct for some arity
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
 #define PLAP_LANG_type_params(n) BOOST_PP_ENUM_PARAMS(n,typename Input)
@@ -74,6 +55,27 @@ struct builtin;
           (BOOST_PP_ENUM_PARAMS(n,t),dst);                              \
     }                                                                   \
   };
+
+namespace plap { namespace lang {
+
+typedef const_subvtree   any;
+typedef list_of<any> any_list;
+
+template<typename T>
+struct arg_helper {
+  vtree arg;
+  arg_helper(context& c,const_subvtree s) : arg(vertex()) { c.eval(s,arg); }
+  T operator()() const { return literal_cast<T>(arg); }
+};
+template<>
+struct arg_helper<any> {
+  any arg;
+  arg_helper(context& c,const_subvtree s) : arg(s) {}
+  any operator()() const { return arg; }
+};
+
+template<typename>
+struct builtin;
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_builtin,~)
 
 template<typename>
@@ -99,11 +101,15 @@ struct lang_binary : public builtin<lang_binary<Func,T>(T,T)> {
   void cfeval(T a,T b,subvtree dst) const { dst.root()=arg(Func()(a,b)); }
 };
 
-//conditionals
+//control flow
 struct lang_if : public builtin<lang_if(bool,any,any)> {
   void eval(context& c,bool cond,any if_br,any else_br,subvtree dst) const {
     c.eval(cond ? if_br : else_br,dst);
   }
+};
+
+struct lang_do : public builtin_variadic<lang_do(any)> {
+  void eval(context& c,any_list l,subvtree dst) const;
 };
 
 //arithmetic operators
@@ -202,19 +208,41 @@ struct lang_accumulate : public builtin<lang_accumulate(any,any_list,any)> {
   void eval(context& c,any ft,any_list l,any a,subvtree dst) const;
 };
 
-#if 0
-inline disc_t lang_foreach(list_of<const_subvtree> l,
-                           func_of<const_subvtree(const_subvtree)> f) {
-  //fixmestd::for_each(l.begin(),l.end(),f);
-  return 0;
-}
+//util
+struct lang_assert : public builtin<lang_assert(any)> {
+  void eval(context& c,any a,subvtree dst) const;
+};
+struct lang_print : public builtin<lang_print(list_of<char>)> {
+  static std::ostream* print_to;
+  void cfeval(list_of<char> l,subvtree dst) const {
+    dst.root()=nil();
+    
+  }
+};
+struct lang_println : public builtin<lang_print(list_of<char>)> {
+  void cfeval(list_of<char> l,subvtree dst) const {
+    lang_print::instance()->cfeval(l,dst);
+    (*lang_print::print_to) << std::endl;
+  }
+};
+struct lang_expand : public builtin<lang_expand(any)> {
+  void cfeval(any a,subvtree dst) {
+    /** if (a.childless())
+      if (is_func(a.root()) && arg_cast<func_t>(a.root())->body())
+        dst=*a.root().body();
+      else
+        
+      dst=**/
+  }
+};
 
-disc_t lang_print(const_subvtree v) { 
-  std::cout << "yuk ";
-  //foreach (const_subvtree s,l) std::cout << "yuk ";
-  return 0;
-}
-#endif
 }} //namespace plap::lang
+
+#undef PLAP_LANG_builtin
+#undef PLAP_LANG_call_arg
+#undef PLAP_LANG_arg_helper
+#undef PLAP_LANG_name
+#undef PLAP_LANG_type_params
+#undef LANG_LIMIT_ARITY_INC
 
 #endif //PLAP_LANG_BUILTIN_H__

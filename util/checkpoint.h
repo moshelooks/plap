@@ -14,28 +14,15 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
-#include "func.h"
-#include <boost/bind.hpp>
-#include "iterator_shorthands.h"
-#include "algorithm.h"
-#include "context.h"
-#include "checkpoint.h"
+#ifndef PLAP_UTIL_CHECKPOINT_H__
+#define PLAP_UTIL_CHECKPOINT_H__
 
-namespace plap { namespace lang {
+#ifdef NDEBUG
+#define checkpoint()       ((void)0)
+#else
+#include <iostream>
+#define checkpoint() \
+  std::cout << "checkpoint: " << __FILE__ << ", line " << __LINE__ << std::endl
+#endif
 
-void func::operator()(context& c,const_subvtree loc,subvtree dst) const {
-  assert(loc.arity()==_arity);
-  context::bind_seq b=context::bind_seq(_arity,vtree(vertex()));
-  checkpoint();
-  util::for_each(loc.begin_sub_child(),loc.end_sub_child(),b.begin(),
-                 boost::bind(&context::eval,&c,_1,_2));
-  checkpoint();
-  c.push_bindings(b);
-  checkpoint();
-  c.eval(_body,dst);
-  checkpoint();
-  c.pop_bindings();
-  checkpoint();
-}
-
-}} //namespace plap::lang
+#endif //PLAP_UTIL_CHECKPOINT_H__

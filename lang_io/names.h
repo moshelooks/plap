@@ -95,6 +95,8 @@ inline const std::string& symbol2name(lang::id_t s) {
 }
 
 extern const char def_symbol[];
+extern const char char_symbol[];
+extern const char string_symbol[];
 /**
 extern const char strlit_symbol[];
 extern const char apply_symbol[];

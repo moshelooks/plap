@@ -32,7 +32,8 @@ const char cons_symbol[]=":";*/
 namespace lang_io_private {
 #define namef(name) (#name,(func_t)lang_ ## name :: instance())
 func_index func_names=boost::assign::map_list_of
-    //conditionals
+    //control flow
+    namef(do)
     namef(if)
 
     //arithmetic operators
@@ -67,11 +68,17 @@ func_index func_names=boost::assign::map_list_of
     namef(hd)
     namef(tl)
 
-    /**("lambda",lambda::instance())
-    ("let",let::instance())
+    //util
+    namef(assert)
+    namef(print)
+    namef(println)
+
+    /**("let",let::instance())
 
     ("pair",pair::instance())**/
     //core
+    namef(lambda)
+    namef(arrow)
     namef(list)
     namef(def)
     namef(decl);

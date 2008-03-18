@@ -18,16 +18,24 @@
 #define PLAP_LANG_IO_PRETTY_PRINT_H__
 
 #include <ostream>
-#include "vertex.h"
 #include "vtree_fwd.h"
+
+namespace plap { namespace lang { struct func_base; }}
 
 namespace plap { namespace lang_io {
 
 void pretty_print(std::ostream&,lang::const_subvtree,
                   std::size_t indent=0,std::size_t line_max=80);
 
-void pretty_print(std::ostream&,lang::func_t,
+void pretty_print(std::ostream&,const lang::func_base*,
                   std::size_t indent=0,std::size_t line_max=80);
 
+std::ostream& operator<<(std::ostream&,lang::const_subvtree);
+std::ostream& operator<<(std::ostream& o,lang::subvtree s);
+std::ostream& operator<<(std::ostream& o,const lang::vtree& v);
+
 }} //namespace plap::lang_io
+
+namespace boost { namespace detail { using plap::lang_io::operator<<; }}
+namespace plap { namespace lang { using plap::lang_io::operator<<; }}
 #endif //PLAP_LANG_IO_PRETTY_PRINT_H__
