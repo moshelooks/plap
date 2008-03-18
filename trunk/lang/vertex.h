@@ -97,6 +97,7 @@ inline func_t call_cast(vertex v) {
 
 template<>
 inline func_t arg_cast<func_t>(vertex v) { 
+  std::cout << is_symbol(v) << "XX" << (v.v.d ^ vertex::symbolarg_mask) << std::endl;
   assert(is_func(v));
   return id2func(v.v.d ^ vertex::funcarg_mask);
 }

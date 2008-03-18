@@ -303,8 +303,12 @@ struct iter : public IterBase,
 // tree base classes
 
 template<typename T,typename Tree>
-struct tr : boost::equality_comparable<tr<T,Tree> >,
-            boost::less_than_comparable<tr<T,Tree> > {
+struct tr : boost::equality_comparable<tree<T> >,
+            boost::equality_comparable<subtree<T> >,
+            boost::equality_comparable<const_subtree<T> >,
+            boost::less_than_comparable<tree<T> >,
+            boost::less_than_comparable<subtree<T> >,
+            boost::less_than_comparable<const_subtree<T> > {
   typedef T                          value_type;
   typedef value_type*                pointer;
   typedef value_type&                reference;
@@ -824,6 +828,7 @@ struct const_subtree
   typedef typename super::const_sub_child_iterator sub_child_iterator;
   typedef typename super::const_post_iterator post_iterator;
   typedef typename super::const_sub_post_iterator sub_post_iterator;
+  typedef pre_iterator iterator;
 
   template<typename OtherTr>
   const_subtree(const OtherTr& other) : super(other.root_node()) { 
@@ -1051,6 +1056,60 @@ struct tree_placeholder : public tree<T> {
 
 template<typename T>
 tree_placeholder<T> tree_of(const T t) { return tree_placeholder<T>(t); }
+
+template<typename Subtree>
+struct child_adapter {
+  typedef typename Subtree::child_iterator iterator;
+  child_adapter(Subtree t) : _t(t) {}
+  iterator begin() const { return _t.begin_child(); }
+  iterator end() const { return _t.end_child(); }
+ protected:
+  Subtree _t;
+};
+
+template<typename Subtree>
+struct sub_child_adapter {
+  typedef typename Subtree::sub_child_iterator iterator;
+  sub_child_adapter(Subtree t) : _t(t) {}
+  iterator begin() const { return _t.begin_sub_child(); }
+  iterator end() const { return _t.end_sub_child(); }
+ protected:
+  Subtree _t;
+};
+
+template<typename T>
+child_adapter<subtree<T> > children(subtree<T> t) { 
+  return child_adapter<subtree<T> >(t);
+}
+template<typename T>
+sub_child_adapter<subtree<T> > sub_children(subtree<T> t) { 
+  return sub_child_adapter<subtree<T> >(t);
+}
+template<typename T>
+child_adapter<subtree<T> > children(tree<T>& t) { 
+  return child_adapter<subtree<T> >(t);
+}
+template<typename T>
+sub_child_adapter<subtree<T> > sub_children(tree<T>& t) { 
+  return sub_child_adapter<subtree<T> >(t);
+}
+
+template<typename T>
+child_adapter<const_subtree<T> > children(const_subtree<T> t) { 
+  return child_adapter<const_subtree<T> >(t);
+}
+template<typename T>
+sub_child_adapter<subtree<T> > sub_children(const_subtree<T> t) { 
+  return sub_child_adapter<const_subtree<T> >(t);
+}
+template<typename T>
+child_adapter<const_subtree<T> > children(const tree<T>& t) { 
+  return child_adapter<const_subtree<T> >(t);
+}
+template<typename T>
+sub_child_adapter<subtree<T> > sub_children(const tree<T>& t) { 
+  return sub_child_adapter<const_subtree<T> >(t);
+}
 
 }} //namespace plap::util
 

@@ -21,6 +21,7 @@
 #include "analyze.h"
 #include "context.h"
 #include "pretty_print.h"
+#include "builtin.h"
 #include "tree_io.h"
 #include "io.h"
 
@@ -29,8 +30,11 @@ namespace plap { namespace lang_io {
 void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
   using std::endl;
   using boost::ref;
+  using namespace plap::lang;
 
-  plap::lang::context c;
+  context c;
+  std::ostream* tmp=lang_print::print_to;
+  lang_print::print_to=&out;
   out << util::sexpr_format << "ctrl+D exits" << endl;
   while (true) {
     try {
@@ -41,6 +45,7 @@ void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
       std::cerr << "\033[22;31m" << e.what() << "\033[00;m" << endl;
     }
   }
+  lang_print::print_to=tmp;
 }
 
 void eval_print(std::ostream& out,const_subsexpr s,lang::context& c) {

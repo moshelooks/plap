@@ -45,9 +45,6 @@ struct context : public boost::noncopyable {
     const_cast<func*>(static_cast<const func*>(decl))->set_body(body);
     return decl;
   }
-  func_t define_func(subvtree body,arity_t a) {
-    return define_func(body,declare_func(a));
-  }
   void erase_last_func() { _funcs.pop_back(); } //needed for error recovery
 
   //evaluation

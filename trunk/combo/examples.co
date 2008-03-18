@@ -1,4 +1,4 @@
-# Factorial
+# Factorial - 3 flavors
 fact $n = if $n==0 1 $n*(fact $n-1)
 # or
 fact1 $n = apply times [1..$n]
@@ -9,7 +9,8 @@ fact2 $n = accumulate times [1..$n] 1
 fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
 
 # Paul Graham's accumulator generator (though in general set should be avoided)
-foo $n = \$i -> set $n ($n+$i)
+# (http://www.paulgraham.com/accgen.html)
+acc_gen $n = \$i -> set $n ($n+$i)
 
 # Combinators
 S $x = \$y -> \$z -> ($x $z) ($y $z)
@@ -47,19 +48,10 @@ length $l = if (empty $l) 0 1+(length (tl $l))
 
 lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n-1)
 
-s = "This is what you have"
-first = nth s 0                         # "T"
-start = sub s [5...7]                   # "is"
-rest  = sub s [13...(length s)]         # "you have"
-lastl = last s                          # "e"
-end   = lasts s 4                       # "have"
-piece = subs s 8 5                      # "you"
-
 ##
 # Converting Between ASCII Characters and Values
 ##
-
-map "HAL" \$x -> char (int $x)+1            # "IBM"
+upchars $l = map $l " \$x -> char (int $x)+1
 
 ##
 # Processing a String One Character at a Time
@@ -80,8 +72,6 @@ sort $l =
     (sort (filter (less (hd $l)) (tl $l)))~[(hd $l)]~
      sort (filter (greater_equal (hd $l) (tl $l)))
 
-println "unique chars are: "~(uniq (sort "an apple a day"))
-
 ##
 # Reversing a String by Word or Character
 ##
@@ -95,10 +85,6 @@ words $l =
         words_helper $word:$words [] (tl $l)
         words_helper $words $word~[hd $l] (tl $l)
   words_helper [] [] $l
-
-
-println (reverse s)                           # reverse letters
-println (join " " (reverse (words s)))        # reverse words
 
 long_palindromes $words = 
   filter \$s -> $s == (reverse $s) && (length $s)>4
@@ -118,10 +104,10 @@ println ""
 #  Generating Random Numbers
 ##
 
-randnums = rand [25..75]                 # rand is in [25,75]
-password = power 8 "" \$x -> rand chars
+$randnum = rand [$x..75]                 # $randnum is in [25,75]
+$password = power 8 "" \$x -> rand chars
 
-# 4.7. Finding Elements in One (Sorted) List but Not Another
+# Finding Elements in One (Sorted) List but Not Another
 difference $a $b = if (empty $b)||(empty $a) $a
   cond 
     hd $a<hd $b -> [$a]~difference (tl $a) $b

@@ -46,6 +46,10 @@ LANG_CORE_make_func(def,3) {}
 
 LANG_CORE_make_func(decl,2) {}
 
+LANG_CORE_make_func(lambda,1) {}
+
+LANG_CORE_make_func(arrow,2) {}
+
 #undef LANG_CORE_make_func
 
 }} //namespace plap::lang
