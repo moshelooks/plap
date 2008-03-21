@@ -15,6 +15,7 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "builtin.h"
+#include <boost/lexical_cast.hpp>
 #include <iostream>
 #include "foreach.h"
 #include "checkpoint.h"
@@ -70,5 +71,13 @@ void lang_assert::eval(context& c,any a,subvtree dst) const {
 }
 
 std::ostream* lang_print::print_to=&std::cout;
+void lang_print::eval(context& c,any a,subvtree dst) const {
+  c.eval(a,dst);
+  (*print_to) << dst;
+}
+void  lang_println::eval(context& c,any a,subvtree dst) const {
+  lang_print::instance()->eval(c,a,dst);
+  (*lang_print::print_to) << std::endl;
+}
 
 }} //namespace plap::lang

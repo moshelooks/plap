@@ -17,16 +17,17 @@
 #ifndef PLAP_LANG_CONTEXT_H__
 #define PLAP_LANG_CONTEXT_H__
 
+#include <tr1/unordered_map>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/bind.hpp>
+#include "algorithm.h"
 #include "slist.h"
 #include "vtree.h"
 #include "func.h"
+#include "core.h"
 
 namespace plap { namespace lang {
-
-struct lang_variable;
 
 struct context : public boost::noncopyable {
 
@@ -36,9 +37,9 @@ struct context : public boost::noncopyable {
   //create a child context
   context(context& p) : _parent(&p),_root(_parent->_root) {}
 
-  lang_def* declare(arity_t a,arity_t o);
-  void define(subvtree body,lang_def* d); //this splices out body
-  void erase_last_var() { _defs.pop_back(); }  //needed for error recovery
+  lang_ident* declare(arity_t a,arity_t o);
+  void define(lang_ident*,subvtree body); //this splices out body
+  void erase_last_decl();  //needed for error recovery
 
   //evaluation methods
   void eval(const_subvtree src,subvtree dst);
@@ -50,51 +51,40 @@ struct context : public boost::noncopyable {
     return arg_cast<T>(tmp.root());
   }
 
-  /**  struct bind_seq : public std::vector<vtree> {
-    bind_seq() {}
-    bind_seq(arity_t a,arity_t o)
-        : std::vector<vtree>(a,vtree(vertex())),offset(o) {}
-    vtree& operator[](arity_t a) {
-      assert(a<this->size()+offset && a>=offset);
-      return std::vector<vtree>::operator[](a-offset);
+  //scalar bindings
+  template<typename Iterator>
+  void scalar_bind(arity_t offset,Iterator f,Iterator l) {
+    std::size_t n=std::distance(f,l);
+    if (offset==0) {
+      _scalars.push_front(vtree_seq(n,vtree(vertex())));
+    } else {
+      assert(offset==_scalars.front().size());
+      _scalars.front().resize(_scalars.front().size()+n,vtree(vertex()));
     }
-    const vtree& operator[](arity_t a) const {
-      assert(a<this->size()+offset && a>=offset);
-      return std::vector<vtree>::operator[](a-offset);
-    }
-    arity_t offset;
-  };
-  **/
-  typedef std::vector<vtree> bind_seq;
-  void pop_arg_bindings() { 
-    assert(!_args.empty());
-    _args.pop_front();
+    util::for_each(f,l,_scalars.front().end()-n,
+                   boost::bind(&context::eval,this,_1,_2));
   }
-  bind_seq& push_arg_bindings(bind_seq& b) {
-    _args.push_front(bind_seq());
-    b.swap(_args.front());
-    return _args.front();
+  void scalar_unbind(arity_t n) {
+    assert(_scalars.front().size()>=n);
+    if (n==_scalars.front().size())
+      _scalars.pop_front();
+    else
+      _scalars.front().resize(_scalars.front().size()-n);
   }
-  const vtree& arg_binding(arity_t idx) const { return _args.front()[idx]; }
-  const vtree* def_binding(func_t f) const {
-    let_map::const_iterator i=_lets.find(f);
-    if (i==_lets.end())
-      return f->body();
-    return i->second;
-  }
-  void bind_def(func_t f);
- protected:
+  
+  //identifier bindings
+  void ident_bind(func_t f,const_subvtree binding);
+  void ident_unbind(func_t f);
+ protected: 
+  typedef std::vector<vtree> vtree_seq;
+  typedef util::slist<vtree> vtree_list;
+  typedef std::tr1::unordered_map<func_t,vtree_list> ident_map;
+
   context* _parent;
   context* _root;
-
-  typedef boost::ptr_vector<lang_def> def_vector;
-  def_vector _defs;
-
-  const_subvtree lookup_arg(arity_t i) const;
-
-  util::slist<bind_seq> _args;
-  typedef tr1::unordered_map<func_t,util::slist<vtree> > let_map;
-  let_map _lets;
+  boost::ptr_vector<lang_ident> _decls;
+  util::slist<vtree_seq> _scalars;
+  ident_map _idents;
 };
 
 }} //namespace plap::lang

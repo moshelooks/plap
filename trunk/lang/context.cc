@@ -19,38 +19,47 @@
 
 namespace plap { namespace lang {
 
-//we must check for two special cases: (1) evaluation of an argument; and
-//(2) evaluation of a closure
- void eval(const_subvtree src,subvtree dst) {
-   if (src.childless()) {
-     arity_t a=test_lang_arg_cast(src.root());
-     if (a!=variadic_arity) { //case 1
-       assert(a<bindings().size());
-       assert(!bindings()[a].empty());
-       dst=bindings()[a];
-     } else if (func_t f=test_func_arg_cast(src.root())) { //case 2
-       ident_bindings::const_iterator i=_idents.find(f);
-       if (i!=idents.end())
-         dst=i->second;
-     }
-   } else {
-     (*call_cast(src.root()))(*this,src,dst);
-   }
- }
-
-lang_def* context::declare(arity_t a,arity_t o) {
-  _defs.push_back(new lang_def(a,o));
-  return &_defs.back();
+lang_ident* context::declare(arity_t a,arity_t o) {
+  _decls.push_back(new lang_ident(a,o));
+  return &_decls.back();
 }
 //this splices out body - so if you want to keep it, make a copy
-void context::define(subvtree body,lang_def* d) { d->set_body(body); }
+void context::define(lang_ident* d,subvtree body) { d->set_body(body); }
+void context::erase_last_decl() { _decls.pop_back(); }
 
-void context::bind_def(func_t f) {
-  let_map::iterator i=_lets.find(f);
-  if (i==_lets.end())
-    i=_lets.insert(make_pair(f,util::slist<vtree>(1,vtree(vertex())))).first;
+//we must check for two special cases: (1) evaluation of an argument; and
+//(2) evaluation of a closure
+void context::eval(const_subvtree src,subvtree dst) {
+  if (src.childless()) {
+    arity_t a=test_lang_arg_cast(src.root());
+    if (a!=variadic_arity) { //case 1
+      assert(a<_scalars.front().size());
+      assert(!_scalars.front()[a].empty());
+      dst=_scalars.front()[a];
+    } else if (func_t f=test_func_arg_cast(src.root())) { //case 2
+      ident_map::const_iterator i=_idents.find(f);
+      if (i!=_idents.end()) {
+        dst.root()=call(lang_closure::instance());
+        dst.append(i->second.front());
+      }
+    }
+  } else {
+    (*call_cast(src.root()))(*this,src,dst);
+  }
+}
+
+void context::ident_bind(func_t f,const_subvtree binding) {
+  ident_map::iterator i=_idents.find(f);
+  if (i==_idents.end())
+    i=_idents.insert(make_pair(f,vtree_list(1,vtree(vertex())))).first;
   else
     i->second.push_front(vtree(vertex()));
-  this->eval(f->body(),
+  this->eval(binding,i->second.front());
+}
+
+void context::ident_unbind(func_t f) {
+  assert(_idents.find(f)!=_idents.end());
+  _idents.find(f)->second.pop_front();
+}
 
 }} //namespace plap::lang

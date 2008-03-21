@@ -16,13 +16,16 @@
 
 #include "core.h"
 #include <vector>
+#include <boost/bind.hpp>
 #include "iterator_shorthands.h"
+#include "foreach.h"
 #include "algorithm.h"
-
-using boost::bind;
-using util::foreach;
+#include "context.h"
 
 namespace plap { namespace lang {
+
+using boost::bind;
+using util::for_each;
 
 void lang_list::operator()(context& c,const_subvtree s,subvtree d) const { 
   assert(!s.childless());
@@ -33,38 +36,34 @@ void lang_list::operator()(context& c,const_subvtree s,subvtree d) const {
                  boost::bind(&context::eval,&c,_1,_2));
 }
 
-//let injects bindings into the context
+//let injects identifier bindings into the context
 void lang_let::operator()(context& c,const_subvtree s,subvtree d) const { 
   assert(s.arity()==2);
-  assert(s.front()==lang_list::instance());
-  std::vector<func_t> closures;
+  assert(s.front()==call(lang_list::instance()));
   foreach (vertex v,children(s.front_sub())) {
-    assert(arg_cast<func_t>(v)->body());
-    if (arg_cast<func_t>(v)->closure()) {
-      closures.push_back(arg_cast<func_t>(v));
-      c.bind_closure(closures.back());
-    }
+    func_t f=arg_cast<func_t>(v);
+    assert(f->body());
+    c.ident_bind(f,*f->body());
   }
   c.eval(s.back_sub(),d);
-  foreach (func_t f,closures)
-    c.unbind_closure(f);
+  foreach (vertex v,children(s.front_sub()))
+    c.ident_unbind(arg_cast<func_t>(v));
 }
 
+//identifiers, when bound to lambdas, inject scalar bindings
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
-  if (_arity==0 || s.childless()) {
-    d=*c.ident_binding(this);
+  if (_arity==0) {
+    //fixme d=*c.ident_binding(this);
   } else {
     assert(s.arity()==_arity);
-    context::bindings& b=c.push_bindings(_arity,_offset);
-    std::for_each(s.begin_sub_child(),s.end_sub_child(),b.begin(),
-                  boost::bind(&context::eval,&c,_1,_2));
-    c.eval(*c.binding(this),d);
-    c.pop_bindings();
+    c.scalar_bind(_offset,s.begin_sub_child(),s.end_sub_child());
+    //fixmec.eval(*c.ident_binding(this),d);
+    c.scalar_unbind(_arity);
   }
 }
 
 void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
-  assert(false); //we shouldn't get called directly, only inside an apply-expr
+  
 }
   
 #if 0
@@ -164,7 +163,7 @@ void lang_variable::operator()(context& c,const_subvtree s,subvtree d) const {
   } else {                                     //case #1
     eval(c,s,d);
   }
-#endif
+
 }
 
 void lang_variable::eval(context& c,const_subvtree s,subvtree d) const {
@@ -228,7 +227,6 @@ void lang_variable::set_body(subvtree b) {
   } else {                                     //case #1
     eval(c,s,d);
   }
-#endif
 }
 
 void lang_variable::eval(context& c,const_subvtree s,subvtree d) const {

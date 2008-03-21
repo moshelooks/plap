@@ -119,10 +119,10 @@ struct semantic_analyzer {
       return;
     }
 
-    special_case(lang_def,3);
-    special_case(lang_lambda,1);
+    //  special_case(lang_def,3);
+    // special_case(lang_lambda,1);
     //special_case(let,variadic_arity);**/
-    special_case(lang_decl,2);
+    // special_case(lang_decl,2);
     /**special_case(pair,variadic_arity);
     **/
     if (func_t f=string2func(root)) {
@@ -184,13 +184,13 @@ struct semantic_analyzer {
       //a new function
       if (nested(src)) //error - defs must first be declared at global scope
         throw_undeclared_name(name);
-      f=c.declare(a);
+      //fixmef=c.declare(a);
       name_func(f,sexpr2identifier(src[0]));
       try {
         make_def(src[2],nested(src),f);
       } catch (std::runtime_error e) {
         erase_func_name(f);
-        c.erase_last_func();
+        c.erase_last_decl();
         throw e;
       }
     }
@@ -216,7 +216,7 @@ struct semantic_analyzer {
         dst.splice(dst.end_child(),body);
 #endif
     } else { //create it now
-      c.define(body,f);
+      //fixmec.define(f,body);
     }
   }
 
@@ -225,6 +225,7 @@ struct semantic_analyzer {
   }
   
   process(lang_lambda) { //lambda(arrow((args),body))
+#if 0
     if (src.front()!=*func2name(lang_arrow::instance()))
       throw_bad_lambda(lexical_cast<string>(src));
     foreach (const string& s,src) {
@@ -244,6 +245,7 @@ struct semantic_analyzer {
       throw e;
     }
     dst.root()=arg(f);
+#endif
   }
 
   process(lang_let) { //let(list(def1 ...) body)
@@ -259,7 +261,7 @@ struct semantic_analyzer {
     const string& name=sexpr2identifier(src[0]);
     if (name2func(name))
       throw_bad_decl_exists(name);
-    name_func(c.declare(sexpr2arity(src[1])),name);
+    //fixmename_func(c.declare(sexpr2arity(src[1])),name);
     dst.root()=nil();
   }
 

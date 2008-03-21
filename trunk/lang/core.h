@@ -17,10 +17,12 @@
 #ifndef PLAP_LANG_CORE_H__
 #define PLAP_LANG_CORE_H__
 
-#include <boost/bind.hpp>
-#include "context.h"
+#include "func.h"
+#include "vtree.h"
 
 namespace plap { namespace lang {
+
+struct context;
 
 struct lang_list : public stateless_func<lang_list,variadic_arity> {
   void operator()(context& c,const_subvtree s,subvtree d) const;
@@ -30,7 +32,7 @@ struct lang_let : public stateless_func<lang_let,2> {
   void operator()(context& c,const_subvtree s,subvtree d) const;
 };
 
-struct lang_def : public func {
+struct lang_ident : public func {
   arity_t arity() const { return _arity; }
   void operator()(context& c,const_subvtree s,subvtree d) const;
   const vtree* body() const { return &_body; }
@@ -38,18 +40,13 @@ struct lang_def : public func {
  protected:
   vtree _body;
   arity_t _arity,_offset;
-  void set_body(subvtree b);
-  lang_def(arity_t a,arity_t o) : _arity(a),_offset(o) {}
+  void set_body(subvtree b) {}//fixme
+  lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 
-struct lang_closure : public func {
-  arity_t arity() const { return _arity; }
+struct lang_closure : public stateless_func<lang_closure,1> {
   void operator()(context& c,const_subvtree s,subvtree d) const;
   bool closure() const { return true; }
-  friend struct context;
- protected:
-  arity_t _arity,_offset;
-  lang_closure(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 
 }} //namespace plap::lang
