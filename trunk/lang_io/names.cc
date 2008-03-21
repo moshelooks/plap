@@ -23,6 +23,8 @@
 namespace plap { namespace lang_io {
 
 const char def_symbol[]="=";
+const char char_symbol[]="'";
+const char string_symbol[]="\"";
 const char anon_func_name[]="anonymous_function";
 
 /*
@@ -87,7 +89,7 @@ func_index func_names=boost::assign::map_list_of
 arg_index arg_names; //core & builtin functions don't need arg names
 
 using namespace util;
-std::string tostr(char c) { return std::string(1,c); }
+std::string tostr(char c) { return "'"+std::string(1,c)+"'"; }
 symbol_index symbol_names=boost::assign::list_of<std::string>
     ("false")
     ("true")

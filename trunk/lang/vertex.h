@@ -17,12 +17,12 @@
 #ifndef PLAP_LANG_VERTEX_H__
 #define PLAP_LANG_VERTEX_H__
 
-#include "func_base.h"
+#include "func.h"
 
 namespace plap { namespace lang {
 
-typedef const func_base* func_t;
-typedef float            number_t;
+typedef const func* func_t;
+typedef float       number_t;
 
 struct vertex {
   vertex() {  //junk
@@ -51,6 +51,7 @@ struct vertex {
   friend bool is_symbol(vertex);
   friend bool is_number(vertex);
   friend arity_t test_lang_arg_cast(vertex);
+  friend bool is_char(vertex);
   
   bool operator<(vertex rhs) const { return v.d<rhs.v.d; }
   bool operator==(vertex rhs) const { return v.d==rhs.v.d; }
@@ -97,7 +98,6 @@ inline func_t call_cast(vertex v) {
 
 template<>
 inline func_t arg_cast<func_t>(vertex v) { 
-  std::cout << is_symbol(v) << "XX" << (v.v.d ^ vertex::symbolarg_mask) << std::endl;
   assert(is_func(v));
   return id2func(v.v.d ^ vertex::funcarg_mask);
 }
@@ -142,6 +142,11 @@ inline  bool is_number(vertex v) {
   return ((v.v.d & vertex::funcarg_mask)!=vertex::funcarg_mask); 
 }
 
+inline bool is_char(vertex v) {
+  return (is_symbol(v) && arg_cast<id_t>(v)>=vertex::smallest_char &&
+          arg_cast<id_t>(v)<=vertex::largest_char);
+}
+
 //returns index if a lang_arg, else varidic_arity
 inline arity_t test_lang_arg_cast(vertex v) {
   if (is_symbol(v)) {
@@ -150,6 +155,9 @@ inline arity_t test_lang_arg_cast(vertex v) {
       return d;
   }
   return variadic_arity;
+}
+inline func_t test_func_arg_cast(vertex v) {
+  return is_func(v) ? arg_cast<func_t>(v) : NULL;
 }
 
 }} //namespace plap::lang

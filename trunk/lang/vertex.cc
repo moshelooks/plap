@@ -37,7 +37,7 @@ const id_t vertex::true_id=1;
 const id_t vertex::nil_id=2;
 
 const id_t vertex::smallest_lang_arg=3;
-const id_t vertex::largest_lang_arg=vertex::smallest_lang_arg+LANG_ARG_MAX;
+const id_t vertex::largest_lang_arg=vertex::smallest_lang_arg+LANG_ARG_MAX-1;
 
 const id_t vertex::smallest_char=vertex::largest_lang_arg+1;
 const id_t vertex::largest_char=vertex::smallest_char

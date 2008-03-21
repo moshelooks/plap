@@ -28,7 +28,6 @@
 #include "builtin.h"
 #include "operators.h"
 #include "names.h"
-
 #include "tree_iterator.h"
 
 #include <iostream>
@@ -113,8 +112,10 @@ struct semantic_analyzer {
   bool nested(const_subsexpr src) { return src.begin()!=root.begin(); }
 
   process(sexpr) {
+    const string& root=src.root();
+
     if (src.childless()) {
-      dst.root()=string2arg(src.root());
+      dst.root()=string2arg(root);
       return;
     }
 
@@ -124,13 +125,27 @@ struct semantic_analyzer {
     special_case(lang_decl,2);
     /**special_case(pair,variadic_arity);
     **/
-    if (func_t f=string2func(src.root())) {
+    if (func_t f=string2func(root)) {
       validate_arity(src,f);
       dst.root()=call(f);
       process_children(src,dst);
+    } else if (root==char_symbol) { //char literal
+      assert(src.arity()==1 && src.front().length()==1);
+      dst.root()=arg(src.front()[0]);
+    } else if (root==string_symbol) { //string literal
+      if (src.childless()) {
+        dst.root()=nil();
+      } else {
+        assert(src.size()==src.arity()+1u);
+        dst.root()=call(lang_list::instance());
+        foreach(const string& s,children(src)) {
+          assert(s.length()==1);
+          dst.append(arg(s[0]));
+        }
+      }        
     } else { //see if its a scalar - if so, need to introduce an apply node
       dst.root()=call(lang_apply::instance());
-      dst.append(string2scalar(src.root()));
+      dst.append(string2scalar(root));
       dst.append(vertex());
       process_list(src,dst.back_sub());
     }
@@ -169,7 +184,7 @@ struct semantic_analyzer {
       //a new function
       if (nested(src)) //error - defs must first be declared at global scope
         throw_undeclared_name(name);
-      f=c.declare_func(a);
+      f=c.declare(a);
       name_func(f,sexpr2identifier(src[0]));
       try {
         make_def(src[2],nested(src),f);
@@ -201,7 +216,7 @@ struct semantic_analyzer {
         dst.splice(dst.end_child(),body);
 #endif
     } else { //create it now
-      c.define_func(body,f);
+      c.define(body,f);
     }
   }
 
@@ -219,7 +234,7 @@ struct semantic_analyzer {
       }
     }
     //no variable capture, easy!
-    func_t f=c.declare_func(src[0][0].arity()+1);
+    func_t f=c.declare(src[0][0].arity()+1);
     for_each(src[0][0].begin(),src[0][0].end(),count_it(0),
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
     try {
@@ -231,17 +246,20 @@ struct semantic_analyzer {
     dst.root()=arg(f);
   }
 
-  process(let) { //let(list(def1 ...) body)
-#if 0
-    argu..;//fixme
-#endif
+  process(lang_let) { //let(list(def1 ...) body)
+    /*  if (src[0]!=*func2name(lang_list::instance()))
+      throw_bad_let(src.root());
+    let_b
+    foreach (const_subsexpr s,children(src[0])) {
+      if (s.root()!=*func2name(lang_def::instance()))
+      throw_bad_let(src.root());*/
   }
 
   process(lang_decl) { //decl(name arity)
     const string& name=sexpr2identifier(src[0]);
     if (name2func(name))
       throw_bad_decl_exists(name);
-    name_func(c.declare_func(sexpr2arity(src[1])),name);
+    name_func(c.declare(sexpr2arity(src[1])),name);
     dst.root()=nil();
   }
 

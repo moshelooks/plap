@@ -30,14 +30,13 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/iterator/indirect_iterator.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
+#include <boost/iterator/filter_iterator.hpp>
 
 namespace plap { namespace util {
 
 template<typename Incrementable>
 inline boost::counting_iterator<Incrementable> 
-count_it(Incrementable x) {
-  return boost::make_counting_iterator(x);
-}
+count_it(Incrementable i) { return boost::make_counting_iterator(i); }
 
 template<typename ElementIterator,typename IndexIterator>
 inline boost::permutation_iterator<ElementIterator,IndexIterator>
@@ -47,21 +46,21 @@ permute_it(ElementIterator e,IndexIterator i) {
 
 template<typename UnaryFunction,typename Iterator>
 inline boost::transform_iterator<UnaryFunction,Iterator>
-transform_it(Iterator it,UnaryFunction fun) { 
-  return boost::make_transform_iterator(it,fun);
+transform_it(Iterator i,UnaryFunction fun) { 
+  return boost::make_transform_iterator(i,fun);
 }
 
 template<typename Iterator>
 inline boost::indirect_iterator<Iterator> 
-indirect_it(Iterator it) {
-  return boost::make_indirect_iterator(it);
-}
+indirect_it(Iterator i) { return boost::make_indirect_iterator(i); }
 
 template<typename BidirectionalIterator>
 inline boost::reverse_iterator<BidirectionalIterator>
-reverse_it(BidirectionalIterator x) {
-  return boost::make_reverse_iterator(x);
-}
+reverse_it(BidirectionalIterator i) { return boost::make_reverse_iterator(i); }
+
+template<typename Predicate,typename Iterator>
+inline boost::filter_iterator<Predicate,Iterator>
+filter_it(Iterator i,Predicate p) { return boost::make_filter_iterator(i,p); }
 
 template<typename Value>
 struct repetition_iterator

@@ -38,12 +38,18 @@ using namespace util;
 using namespace boost;
 using namespace std;
 
+bool is_string(const_subvtree& loc,func_t& f) {
+  return (lexical_cast<string>(*f)==*func2name(lang_list::instance()) &&
+          is_char(loc.front()));
+}
+
 struct directive {
   string prefix,infix,suffix;
     
   directive(const_subvtree& loc,func_t& f) {
     string s=lexical_cast<string>(*f);
     if (s==*func2name(lang_list::instance())) {
+      assert(!loc.childless());
       prefix="[";
       infix=",";
       suffix="]";
@@ -101,6 +107,15 @@ struct pretty_printer {
     }
 
     func_t f=call_cast(s.root());
+
+    if (is_string(s,f)) {
+      (*o) << '"';
+      foreach(vertex v,children(s))
+        (*o) << arg_cast<char>(v);
+      (*o) << '"';
+      return;
+    }
+
     directive d=directive(s,f);
 
     if (sexpr && d.prefix!="" && d.prefix!="[") {
