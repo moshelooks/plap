@@ -18,55 +18,40 @@
 #define PLAP_LANG_CORE_H__
 
 #include <boost/bind.hpp>
-#include "algorithm.h"
 #include "context.h"
-#include "cast.h"
 
 namespace plap { namespace lang {
 
 struct lang_list : public stateless_func<lang_list,variadic_arity> {
-  void operator()(context& c,const_subvtree s,subvtree d) const { 
-    assert(!s.childless());
-    assert(d.childless());
-    d.root()=call(this);
-    d.append(s.arity(),vertex());
-    util::for_each(s.begin_sub_child(),s.end_sub_child(),d.begin_sub_child(),
-                   boost::bind(&context::eval,&c,_1,_2));
-  }
+  void operator()(context& c,const_subvtree s,subvtree d) const;
 };
 
-#define LANG_CORE_make_func(name,arity)                                   \
-  struct lang_ ## name : public stateless_func<lang_ ## name,arity> {     \
-    inline void operator()(context& c,const_subvtree s,subvtree d) const; \
-  };                                                                      \
-  void lang_ ## name::operator()(context& c,const_subvtree s,subvtree d) const
+struct lang_let : public stateless_func<lang_let,2> {
+  void operator()(context& c,const_subvtree s,subvtree d) const;
+};
 
+struct lang_def : public func {
+  arity_t arity() const { return _arity; }
+  void operator()(context& c,const_subvtree s,subvtree d) const;
+  const vtree* body() const { return &_body; }
+  friend struct context;
+ protected:
+  vtree _body;
+  arity_t _arity,_offset;
+  void set_body(subvtree b);
+  lang_def(arity_t a,arity_t o) : _arity(a),_offset(o) {}
+};
 
-LANG_CORE_make_func(def,3) {}
-
-LANG_CORE_make_func(decl,2) {}
-
-LANG_CORE_make_func(lambda,1) {}
-
-LANG_CORE_make_func(arrow,2) {}
-
-#undef LANG_CORE_make_func
+struct lang_closure : public func {
+  arity_t arity() const { return _arity; }
+  void operator()(context& c,const_subvtree s,subvtree d) const;
+  bool closure() const { return true; }
+  friend struct context;
+ protected:
+  arity_t _arity,_offset;
+  lang_closure(arity_t a,arity_t o) : _arity(a),_offset(o) {}
+};
 
 }} //namespace plap::lang
 
 #endif //PLAP_LANG_CORE_H__
-
-#if 0
-void lang_apply2(const_subvtree l,list_of<const_subvtree> r) {
-
-
-  vtree tmp=vtree(vertex());
-  c.eval(s.front_sub(),tmp);
-  util::foreach
-  tmp.append(s.back_sub().begin_sub_child(),s.back_sub().end_sub_child());
-}
-
-{
-  
-  func_of<T(U)> l=get_type(s[0]);
-#endif  

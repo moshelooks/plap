@@ -28,6 +28,7 @@
 #include <numeric>
 #include <ostream>
 #include "iterator_shorthands.h"
+#include "pretty_print.h"
 #include "core.h"
 
 //generates a builtin struct for some arity
@@ -212,30 +213,45 @@ struct lang_accumulate : public builtin<lang_accumulate(any,any_list,any)> {
 struct lang_assert : public builtin<lang_assert(any)> {
   void eval(context& c,any a,subvtree dst) const;
 };
-struct lang_print : public builtin<lang_print(list_of<char>)> {
+struct lang_print : public builtin<lang_print(any)> {
   static std::ostream* print_to;
-  void cfeval(list_of<char> l,subvtree dst) const {
-    dst.root()=nil();
-    
+  void eval(context& c,any a,subvtree dst) const {
+    c.eval(a,dst);
+    (*print_to) << dst;
   }
 };
-struct lang_println : public builtin<lang_print(list_of<char>)> {
-  void cfeval(list_of<char> l,subvtree dst) const {
-    lang_print::instance()->cfeval(l,dst);
+struct lang_println : public builtin<lang_println(any)> {
+  void eval(context& c,any a,subvtree dst) const {
+    lang_print::instance()->eval(c,a,dst);
     (*lang_print::print_to) << std::endl;
+  }
+};
+#if 0
+struct lang_expand : public builtin<lang_expand(any)> {
+  void cfeval(any a,subvtree dst) {
+    if (a.childless())
+      if (is_func(a.root()) && arg_cast<func_t>(a.root())->body())
+        dst=*a.root().body();
+      else
+        dst=a;
+    else
+      dst=a;
   }
 };
 struct lang_expand : public builtin<lang_expand(any)> {
   void cfeval(any a,subvtree dst) {
-    /** if (a.childless())
+    if (a.childless())
+
+      two expands, one just a function (list?), one all the way
+
       if (is_func(a.root()) && arg_cast<func_t>(a.root())->body())
         dst=*a.root().body();
       else
         
-      dst=**/
+      dst=
   }
 };
-
+#endif
 }} //namespace plap::lang
 
 #undef PLAP_LANG_builtin

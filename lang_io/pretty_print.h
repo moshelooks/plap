@@ -20,14 +20,14 @@
 #include <ostream>
 #include "vtree_fwd.h"
 
-namespace plap { namespace lang { struct func_base; }}
+namespace plap { namespace lang { struct func; }}
 
 namespace plap { namespace lang_io {
 
 void pretty_print(std::ostream&,lang::const_subvtree,
                   std::size_t indent=0,std::size_t line_max=80);
 
-void pretty_print(std::ostream&,const lang::func_base*,
+void pretty_print(std::ostream&,const lang::func*,
                   std::size_t indent=0,std::size_t line_max=80);
 
 std::ostream& operator<<(std::ostream&,lang::const_subvtree);

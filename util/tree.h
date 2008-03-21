@@ -218,6 +218,9 @@ template<typename SubtreeT,typename IterBase>
 struct sub_iter_base : public IterBase {
   typedef SubtreeT result_type;
   typedef SubtreeT reference;
+  typedef boost::filter_iterator<bool(*)(SubtreeT),sub_iter_base> sub_leaves;
+  typedef boost::transform_iterator< //for convenient iteration over leaves
+    typename SubtreeT::value_type(*)(result_type),sub_leaves> leaves;
  protected:
   result_type dereference() const { return result_type(this->_node); }
 };
@@ -1060,6 +1063,7 @@ tree_placeholder<T> tree_of(const T t) { return tree_placeholder<T>(t); }
 template<typename Subtree>
 struct child_adapter {
   typedef typename Subtree::child_iterator iterator;
+  typedef typename Subtree::const_child_iterator const_iterator;
   child_adapter(Subtree t) : _t(t) {}
   iterator begin() const { return _t.begin_child(); }
   iterator end() const { return _t.end_child(); }
@@ -1070,6 +1074,7 @@ struct child_adapter {
 template<typename Subtree>
 struct sub_child_adapter {
   typedef typename Subtree::sub_child_iterator iterator;
+  typedef typename Subtree::const_sub_child_iterator const_iterator;
   sub_child_adapter(Subtree t) : _t(t) {}
   iterator begin() const { return _t.begin_sub_child(); }
   iterator end() const { return _t.end_sub_child(); }
@@ -1109,6 +1114,18 @@ child_adapter<const_subtree<T> > children(const tree<T>& t) {
 template<typename T>
 sub_child_adapter<subtree<T> > sub_children(const tree<T>& t) { 
   return sub_child_adapter<const_subtree<T> >(t);
+}
+
+template<typename Tree>
+bool childless(const Tree& t) { return t.childless(); }
+template<typename Tree>
+typename Tree::value_type root(const Tree& t) { return t.root(); }
+
+template<typename Iter>
+typename Iter::sub_leaves leaves(Iter i) { return filter_it(i,&childless); }
+template<typename Iter>
+typename Iter::leaves leaves(Iter i) { 
+  return transform_it(sub_leaves(i),&root);
 }
 
 }} //namespace plap::util

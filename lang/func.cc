@@ -15,27 +15,14 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "func.h"
-#include <boost/bind.hpp>
-#include "iterator_shorthands.h"
-#include "algorithm.h"
-#include "context.h"
-#include "checkpoint.h"
 
 namespace plap { namespace lang {
 
-void func::operator()(context& c,const_subvtree loc,subvtree dst) const {
-  assert(loc.arity()==_arity);
-  context::bind_seq b=context::bind_seq(_arity,vtree(vertex()));
-  checkpoint();
-  util::for_each(loc.begin_sub_child(),loc.end_sub_child(),b.begin(),
-                 boost::bind(&context::eval,&c,_1,_2));
-  checkpoint();
-  c.push_bindings(b);
-  checkpoint();
-  c.eval(_body,dst);
-  checkpoint();
-  c.pop_bindings();
-  checkpoint();
+namespace lang_private { //global repo mapping functions to ids
+std::vector<func*>& ids() {
+  static std::vector<func*> id_repo;
+  return id_repo;
 }
+} //namespace lang_private
 
 }} //namespace plap::lang

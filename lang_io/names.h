@@ -22,7 +22,7 @@
 #include <vector>
 #include <ostream>
 #include "bimap.h"
-#include "func.h"
+#include "vertex.h"
 
 namespace plap { namespace lang_io {
 
@@ -37,6 +37,8 @@ typedef util::vector_bimap<std::string>::type symbol_index;
 extern func_index func_names;
 extern arg_index arg_names;
 extern symbol_index symbol_names;
+
+extern func_index let_names;
 } //namespace lang_io_private
 
 inline void name_func(lang::func_t f,const std::string& name) {
@@ -97,37 +99,17 @@ inline const std::string& symbol2name(lang::id_t s) {
 extern const char def_symbol[];
 extern const char char_symbol[];
 extern const char string_symbol[];
-/**
-extern const char strlit_symbol[];
-extern const char apply_symbol[];
-extern const char cons_symbol[];
-
-extern const char def_name[];
-extern const char apply_name[];
-
-
-extern const char lambda_name[];
-extern const char let_name[];
-extern const char decl_name[];
-extern const char pair_name[];
-
-extern const char true_name[];
-extern const char false_name[];
-
-extern const char if_name[];**/
-
 extern const char anon_func_name[];
 
 }} //namespace plap::lang_io
 
 //this allows lexical_casts to work properly - blech
 namespace boost { namespace detail {
-inline std::ostream& operator<<(std::ostream& out,
-                                const plap::lang::func_base& f) {
-  if (const std::string* s=plap::lang_io::func2name(&f))
+inline std::ostream& operator<<(std::ostream& out,plap::lang::func_t f) {
+  if (const std::string* s=plap::lang_io::func2name(f))
     out << *s;
   else
-    out << plap::lang_io::anon_func_name << "#" << f.id();
+    out << plap::lang_io::anon_func_name << "#" << f->id();
   return out;
 }
 }}

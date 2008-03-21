@@ -17,25 +17,76 @@
 #ifndef PLAP_LANG_FUNC_H__
 #define PLAP_LANG_FUNC_H__
 
-#include "func_base.h"
-#include "vtree.h"
+#include <cassert>
+#include <vector>
+#include <boost/noncopyable.hpp>
+#include <boost/integer_traits.hpp>
+#include "vtree_fwd.h"
+
+#include <iostream> //fixme
+
+#ifndef LANG_LIMIT_ARITY //determines the maximal arity of defs in the language
+#  define LANG_LIMIT_ARITY 4
+#endif
+#ifndef LANG_ARG_MAX //determines max # of args, including nesting
+#  define LANG_ARG_MAX 16
+#endif
 
 namespace plap { namespace lang {
 
-struct func : public func_base {
-  func(arity_t a) : _arity(a) { assert(_arity>0); }
-  const vtree* body() const { return &_body; }
+struct context;
 
-  arity_t arity() const { return _arity; }
-  void operator()(context& c,const_subvtree loc,subvtree dst) const;
+typedef unsigned int  id_t;
+typedef unsigned char arity_t;
+//this is needed because numeric_limits::max() isn't a const-expression
+static const arity_t variadic_arity=boost::integer_traits<arity_t>::const_max;
 
-  friend struct context;
+struct func;
+namespace lang_private {
+std::vector<func*>& ids(); //global repo mapping functions to ids
+} //namespace lang_private
+
+struct func : boost::noncopyable {
+ //fixme - look for gaps in ids() and use them
+  func() : _id(lang_private::ids().size()) { 
+    lang_private::ids().push_back(this); 
+  }
+  virtual ~func() { lang_private::ids()[_id]=NULL; }
+
+  id_t id() const { return _id; }
+  
+  bool variadic() const { return arity()==variadic_arity; }
+  virtual const vtree* body() const { return NULL; }
+  virtual bool closure() const { return false; }
+
+  virtual arity_t arity() const=0;
+  virtual void operator()(context&,const_subvtree,subvtree) const=0;
+
  protected:
-  arity_t _arity;
-  vtree _body;
+  id_t _id;
+};
 
-  void set_body(subvtree b) { _body.splice(_body.end(),b); }
+inline func* id2func(id_t s) {
+  //  std::cout << s << " "  << func::_ids.size() << std::endl;
+  assert(s<lang_private::ids().size());
+  assert(lang_private::ids()[s]);
+  return lang_private::ids()[s];
+}
+
+template<arity_t Arity>
+struct narg_func : public func {
+  arity_t arity() const { return Arity; }
+};
+
+template<typename Type,arity_t Arity>
+struct stateless_func : public narg_func<Arity> { 
+  static Type* instance() {
+    static Type t;
+    return &t;
+  }
+ protected:
+  stateless_func() {}
 };
 
 }} //namespace plap::lang
-#endif //PLAP_LANG_FUNCTION_H__
+#endif //PLAP_LANG_FUNC_H__

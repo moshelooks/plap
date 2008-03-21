@@ -17,7 +17,7 @@
 #ifndef PLAP_LANG_TYPE_H__
 #define PLAP_LANG_TYPE_H__
 
-#include "func.h"
+#include "vtree.h"
 
 namespace plap { namespace lang {
 
