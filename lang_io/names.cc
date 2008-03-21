@@ -79,11 +79,11 @@ func_index func_names=boost::assign::map_list_of
 
     ("pair",pair::instance())**/
     //core
-    namef(lambda)
-    namef(arrow)
-    namef(list)
-    namef(def)
-    namef(decl);
+    //fixme namef(lambda)
+    //fixmenamef(arrow)
+    namef(list);
+    //fixmenamef(def)
+    //fixmenamef(decl);
 #undef namef
 
 arg_index arg_names; //core & builtin functions don't need arg names

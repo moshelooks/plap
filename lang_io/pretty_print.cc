@@ -39,7 +39,7 @@ using namespace boost;
 using namespace std;
 
 bool is_string(const_subvtree& loc,func_t& f) {
-  return (lexical_cast<string>(*f)==*func2name(lang_list::instance()) &&
+  return (lexical_cast<string>(f)==*func2name(lang_list::instance()) &&
           is_char(loc.front()));
 }
 
@@ -47,7 +47,7 @@ struct directive {
   string prefix,infix,suffix;
     
   directive(const_subvtree& loc,func_t& f) {
-    string s=lexical_cast<string>(*f);
+    string s=lexical_cast<string>(f);
     if (s==*func2name(lang_list::instance())) {
       assert(!loc.childless());
       prefix="[";
@@ -56,7 +56,7 @@ struct directive {
     } else {
       infix=operator2name(s,2);
       if (infix==s) { //infix binary operator, or prefix operator?
-        prefix=lexical_cast<string>(*f)+" ";
+        prefix=lexical_cast<string>(f)+" ";
         infix=" ";
       }
     }
@@ -67,13 +67,13 @@ struct name_visitor : public arg_visitor<string> {
   name_visitor(const argname_seq& a) : args(a) {}
   const argname_seq& args;
 
-  string operator()(func_t f) const { return lexical_cast<string>(*f); }
+  template<typename T>
+  string operator()(T t) const { return lexical_cast<string>(t); }
   string operator()(id_t d) const { 
     if (is_lang_arg(d))
       return '$'+args[lang_arg_cast(d)];
     return symbol2name(d); 
   }
-  string operator()(number_t n) const { return lexical_cast<string>(n); }
 };
 
 struct pretty_printer {
@@ -169,7 +169,7 @@ void pretty_print(ostream& o,const_subvtree s,size_t indent,size_t linemax) {
 }
 
 void pretty_print(ostream& o,func_t f,size_t indent,size_t linemax) {
-  std::string name=lexical_cast<std::string>(*f);
+  std::string name=lexical_cast<std::string>(f);
   if (const vtree* body=f->body()) {
     std::stringstream ss;
     ss << name << " ";

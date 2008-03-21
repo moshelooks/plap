@@ -28,8 +28,9 @@
 #include <numeric>
 #include <ostream>
 #include "iterator_shorthands.h"
-#include "pretty_print.h"
 #include "core.h"
+#include "context.h"
+#include "cast.h"
 
 //generates a builtin struct for some arity
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
@@ -215,16 +216,10 @@ struct lang_assert : public builtin<lang_assert(any)> {
 };
 struct lang_print : public builtin<lang_print(any)> {
   static std::ostream* print_to;
-  void eval(context& c,any a,subvtree dst) const {
-    c.eval(a,dst);
-    (*print_to) << dst;
-  }
+  void eval(context& c,any a,subvtree dst) const;
 };
 struct lang_println : public builtin<lang_println(any)> {
-  void eval(context& c,any a,subvtree dst) const {
-    lang_print::instance()->eval(c,a,dst);
-    (*lang_print::print_to) << std::endl;
-  }
+  void eval(context& c,any a,subvtree dst) const;
 };
 #if 0
 struct lang_expand : public builtin<lang_expand(any)> {
