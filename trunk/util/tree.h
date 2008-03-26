@@ -106,6 +106,17 @@ struct subtree;
 template<typename T>
 struct tree;
 
+template<typename Iterator>
+Iterator parent(Iterator i) {
+  typename Iterator::base_pointer n=i._node;
+  while (n->dereferenceable()) {
+    if (n->end==n)
+      return n;
+    n=n->next;
+  }
+  return Iterator(n->next);
+}
+
 namespace util_private {
 
 /////////
@@ -212,6 +223,8 @@ struct iter_base {
   friend struct const_subtree;
   template<typename>
   friend struct iter;
+  template<typename Iterator>
+  friend Iterator plap::util::parent(Iterator);
 };
 
 template<typename SubtreeT,typename IterBase>
@@ -646,14 +659,6 @@ struct mutable_tr : public tr<T,Tree> {
   sub_post_iterator begin_sub_post() { return make_post(this->root_node()); }
   sub_post_iterator end_sub_post() { return this->end_node(); }
 
-  template<typename Iterator>
-  Iterator parent(Iterator i) const {
-    node_base* n=i._node;
-    while (n->dereferenceable())
-      n=n->next;
-    return Iterator(n->next);
-  }
-
   value_type& root() { return *this->begin(); }
   subtree<T> root_sub() { return *this->begin_sub(); } 
   subtree<T> operator[](size_type idx) {
@@ -1063,23 +1068,23 @@ tree_placeholder<T> tree_of(const T t) { return tree_placeholder<T>(t); }
 template<typename Subtree>
 struct child_adapter {
   typedef typename Subtree::child_iterator iterator;
-  typedef typename Subtree::const_child_iterator const_iterator;
+  typedef typename Subtree::child_iterator const_iterator;
   child_adapter(Subtree t) : _t(t) {}
   iterator begin() const { return _t.begin_child(); }
   iterator end() const { return _t.end_child(); }
  protected:
-  Subtree _t;
+  mutable Subtree _t;
 };
 
 template<typename Subtree>
 struct sub_child_adapter {
   typedef typename Subtree::sub_child_iterator iterator;
-  typedef typename Subtree::const_sub_child_iterator const_iterator;
+  typedef typename Subtree::sub_child_iterator const_iterator;
   sub_child_adapter(Subtree t) : _t(t) {}
   iterator begin() const { return _t.begin_sub_child(); }
-  iterator end() const { return _t.end_sub_child(); }
+  iterator end() const { return _t.end_sub_child(); } 
  protected:
-  Subtree _t;
+  mutable Subtree _t;
 };
 
 template<typename T>
@@ -1104,7 +1109,7 @@ child_adapter<const_subtree<T> > children(const_subtree<T> t) {
   return child_adapter<const_subtree<T> >(t);
 }
 template<typename T>
-sub_child_adapter<subtree<T> > sub_children(const_subtree<T> t) { 
+sub_child_adapter<const_subtree<T> > sub_children(const_subtree<T> t) { 
   return sub_child_adapter<const_subtree<T> >(t);
 }
 template<typename T>

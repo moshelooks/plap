@@ -74,6 +74,7 @@ func_index func_names=boost::assign::map_list_of
     namef(assert)
     namef(print)
     namef(println)
+    namef(set)
 
     /**("let",let::instance())
 
@@ -81,6 +82,7 @@ func_index func_names=boost::assign::map_list_of
     //core
     //fixme namef(lambda)
     //fixmenamef(arrow)
+    //namef(ident)
     namef(list);
     //fixmenamef(def)
     //fixmenamef(decl);

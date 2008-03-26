@@ -21,6 +21,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/bind.hpp>
+#include "foreach.h"
 #include "algorithm.h"
 #include "slist.h"
 #include "vtree.h"
@@ -54,15 +55,21 @@ struct context : public boost::noncopyable {
   //scalar bindings
   template<typename Iterator>
   void scalar_bind(arity_t offset,Iterator f,Iterator l) {
-    std::size_t n=std::distance(f,l);
+    //first eval, then add (we must not mung _scalars until after evaling)
+    vtree_seq args(std::distance(f,l),vtree(vertex()));
+    util::for_each(f,l,args.begin(),boost::bind(&context::eval,this,_1,_2));
+
     if (offset==0) {
-      _scalars.push_front(vtree_seq(n,vtree(vertex())));
+      _scalars.push_front(vtree_seq());
+      std::swap(args,_scalars.front());
     } else {
       assert(offset==_scalars.front().size());
-      _scalars.front().resize(_scalars.front().size()+n,vtree(vertex()));
+      _scalars.front().reserve(_scalars.front().size()+args.size());
+      foreach(vtree& v,args) {
+        _scalars.front().push_back(vtree());
+        std::swap(_scalars.front().back(),v);
+      }
     }
-    util::for_each(f,l,_scalars.front().end()-n,
-                   boost::bind(&context::eval,this,_1,_2));
   }
   void scalar_unbind(arity_t n) {
     assert(_scalars.front().size()>=n);
@@ -75,6 +82,14 @@ struct context : public boost::noncopyable {
   //identifier bindings
   void ident_bind(func_t f,const_subvtree binding);
   void ident_unbind(func_t f);
+  const_subvtree ident_binding(func_t f) const {
+    ident_map::const_iterator i=_idents.find(f);
+    if (i==_idents.end()) {
+      assert(f->body());
+      return *f->body();
+    }
+    return i->second.front();
+  }
  protected: 
   typedef std::vector<vtree> vtree_seq;
   typedef util::slist<vtree> vtree_list;

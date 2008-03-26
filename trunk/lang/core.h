@@ -40,7 +40,7 @@ struct lang_ident : public func {
  protected:
   vtree _body;
   arity_t _arity,_offset;
-  void set_body(subvtree b) {}//fixme
+  void set_body(subvtree b) {  _body.splice(_body.end(),b); }
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 

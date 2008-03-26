@@ -22,6 +22,8 @@
 #include "algorithm.h"
 #include "context.h"
 
+#include "pretty_print.h"//fixme
+
 namespace plap { namespace lang {
 
 using boost::bind;
@@ -53,17 +55,17 @@ void lang_let::operator()(context& c,const_subvtree s,subvtree d) const {
 //identifiers, when bound to lambdas, inject scalar bindings
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
   if (_arity==0) {
-    //fixme d=*c.ident_binding(this);
+    d=c.ident_binding(this);
   } else {
     assert(s.arity()==_arity);
     c.scalar_bind(_offset,s.begin_sub_child(),s.end_sub_child());
-    //fixmec.eval(*c.ident_binding(this),d);
+    c.eval(c.ident_binding(this),d);
     c.scalar_unbind(_arity);
   }
 }
 
 void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
-  
+  assert(false);
 }
   
 #if 0

@@ -16,6 +16,7 @@
 
 #include "analyze.h"
 #include <map>
+#include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <tr1/unordered_map>
 #include "iterator_shorthands.h"
@@ -29,9 +30,8 @@
 #include "operators.h"
 #include "names.h"
 #include "tree_iterator.h"
-
-#include <iostream>
-using namespace std;//fixme
+#include "io.h"
+#include "parse.h"
 
 namespace plap { namespace lang_io {
 
@@ -45,7 +45,7 @@ using std::stringstream;
 
 void throw_bad_arity(const string& name,arity_t actual, arity_t tgt) {
   throw std::runtime_error(string("Bad arity for ")+name+" - expected "+
-                           lexical_cast<string>((int)tgt)+" arguments, got "+
+                           lexical_cast<string>((int)tgt)+" argument(s), got "+
                            lexical_cast<string>((int)actual)+".");
 }
 #define make_exception(nm,dsc)                   \
@@ -76,18 +76,20 @@ make_exception(bad_symbol,"Unrecognized symbol or function '"+str+"'.");
 make_exception(bad_redef,"Cannot redifine existing function '"+str+"'.");
 make_exception(bad_lambda,"Malformed lambda expression '"+str+
                "' - should be (lambda (arrow (arg1 arg2 ..) body)).");
+make_exception(bad_import,"Malformed import '"+str+"'.");
+make_exception(bad_import_file,"Could not open file '"+str+"' for reading.");
+make_exception(bad_let,"Malformed let '"+str+"'.");
+make_exception(nested_import,"Error processing directive '"+str+
+               "'; imports must be at global scope.")
 
 #define process(name) \
   void process_ ## name(const_subsexpr src,subvtree dst)
 #define special_case(name,arity)                                \
-  assert(func2name(name ::  instance()));                       \
-  if (src.root()==*func2name(name :: instance())) {             \
+  if (src.root()==#name) {                                      \
     validate_arity(src,arity_t(arity));                         \
-    process_ ## name(src,dst);                                  \
+    process_lang_ ## name(src,dst);                             \
     return;                                                     \
   }
-
-//fixme -should be possible to write special case without taking arity argument
 
 bool scalar(const string& s) { return (s[0]=='$' && s.size()>1); }
 bool number(const string& s) { 
@@ -109,6 +111,9 @@ struct semantic_analyzer {
   typedef std::tr1::unordered_map<string,arity_t> scalar_map;
   scalar_map scalars;
 
+  typedef std::tr1::unordered_map<string,util::slist<func_t> > let_map;
+  let_map lets;
+  
   bool nested(const_subsexpr src) { return src.begin()!=root.begin(); }
 
   process(sexpr) {
@@ -119,12 +124,13 @@ struct semantic_analyzer {
       return;
     }
 
-    //  special_case(lang_def,3);
-    // special_case(lang_lambda,1);
-    //special_case(let,variadic_arity);**/
-    // special_case(lang_decl,2);
-    /**special_case(pair,variadic_arity);
-    **/
+    special_case(def,3);
+    special_case(decl,2);
+    special_case(import,1);
+    special_case(lambda,1);
+    special_case(let,2);
+    //special_case(pair,variadic_arity);
+
     if (func_t f=string2func(root)) {
       validate_arity(src,f);
       dst.root()=call(f);
@@ -158,6 +164,28 @@ struct semantic_analyzer {
              bind(&semantic_analyzer::process_sexpr,this,_1,_2));
   }
 
+  process(lang_import) {
+    if (nested(src))
+      throw_nested_import(lexical_cast<string>(src));
+    process_sexpr(src[0],dst);
+    if (dst.root()==call(lang_list::instance())) {
+      foreach(subvtree s,sub_children(dst))
+        if (!s.childless() || !is_char(s.root()))
+          throw_bad_import(lexical_cast<string>(src[0]));
+      std::ifstream in(string(list_of<char>(dst).begin(),
+                              list_of<char>(dst).end()).c_str());
+      if (!in.good())
+        throw_bad_import_file(string(list_of<char>(dst).begin(),
+                                     list_of<char>(dst).end()));
+      dst.prune();
+      dst.root()=nil();
+      io_loop<sexpr>(in,*lang_print::print_to,&indent_parse,
+                     bind(&analyze,_2,dst,boost::ref(c)));
+    } else {
+      throw_bad_import(lexical_cast<string>(src[0]));
+    }
+  }
+
   process(lang_def) { //def(name list(arg1 arg2 ...) body)
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
@@ -170,7 +198,7 @@ struct semantic_analyzer {
     for_each(src[1].begin_child(),src[1].end_child(),count_it(0),
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
 
-    func_t f=name2func(name);
+    func_t f=string2func(name);
     if (f) {
       validate_arity(src[1],f);
       if (const vtree* v=f->body()) {
@@ -184,12 +212,12 @@ struct semantic_analyzer {
       //a new function
       if (nested(src)) //error - defs must first be declared at global scope
         throw_undeclared_name(name);
-      //fixmef=c.declare(a);
-      name_func(f,sexpr2identifier(src[0]));
+      lang_ident* d=c.declare(a,0);//fixme offset
+      name_func(d,sexpr2identifier(src[0]));
       try {
-        make_def(src[2],nested(src),f);
+        make_def(src[2],nested(src),d);
       } catch (std::runtime_error e) {
-        erase_func_name(f);
+        erase_func_name(d);
         c.erase_last_decl();
         throw e;
       }
@@ -203,65 +231,84 @@ struct semantic_analyzer {
     dst.root()=nil();
   }
 
-  void make_def(const_subsexpr src,bool nested,func_t f) {
+  void make_def(const_subsexpr src,bool nested,func_t f,bool closure=false) {
+    assert(dynamic_cast<const lang_ident*>(f));
+    lang_ident* d=static_cast<lang_ident*>(const_cast<func*>(f));
     vtree body=vtree(vertex());
     process_sexpr(src,body);
-    if (nested) { //set to be created at runtime - def(func args body)
-      assert(false); //fixme
-#if 0
-        dst.root()=id::def;
-        dst.append(i->second);
-        dst.append(id::list);
-        dst.back_sub();//fixeme what do do with args???
-        dst.splice(dst.end_child(),body);
-#endif
+    if (closure) {
+      assert(nested);
+      
     } else { //create it now
-      //fixmec.define(f,body);
+      
+      c.define(d,body);
     }
   }
 
-  process(closure) {
-    assert(false);
+  bool is_closure(const string& s) {
+    return (scalar(s) && scalars.find(scalar_name(s))!=scalars.end());
   }
   
   process(lang_lambda) { //lambda(arrow((args),body))
-#if 0
-    if (src.front()!=*func2name(lang_arrow::instance()))
+    if (src.front()!="arrow")//fixme*func2name(lang_arrow::instance()))
       throw_bad_lambda(lexical_cast<string>(src));
-    foreach (const string& s,src) {
-      if (scalar(s) && scalars.find(scalar_name(s))!=scalars.end()) {
-        process_closure(src,dst);
-        return;
-      }
-    }
-    //no variable capture, easy!
-    func_t f=c.declare(src[0][0].arity()+1);
+    func_t f=c.declare(src[0][0].arity()+1,0);//fixmeoffset
+    bool closure=
+        (find_if(src.begin(),src.end(),
+                 bind(&semantic_analyzer::is_closure,this,_1))!=src.end());
     for_each(src[0][0].begin(),src[0][0].end(),count_it(0),
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
     try {
-      make_def(src[0][1],nested(src),f);
+      make_def(src[0][1],nested(src),f,closure);
     } catch (std::runtime_error e) {
-      c.erase_last_func();
+      c.erase_last_decl();
       throw e;
     }
     dst.root()=arg(f);
-#endif
   }
 
   process(lang_let) { //let(list(def1 ...) body)
-    /*  if (src[0]!=*func2name(lang_list::instance()))
+    if (src.front()!=*func2name(lang_list::instance()))
       throw_bad_let(src.root());
-    let_b
-    foreach (const_subsexpr s,children(src[0])) {
-      if (s.root()!=*func2name(lang_def::instance()))
-      throw_bad_let(src.root());*/
+    foreach (string s,children(src[0])) 
+      if (s!="def") //fixme
+        throw_bad_let(src.root());
+    
+    std::vector<func_t> idents;
+    foreach (const_subsexpr s,sub_children(src[0])) {
+      func_t f=string2func(s.front());
+      if (!f)
+        f=c.declare(s[1].arity(),0);//fixme offset
+      idents.push_back(f);
+      lets[s.front()].push_front(f);
+    }
+    try {
+      util::for_each(idents.begin(),idents.end(),src[0].begin_sub_child(),
+                     bind(&semantic_analyzer::make_def,this,_2,
+                          bind(&semantic_analyzer::nested,this,_2),
+                          _1,false));//fixme closure
+    } catch (std::runtime_error e) {
+      foreach(func_t f,idents) {
+        c.erase_last_decl();
+      }
+      throw e;
+    }
+    try {
+      process_sexpr(src[1],dst);
+    } catch (std::runtime_error e) {
+      std::cerr << "EEP" << std::endl;
+      throw e;
+    }    
+    foreach(const_subsexpr s,sub_children(src[0])) {
+      lets[s.front()].pop_front();
+    }
   }
 
   process(lang_decl) { //decl(name arity)
     const string& name=sexpr2identifier(src[0]);
-    if (name2func(name))
+    if (string2func(name))
       throw_bad_decl_exists(name);
-    //fixmename_func(c.declare(sexpr2arity(src[1])),name);
+    name_func(c.declare(sexpr2arity(src[1]),0),name);
     dst.root()=nil();
   }
 
@@ -361,12 +408,9 @@ struct semantic_analyzer {
 
   //returns a func_t if available, else NULL
   func_t string2func(const string& str) {
-#if 0
-    bindings::const_iterator i=lets.find(str);
-    if (i!=lets.end())
-      return i->second;
-#endif
-    //fixme is this correct?
+    let_map::const_iterator i=lets.find(str);
+    if (i!=lets.end() && !i->second.empty())
+      return i->second.front();
     return name2func(str);
   }
 
@@ -402,7 +446,8 @@ struct semantic_analyzer {
   }
   void validate_arity(const_subsexpr src,arity_t a) {
     if (a!=variadic_arity && src.arity()!=a)
-      throw_bad_arity(src.root(),src.arity(),a);
+      throw_bad_arity(src.root()=="list" ? parent(src.begin_sub())->front() : 
+                      src.root(),src.arity(),a);
   }
 
   void replace_args(const_subsexpr args,subsexpr body) {

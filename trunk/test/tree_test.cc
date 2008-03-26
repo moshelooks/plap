@@ -777,6 +777,19 @@ test_case(tree_swap) {
   std::swap(foo[2],foo[3]);
 }
 
+test_case(tree_parent) {
+  itree tr=tree_of(1)(2,3,tree_of(4)(5,6));
+
+  check(parent(tr.begin())==tr.end());
+
+  check(parent(tr[0].begin())==tr.begin());
+  check(parent(tr[1].begin())==tr.begin());
+  check(parent(tr[2].begin())==tr.begin());
+
+  check(parent(tr[2][0].begin())==tr[2].begin());
+  check(parent(tr[2][1].begin())==tr[2].begin());
+}
+
 #define check_parse(src,goal)                      \
   { stringstream ss;                               \
     tree<string> tmpXXX;                           \
