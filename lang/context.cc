@@ -16,6 +16,11 @@
 
 #include "context.h"
 #include "core.h"
+#include "foreach.h"
+#include "names.h"
+#include "checkpoint.h"
+
+#include "pretty_print.h" //fixme
 
 namespace plap { namespace lang {
 
@@ -27,24 +32,33 @@ lang_ident* context::declare(arity_t a,arity_t o) {
 void context::define(lang_ident* d,subvtree body) { d->set_body(body); }
 void context::erase_last_decl() { _decls.pop_back(); }
 
-//we must check for two special cases: (1) evaluation of an argument; and
-//(2) evaluation of a closure
+//we must check for some special cases: (1) evaluation of an argument;
+//(2) evaluation of a closure; and (3) a def that's not a function
 void context::eval(const_subvtree src,subvtree dst) {
+  vertex v=src.root();
   if (src.childless()) {
-    arity_t a=test_lang_arg_cast(src.root());
+    arity_t a=test_lang_arg_cast(v);
     if (a!=variadic_arity) { //case 1
       assert(a<_scalars.front().size());
       assert(!_scalars.front()[a].empty());
       dst=_scalars.front()[a];
-    } else if (func_t f=test_func_arg_cast(src.root())) { //case 2
-      ident_map::const_iterator i=_idents.find(f);
-      if (i!=_idents.end()) {
-        dst.root()=call(lang_closure::instance());
-        dst.append(i->second.front());
+    } else { 
+      if (func_t f=test_func_arg_cast(v)) { //case 2
+        ident_map::const_iterator i=_idents.find(f);
+        if (i!=_idents.end()) {
+          dst.root()=call(lang_closure::instance());
+          dst.append(i->second.front());
+          return;
+        } else if (f->arity()==0) { //case 3
+          assert(f->body());
+          dst=*f->body();
+          return;
+        }
       }
+      dst.root()=v;
     }
   } else {
-    (*call_cast(src.root()))(*this,src,dst);
+    (*call_cast(v))(*this,src,dst);
   }
 }
 

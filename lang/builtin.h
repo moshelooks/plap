@@ -221,6 +221,14 @@ struct lang_print : public builtin<lang_print(any)> {
 struct lang_println : public builtin<lang_println(any)> {
   void eval(context& c,any a,subvtree dst) const;
 };
+
+struct lang_set : public builtin<lang_set(any,any)> {
+  void eval(context& c,any lhs,any rhs,subvtree d) const {
+    c.eval(rhs,d);
+    (*reinterpret_cast<subvtree*>(&lhs))=d;
+  }
+};
+
 #if 0
 struct lang_expand : public builtin<lang_expand(any)> {
   void cfeval(any a,subvtree dst) {

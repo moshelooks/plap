@@ -1,7 +1,7 @@
 # symbolic regression - x+x^2+x^3+x^4 from 20 random values in [-1.0,1.0)
 f^1
 let 
-  generate $x = (f $x = (accumulate [1..5] \$y -> (power $x $y)))
+  [generate $x = f $x -> accumulate [1..5] \$y -> (power $x $y)]
   repeat 20 (generate (rand -1.0 1.0))
 
 generalize f

@@ -34,8 +34,6 @@ using namespace boost::spirit;
 using std::string;
 using namespace lang;
 
-const char strlit_symbol[]="\"";
-
 bool special_name(const string& s,subsexpr d) {
   if (s==")") { //not used but needed to get parsing right
     assert(!d.childless());
@@ -76,9 +74,9 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
   d.append(s.children.size(),string());
   string name=tostr(s);
 
-  if (name==strlit_symbol) {
+  if (name==string_symbol) {
     assert(d.size()==d.arity()+1);
-    d.root()=strlit_symbol;
+    d.root()=string_symbol;
     std::transform(s.children.begin(),s.children.end(),d.begin_sub_child(),
                    &tostr);
     return;

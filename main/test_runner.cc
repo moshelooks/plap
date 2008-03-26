@@ -22,6 +22,7 @@
 #include "tree_iterator.h"
 #include "foreach.h"
 #include "dorepeat.h"
+#include "checkpoint.h"
 #include "context.h"
 #include "parse.h"
 #include "cast.h"
