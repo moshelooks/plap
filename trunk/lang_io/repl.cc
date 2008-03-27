@@ -17,6 +17,8 @@
 #include "repl.h"
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include "parse.h"
 #include "analyze.h"
 #include "context.h"
@@ -33,6 +35,10 @@ void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
   using namespace plap::lang;
 
   context c;
+  std::ifstream lib("combo/lib.co");
+  load_lib(lib,c);
+  lib.close();
+
   std::ostream* tmp=lang_print::print_to;
   lang_print::print_to=&out;
   out << util::sexpr_format << "ctrl+D exits" << endl;
@@ -62,13 +68,19 @@ void eval_print(std::ostream& out,const_subsexpr s,lang::context& c) {
   c.eval(expr,res);
   out << "evals to" << std::endl;
   pretty_print(out,res);
-  /*
-  //evaluate it
-  vtree result(vertex());
-  eval(expr,result);
-  pretty_print(out,result);
-  out << endl;
-  */
+}
+
+void eval_quiet(const_subsexpr s,lang::context& c) {
+  using namespace lang;
+  vtree expr=vtree(vertex()),res=vtree(vertex());
+  analyze(s,expr,c);
+  c.eval(expr,res);
+}
+
+void load_lib(std::istream& in,lang::context& c) {
+  std::stringstream tmp;
+  util::io_loop<sexpr>(in,tmp,&indent_parse,
+                       boost::bind(&eval_quiet,_2,boost::ref(c)),"");
 }
 
 }} //namespace plap::lang_io

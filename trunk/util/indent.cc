@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <cassert>
 #include "io.h"
+#include "dorepeat.h"
 
 namespace plap { namespace util {
 
@@ -33,11 +34,12 @@ bool newline(char c) { return (c=='\n'); }
 bool eof(char c) { return (c==EOF); }
 
 struct indent_parser {
-  indent_parser() : mode(indenting),indent(0) {}
+  indent_parser() : mode(indenting),indent(0) {}// brackets.push(0); }
 
   enum { indenting,commaed,incomment,escaped,normal } mode;
   string::size_type indent;
   std::stack<string::size_type> indents;
+  //std::stack<int> brackets;fixme
 
   bool dump(ostream& out) {
     if (indents.empty())
@@ -61,6 +63,7 @@ struct indent_parser {
       else
         return true;
     }
+
 
     if (mode==indenting && whitespace(c)) {
       ++indent;
@@ -91,6 +94,7 @@ struct indent_parser {
       if (indent!=0)
         out << ' ';
       out << '(';
+      //++brackets.top();
     }
     
     if (c==',') {
@@ -102,6 +106,23 @@ struct indent_parser {
     } else {
       mode=normal;
     }
+
+    /**  if (c=='[') {
+      brackets.push(0);
+    } 
+    if (c==']') {
+      if (brackets.top()) {
+        dorepeat(brackets.top()-1) {
+          out << ')';
+          if (indents.empty())
+            throw std::runtime_error("Mismatched brackets & indents.");
+          indents.pop();
+        }
+      }
+      brackets.pop();
+      if (brackets.empty())
+        throw std::runtime_error("Unmatched right bracket.");
+    }**/
 
     out << c;
     return true;

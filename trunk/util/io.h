@@ -38,7 +38,7 @@ void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
              const std::string& prompt="") {
   UTIL_IO_begin_loop;
   In i;
-  if (!read(in,i) || !in.good())
+  if (!read(in,i))
     break;
   write(out,i);
   UTIL_IO_end_loop;

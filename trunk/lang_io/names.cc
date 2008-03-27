@@ -74,7 +74,10 @@ func_index func_names=boost::assign::map_list_of
     namef(assert)
     namef(print)
     namef(println)
+    namef(expand)
     namef(set)
+    namef(symbol2index)
+    namef(index2symbol)
 
     /**("let",let::instance())
 

@@ -89,13 +89,21 @@ test_case(lambda_test) {
 test_case(let_test) {
   check_eval("let [x=5] x+1","6");
   check_eval("let [doo $x = $x+1] (doo 42)","43");
-  //wont work until typecheck can verify the arity of poo
-  //check_eval("let [poo = \\$x -> $x+1] (poo 42)","43");
+  check_eval("mmm $x = let [nnn $y = $y+1] $x+(nnn 42)","[]");
+  check_eval("mmm 100","143");
+  check_throw(str2vtr("nnn 42")); //out of scope
+
+  check_eval("qq $a = let [ww $b = (let [ee $c = $c*2] (ee $b+1))] (ww $a*2)",
+             "[]");
+  check_eval("qq 10","42");
+  //wont work until typecheck can verify the arity of ooo
+  //check_eval("let [ooo = \\$x -> $x+1] (ooo 42)","43");
 }
 
 test_case(test_closure) {
+  /** check_eval("((\\$x -> (\\$y -> $x+$y)) 42) 100","142");
   check_eval("blup $x = \\$y -> $x+$y","[]");
-  check_eval("(blup 4) 5","9");
+  check_eval("(blup 4) 5","9");**/
 }
 
 test_case(lang_import_and_test) {

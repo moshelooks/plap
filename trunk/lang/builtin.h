@@ -28,10 +28,31 @@
 #include <numeric>
 #include <ostream>
 #include "iterator_shorthands.h"
-#include "core.h"
+#include "func.h"
+#include "vtree.h"
 #include "context.h"
 #include "cast.h"
 
+namespace plap { namespace lang {
+
+typedef const_subvtree   any;
+typedef list_of<any> any_list;
+
+template<typename T>
+struct arg_helper {
+  vtree arg;
+  arg_helper(context& c,const_subvtree s) : arg(vertex()) { c.eval(s,arg); }
+  T operator()() const { return literal_cast<T>(arg); }
+};
+template<>
+struct arg_helper<any> {
+  any arg;
+  arg_helper(context& c,const_subvtree s) : arg(s) {}
+  any operator()() const { return arg; }
+};
+
+template<typename>
+struct builtin;
 //generates a builtin struct for some arity
 #define LANG_LIMIT_ARITY_INC BOOST_PP_INC(LANG_LIMIT_ARITY)
 #define PLAP_LANG_type_params(n) BOOST_PP_ENUM_PARAMS(n,typename Input)
@@ -57,28 +78,13 @@
           (BOOST_PP_ENUM_PARAMS(n,t),dst);                              \
     }                                                                   \
   };
-
-namespace plap { namespace lang {
-
-typedef const_subvtree   any;
-typedef list_of<any> any_list;
-
-template<typename T>
-struct arg_helper {
-  vtree arg;
-  arg_helper(context& c,const_subvtree s) : arg(vertex()) { c.eval(s,arg); }
-  T operator()() const { return literal_cast<T>(arg); }
-};
-template<>
-struct arg_helper<any> {
-  any arg;
-  arg_helper(context& c,const_subvtree s) : arg(s) {}
-  any operator()() const { return arg; }
-};
-
-template<typename>
-struct builtin;
 BOOST_PP_REPEAT_FROM_TO(1,LANG_LIMIT_ARITY_INC,PLAP_LANG_builtin,~)
+#undef PLAP_LANG_builtin
+#undef PLAP_LANG_call_arg
+#undef PLAP_LANG_arg_helper
+#undef PLAP_LANG_name
+#undef PLAP_LANG_type_params
+#undef LANG_LIMIT_ARITY_INC
 
 template<typename>
 struct builtin_variadic;
@@ -101,6 +107,16 @@ struct lang_unary : public builtin<lang_unary<Func,T>(T)> {
 template<typename Func,typename T>
 struct lang_binary : public builtin<lang_binary<Func,T>(T,T)> {
   void cfeval(T a,T b,subvtree dst) const { dst.root()=arg(Func()(a,b)); }
+};
+
+//core
+/**struct lang_let : public stateless_func<lang_let,2> {
+  void operator()(context& c,const_subvtree s,subvtree d) const;
+  };**/
+
+//closure(f)
+struct lang_closure : public builtin<lang_closure(func_t)> {
+  void eval(context& c,func_t f,subvtree d) const { f->closure(c,d); }
 };
 
 //control flow
@@ -229,18 +245,27 @@ struct lang_set : public builtin<lang_set(any,any)> {
   }
 };
 
-#if 0
+struct lang_symbol2index : public builtin<lang_symbol2index(id_t)> {
+  void cfeval(id_t i,subvtree d) const { d.root()=arg(number_t(i)); }
+};
+
+struct lang_index2symbol : public builtin<lang_index2symbol(number_t)> {
+  void cfeval(number_t n,subvtree d) const { d.root()=arg(id_t(n)); }
+};
+
 struct lang_expand : public builtin<lang_expand(any)> {
-  void cfeval(any a,subvtree dst) {
+  void cfeval(any a,subvtree dst) const {
     if (a.childless())
       if (is_func(a.root()) && arg_cast<func_t>(a.root())->body())
-        dst=*a.root().body();
+        dst=*arg_cast<func_t>(a.root())->body();
       else
         dst=a;
     else
       dst=a;
   }
 };
+#if 0
+
 struct lang_expand : public builtin<lang_expand(any)> {
   void cfeval(any a,subvtree dst) {
     if (a.childless())
@@ -256,12 +281,5 @@ struct lang_expand : public builtin<lang_expand(any)> {
 };
 #endif
 }} //namespace plap::lang
-
-#undef PLAP_LANG_builtin
-#undef PLAP_LANG_call_arg
-#undef PLAP_LANG_arg_helper
-#undef PLAP_LANG_name
-#undef PLAP_LANG_type_params
-#undef LANG_LIMIT_ARITY_INC
 
 #endif //PLAP_LANG_BUILTIN_H__

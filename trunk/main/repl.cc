@@ -15,6 +15,7 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include <iostream>
+#include <sstream>
 #include "repl.h"
 
 int main() { 

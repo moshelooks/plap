@@ -22,6 +22,36 @@
 #include "pretty_print.h"
 
 namespace plap { namespace lang {
+
+//let injects identifier bindings into the context
+/**
+void lang_let::operator()(context& c,const_subvtree s,subvtree d) const { 
+  assert(s.arity()==2);
+  assert(s.front()==call(lang_list::instance()));
+  foreach (vertex v,children(s.front_sub())) {
+    func_t f=arg_cast<func_t>(v);
+    assert(f->body());
+    c.ident_bind(f,*f->body());
+  }
+  c.eval(s.back_sub(),d);
+  foreach (vertex v,children(s.front_sub()))
+    c.ident_unbind(arg_cast<func_t>(v));
+    }**/
+
+//closure(f,list(args))
+/**
+void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
+  assert(s.arity()==2);
+  assert(s[0].childless());
+  assert(arg_cast<func_t>(s.front())->body());
+  assert(s[1].flat());
+
+  func_t f=arg_cast<func_t>(s.front())->body();
+  d=*arg_cast<func_t>(s.front())->body();
+  foreach (vertex v,leaves(s)) {
+    if (
+}
+**/
   
 void lang_do::eval(context& c,any_list l,subvtree dst) const {
   foreach(any a,l) {
@@ -31,7 +61,15 @@ void lang_do::eval(context& c,any_list l,subvtree dst) const {
 }
 
 void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
-  (*c.eval_to<func_t>(f))(c,args.src,dst);
+  vtree tmp=vtree(vertex());
+  c.eval(f,tmp);
+  if (tmp.childless()) {
+    (*arg_cast<func_t>(tmp.root()))(c,args.src,dst);
+  } else {
+    c.scalar_bind(0,args.begin(),args.end());
+    c.eval(tmp,dst);
+    c.scalar_unbind(args.size());
+  }
 }
 
 void lang_accumulate::eval(context& c,
@@ -73,7 +111,14 @@ void lang_assert::eval(context& c,any a,subvtree dst) const {
 std::ostream* lang_print::print_to=&std::cout;
 void lang_print::eval(context& c,any a,subvtree dst) const {
   c.eval(a,dst);
-  (*print_to) << dst;
+  if (dst.flat() && dst.root()==call(lang_list::instance()) &&
+      is_char(dst.front()))
+    foreach(char c,list_of<char>(dst))
+      (*print_to) << c;
+  else
+    (*print_to) << dst;
+  dst.prune();
+  dst.root()=nil();
 }
 void  lang_println::eval(context& c,any a,subvtree dst) const {
   lang_print::instance()->eval(c,a,dst);
