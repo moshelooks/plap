@@ -32,6 +32,8 @@
 #include "tree_iterator.h"
 #include "io.h"
 #include "parse.h"
+#include "repl.h"
+#include "checkpoint.h"
 
 namespace plap { namespace lang_io {
 
@@ -69,6 +71,7 @@ make_exception(bad_def,
 make_exception(bad_decl_exists,
                "Bad declaration of function '"+str+"', which already exists.");
 make_exception(bad_arg_name,"Bad name '"+str+"'");
+make_exception(bad_arg_list,"Bad argument list '"+str+"'");
 make_exception(arg_shadow,"Argument '"+str+"' shadows existing argument.");
 make_exception(arg_unbound,"Invalid reference to unbound argument '"+str+"'.");
 make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
@@ -104,9 +107,10 @@ bool character(const string& s) { return (s=="'"); }
 string scalar_name(const string& s) { return s.substr(1); }
 
 struct semantic_analyzer {
-  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r) {}
+  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r),arg_idx(0) {}
   context& c;
   const_subsexpr root;
+  arity_t arg_idx;
 
   typedef std::tr1::unordered_map<string,arity_t> scalar_map;
   scalar_map scalars;
@@ -179,8 +183,7 @@ struct semantic_analyzer {
                                      list_of<char>(dst).end()));
       dst.prune();
       dst.root()=nil();
-      io_loop<sexpr>(in,*lang_print::print_to,&indent_parse,
-                     bind(&analyze,_2,dst,boost::ref(c)));
+      load_lib(in,c);
     } else {
       throw_bad_import(lexical_cast<string>(src[0]));
     }
@@ -189,77 +192,80 @@ struct semantic_analyzer {
   process(lang_def) { //def(name list(arg1 arg2 ...) body)
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
-
-    if (src[1].root()!=*func2name(lang_list::instance()))
-      throw_bad_def(name);
-    arity_t a=src[1].arity();
-    if (src[1].size()!=a+1u)
-      throw_bad_def(name);
-    for_each(src[1].begin_child(),src[1].end_child(),count_it(0),
-             bind(&semantic_analyzer::index_scalar,this,_1,_2));
-
     func_t f=string2func(name);
     if (f) {
-      validate_arity(src[1],f);
       if (const vtree* v=f->body()) {
         if (!v->empty())
           throw_bad_redef(name);
       } else {
         throw_bad_redef(name);
       }
-      make_def(src[2],nested(src),f);
+      make_def(src,src[1],src[2],f);
     } else {
       //a new function
       if (nested(src)) //error - defs must first be declared at global scope
         throw_undeclared_name(name);
-      lang_ident* d=c.declare(a,0);//fixme offset
+      lang_ident* d=c.declare(src[1].arity(),arg_idx);
       name_func(d,sexpr2identifier(src[0]));
       try {
-        make_def(src[2],nested(src),d);
+        make_def(src,src[1],src[2],d);
       } catch (std::runtime_error e) {
         erase_func_name(d);
         c.erase_last_decl();
         throw e;
       }
     }
-
-    name_args(f,transform_it(src[1].begin_child(),&scalar_name),
-              transform_it(src[1].end_child(),&scalar_name));
-    for (sexpr::const_child_iterator i=src[1].begin_child();
-         i!=src[1].end_child();++i)
-      scalars.erase(scalar_name(*i));
     dst.root()=nil();
   }
 
-  void make_def(const_subsexpr src,bool nested,func_t f,bool closure=false) {
+  void make_def(const_subsexpr root,const_subsexpr args,const_subsexpr src,
+                func_t f) {
     assert(dynamic_cast<const lang_ident*>(f));
     lang_ident* d=static_cast<lang_ident*>(const_cast<func*>(f));
+
+    //validate and index arguments
+    validate_arity(args,f->arity());
+    if (args.root()!=*func2name(lang_list::instance()) || 
+        !(args.flat() || args.childless()))
+      throw_bad_arg_list(lexical_cast<string>(args));
+    bool cl=find_if(src.begin(),src.end(),
+                    bind(&semantic_analyzer::is_closure,this,_1))!=src.end();
+    for_each(args.begin_child(),args.end_child(),count_it(arg_idx),
+             bind(&semantic_analyzer::index_scalar,this,_1,_2));
+
     vtree body=vtree(vertex());
+    arg_idx+=f->arity();
     process_sexpr(src,body);
-    if (closure) {
-      assert(nested);
+    arg_idx-=f->arity();
+
+    if (cl) {
+      assert(nested(root));
       
-    } else { //create it now
-      
-      c.define(d,body);
+    } else {
+      if (f->arity()==0) { //evaluate it now
+        vtree tmp=vtree(vertex());
+        c.eval(body,tmp);
+        std::swap(body,tmp);
+      }
+      c.define(d,body); //create it
     }
+
+    name_args(f,transform_it(args.begin_child(),&scalar_name),
+              transform_it(args.end_child(),&scalar_name));
+    foreach (const string& s,children(args)) 
+      scalars.erase(scalar_name(s));
   }
 
   bool is_closure(const string& s) {
     return (scalar(s) && scalars.find(scalar_name(s))!=scalars.end());
   }
   
-  process(lang_lambda) { //lambda(arrow((args),body))
+  process(lang_lambda) { //lambda(arrow(list(args),body))
     if (src.front()!="arrow")//fixme*func2name(lang_arrow::instance()))
       throw_bad_lambda(lexical_cast<string>(src));
-    func_t f=c.declare(src[0][0].arity()+1,0);//fixmeoffset
-    bool closure=
-        (find_if(src.begin(),src.end(),
-                 bind(&semantic_analyzer::is_closure,this,_1))!=src.end());
-    for_each(src[0][0].begin(),src[0][0].end(),count_it(0),
-             bind(&semantic_analyzer::index_scalar,this,_1,_2));
+    func_t f=c.declare(src[0][0].arity(),arg_idx);
     try {
-      make_def(src[0][1],nested(src),f,closure);
+      make_def(src,src[0][0],src[0][1],f);
     } catch (std::runtime_error e) {
       c.erase_last_decl();
       throw e;
@@ -268,37 +274,44 @@ struct semantic_analyzer {
   }
 
   process(lang_let) { //let(list(def1 ...) body)
-    if (src.front()!=*func2name(lang_list::instance()))
+    if (src.front()!=*func2name(lang_list::instance()) || 
+        src.front_sub().childless())
       throw_bad_let(src.root());
-    foreach (string s,children(src[0])) 
+    foreach (string s,children(src[0]))
       if (s!="def") //fixme
         throw_bad_let(src.root());
     
+    //create the identifiers
     std::vector<func_t> idents;
     foreach (const_subsexpr s,sub_children(src[0])) {
       func_t f=string2func(s.front());
       if (!f)
-        f=c.declare(s[1].arity(),0);//fixme offset
+        f=c.declare(s[1].arity(),arg_idx);
       idents.push_back(f);
       lets[s.front()].push_front(f);
     }
+
+    //bind them
     try {
-      util::for_each(idents.begin(),idents.end(),src[0].begin_sub_child(),
-                     bind(&semantic_analyzer::make_def,this,_2,
-                          bind(&semantic_analyzer::nested,this,_2),
-                          _1,false));//fixme closure
+      std::vector<func_t>::iterator ident=idents.begin();
+      foreach(const_subsexpr s,sub_children(src.front_sub()))
+        make_def(s,s[1],s[2],*ident++);
     } catch (std::runtime_error e) {
       foreach(func_t f,idents) {
         c.erase_last_decl();
       }
       throw e;
     }
+
+    //analyze the body of the let
     try {
       process_sexpr(src[1],dst);
     } catch (std::runtime_error e) {
       std::cerr << "EEP" << std::endl;
       throw e;
-    }    
+    }
+
+    //cleanup
     foreach(const_subsexpr s,sub_children(src[0])) {
       lets[s.front()].pop_front();
     }

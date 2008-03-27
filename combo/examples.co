@@ -30,15 +30,14 @@ nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
 
 empty $l = $l==[]
 
+sub_helper $list $indices $offset = #fixme
+  if (empty $indices) [] 
+     if (hd $indices)==$offset 
+        (hd $list):(sub_helper (tl $list) (tl $indices) $offset+1)
+        sub_helper (tl $list) $indices $offset
+  
 sub $list $indices = 
-  let 
-    (helper $list $indices $offset =
-      if (empty $indices) [] 
-         if (hd $indices)=$offset 
-            (hd $list):(helper (tl $list) (tl $indices) $offset+1)
-            helper (tl $list) $indices $offset
-    )
-    helper $list $indices 0
+    sub_helper $list $indices 0
 
 subs $list $from $len = sub $list [$from..$from+$len-1]
 
@@ -51,7 +50,7 @@ lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n-1)
 ##
 # Converting Between ASCII Characters and Values
 ##
-upchars $l = map $l " \$x -> char (int $x)+1
+upchars $l = map $l \$x -> index2symbol (symbol2index $x)+1
 
 ##
 # Processing a String One Character at a Time

@@ -46,7 +46,7 @@ test_case(parse_infix) {
 
 
   check_parse("(foo x p = \\y z -> z+q)",
-              "(def foo (list x p) (lambda (arrow (y z) (plus z q))))");
+              "(def foo (list x p) (lambda (arrow (list y z) (plus z q))))");
 
   check_parse("([1,2,3,foo bar, baz])","(list 1 2 3 (foo bar) baz)");
 

@@ -28,6 +28,8 @@
 #include "func.h"
 #include "core.h"
 
+#include "pretty_print.h"//fixme
+
 namespace plap { namespace lang {
 
 struct context : public boost::noncopyable {

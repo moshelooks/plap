@@ -35,6 +35,8 @@ void repl(std::istream& in,std::ostream& out,
           const std::string& prompt="\033[22;32m> \033[00;m\n");
 
 void eval_print(std::ostream& out,const_subsexpr s,lang::context& c);
+void eval_quiet(const_subsexpr s,lang::context& c);
+void load_lib(std::istream& in,lang::context& c);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_IO_REPL_H__

@@ -55,9 +55,13 @@ bool special_name(const string& s,subsexpr d) {
       d.splice(d[1].begin_child(),d[2].begin(),d.end_child());
     }
   } else if (s==def_symbol) { //a definition (explicitly set up structure)
-      d.prepend(d[0].root());
-      d[1].root()=*func2name(lang_list::instance());
-      d.root()=operator2name(def_symbol,3);
+    d.prepend(d[0].root());
+    d[1].root()=*func2name(lang_list::instance());
+    d.root()=operator2name(def_symbol,3);
+  } else if (s=="\\") {
+    d[0][0].prepend(*func2name(lang_list::instance()));
+    std::swap(d[0][0].root(),d[0][0][0].root());
+    d.root()=operator2name(s,1);
   } else {
     return false;
   }

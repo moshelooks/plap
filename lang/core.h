@@ -28,25 +28,18 @@ struct lang_list : public stateless_func<lang_list,variadic_arity> {
   void operator()(context& c,const_subvtree s,subvtree d) const;
 };
 
-struct lang_let : public stateless_func<lang_let,2> {
-  void operator()(context& c,const_subvtree s,subvtree d) const;
-};
-
 struct lang_ident : public func {
   arity_t arity() const { return _arity; }
   void operator()(context& c,const_subvtree s,subvtree d) const;
   const vtree* body() const { return &_body; }
+  void closure(context& c,subvtree d) const;
   friend struct context;
  protected:
   vtree _body;
   arity_t _arity,_offset;
+  bool _closure;
   void set_body(subvtree b) {  _body.splice(_body.end(),b); }
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
-};
-
-struct lang_closure : public stateless_func<lang_closure,1> {
-  void operator()(context& c,const_subvtree s,subvtree d) const;
-  bool closure() const { return true; }
 };
 
 }} //namespace plap::lang

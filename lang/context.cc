@@ -46,11 +46,11 @@ void context::eval(const_subvtree src,subvtree dst) {
       if (func_t f=test_func_arg_cast(v)) { //case 2
         ident_map::const_iterator i=_idents.find(f);
         if (i!=_idents.end()) {
-          dst.root()=call(lang_closure::instance());
-          dst.append(i->second.front());
+          eval(i->second.front(),dst);
           return;
         } else if (f->arity()==0) { //case 3
           assert(f->body());
+          assert(!f->body()->empty());
           dst=*f->body();
           return;
         }
