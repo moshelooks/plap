@@ -34,7 +34,7 @@ sub_helper $list $indices $offset = #fixme
   if (empty $indices) [] 
      if (hd $indices)==$offset 
         (hd $list):(sub_helper (tl $list) (tl $indices) $offset+1)
-        sub_helper (tl $list) $indices $offset
+        sub_helper (tl $list) $indices $offset+1
   
 sub $list $indices = 
     sub_helper $list $indices 0

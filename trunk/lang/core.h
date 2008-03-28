@@ -32,13 +32,13 @@ struct lang_ident : public func {
   arity_t arity() const { return _arity; }
   void operator()(context& c,const_subvtree s,subvtree d) const;
   const vtree* body() const { return &_body; }
-  void closure(context& c,subvtree d) const;
+  bool closure() const { return _closure; }
   friend struct context;
  protected:
   vtree _body;
   arity_t _arity,_offset;
   bool _closure;
-  void set_body(subvtree b) {  _body.splice(_body.end(),b); }
+  void set_body(context& c,subvtree b);
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 

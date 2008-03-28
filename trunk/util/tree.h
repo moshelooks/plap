@@ -1127,7 +1127,9 @@ template<typename Tree>
 typename Tree::value_type root(const Tree& t) { return t.root(); }
 
 template<typename Iter>
-typename Iter::sub_leaves leaves(Iter i) { return filter_it(i,&childless); }
+typename Iter::sub_leaves sub_leaves(Iter i) { 
+  return filter_it(i,&childless); 
+}
 template<typename Iter>
 typename Iter::leaves leaves(Iter i) { 
   return transform_it(sub_leaves(i),&root);

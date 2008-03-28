@@ -23,6 +23,7 @@
 #include "context.h"
 
 #include "pretty_print.h"//fixme
+#include "checkpoint.h"
 
 namespace plap { namespace lang {
 
@@ -38,29 +39,64 @@ void lang_list::operator()(context& c,const_subvtree s,subvtree d) const {
                  boost::bind(&context::eval,&c,_1,_2));
 }
 
-//identifiers, when bound to lambdas, inject scalar bindings
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
-  if (_arity==0) {
+  if (_closure) {
+    checkpoint();
+    assert(s.childless());
+    std::cout << _body << std::endl;
+    checkpoint();
     d=c.ident_binding(this);
+    checkpoint();
+
+    //foreach(subvtree s,d) { //fixme leaves
+    for (subvtree::sub_pre_iterator i=d.begin_sub();i!=d.end_sub();++i) {
+      subvtree s=*i;
+      if (!s.childless())
+        continue;
+
+      arity_t a=test_lang_arg_cast(s.root());
+      if (a<_offset)
+        s=c.scalar(a);
+      else if (a<_offset+_arity)
+        s.root()=lang_arg(a-_offset);
+      else
+        assert(a==variadic_arity);
+    }
+    checkpoint();
   } else {
     assert(s.arity()==_arity);
-    c.scalar_bind(_offset,s.begin_sub_child(),s.end_sub_child());
-    c.eval(c.ident_binding(this),d);
-    c.scalar_unbind(_arity);
+    if (_arity==0) {
+      d=c.ident_binding(this);
+    } else {
+      c.scalar_bind(_offset,s.begin_sub_child(),s.end_sub_child());
+      c.eval(c.ident_binding(this),d);
+      c.scalar_unbind(_arity);
+    }
   }
 }
 
-void lang_ident::closure(context& c,subvtree d) {
-  d=_body;
-  foreach(subvtree s,sub_leaves(d)) {
-    arity_t a=test_lang_arg_cast(s.root());
-    if (a<_offset)
-      s=c.scalar(a);
-    else if (a<_offset+_arity)
-      s.root()=arg(a-_offset);
-    else
-      assert(a==variadic_arity);
+void lang_ident::set_body(context& c,subvtree b) {  
+  assert(_body.empty()); //fixeme for overriding
+
+  _body.splice(_body.end(),b); 
+  //foreach (vertex v,_body) {//fixme leaves
+  for (subvtree::sub_pre_iterator i=_body.begin_sub();i!=_body.end_sub();++i) {
+    vertex v=i->root();
+    if (!i->childless())
+        continue;
+  
+    arity_t a=test_lang_arg_cast(v);
+    if (a!=variadic_arity && a<_offset) {
+      _closure=true;
+      return;
+    }
   }
+  if (_arity==0) { //evaluate it now
+    vtree tmp=vtree(vertex());
+    c.eval(_body,tmp);
+    std::swap(_body,tmp);
+  }
+  _closure=false;
 }
 
 }} //namespace plap::lang

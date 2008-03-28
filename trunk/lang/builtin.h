@@ -115,9 +115,10 @@ struct lang_binary : public builtin<lang_binary<Func,T>(T,T)> {
   };**/
 
 //closure(f)
+/**
 struct lang_closure : public builtin<lang_closure(func_t)> {
   void eval(context& c,func_t f,subvtree d) const { f->closure(c,d); }
-};
+  };**/
 
 //control flow
 struct lang_if : public builtin<lang_if(bool,any,any)> {
