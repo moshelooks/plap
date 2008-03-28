@@ -57,14 +57,23 @@ struct context : public boost::noncopyable {
   //scalar bindings
   template<typename Iterator>
   void scalar_bind(arity_t offset,Iterator f,Iterator l) {
+    std::cout << "bind " << 
+        int(offset) << " " << std::distance(f,l) << std::endl;
+
     //first eval, then add (we must not mung _scalars until after evaling)
     vtree_seq args(std::distance(f,l),vtree(vertex()));
     util::for_each(f,l,args.begin(),boost::bind(&context::eval,this,_1,_2));
 
+    _scalars.push_front(make_pair(vtree_seq(),offset));
+    std::swap(args,_scalars.front().first);
+
+    /**
     if (offset==0) {
       _scalars.push_front(vtree_seq());
       std::swap(args,_scalars.front());
     } else {
+      assert(!_scalars.empty());
+      std::cout << int(offset) << "PP" << _scalars.front().size() << std::endl;
       assert(offset==_scalars.front().size());
       _scalars.front().reserve(_scalars.front().size()+args.size());
       foreach(vtree& v,args) {
@@ -72,13 +81,19 @@ struct context : public boost::noncopyable {
         std::swap(_scalars.front().back(),v);
       }
     }
+    **/
   }
   void scalar_unbind(arity_t n) {
-    assert(_scalars.front().size()>=n);
-    if (n==_scalars.front().size())
+    std::cout << "unbind " << n << std::endl;
+    assert(_scalars.front().first.size()==n);
+    //if (n==_scalars.front().size())
       _scalars.pop_front();
-    else
-      _scalars.front().resize(_scalars.front().size()-n);
+      //else
+      //_scalars.front().resize(_scalars.front().size()-n);
+  }
+  const_subvtree scalar(arity_t idx) const { 
+    assert(_scalars.front().first.size()+_scalars.front().second>idx);
+    return _scalars.front().first[idx-_scalars.front().second];
   }
   
   //identifier bindings
@@ -100,7 +115,7 @@ struct context : public boost::noncopyable {
   context* _parent;
   context* _root;
   boost::ptr_vector<lang_ident> _decls;
-  util::slist<vtree_seq> _scalars;
+  util::slist<std::pair<vtree_seq,arity_t> > _scalars;
   ident_map _idents;
 };
 

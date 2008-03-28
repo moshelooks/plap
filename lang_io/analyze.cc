@@ -228,8 +228,6 @@ struct semantic_analyzer {
     if (args.root()!=*func2name(lang_list::instance()) || 
         !(args.flat() || args.childless()))
       throw_bad_arg_list(lexical_cast<string>(args));
-    bool cl=find_if(src.begin(),src.end(),
-                    bind(&semantic_analyzer::is_closure,this,_1))!=src.end();
     for_each(args.begin_child(),args.end_child(),count_it(arg_idx),
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
 
@@ -238,28 +236,15 @@ struct semantic_analyzer {
     process_sexpr(src,body);
     arg_idx-=f->arity();
 
-    if (cl) {
-      assert(nested(root));
-      
-    } else {
-      if (f->arity()==0) { //evaluate it now
-        vtree tmp=vtree(vertex());
-        c.eval(body,tmp);
-        std::swap(body,tmp);
-      }
-      c.define(d,body); //create it
-    }
+    c.define(d,body); //create it
 
     name_args(f,transform_it(args.begin_child(),&scalar_name),
               transform_it(args.end_child(),&scalar_name));
     foreach (const string& s,children(args)) 
       scalars.erase(scalar_name(s));
+    std::cout << "PP" << *f->body() << std::endl;
   }
 
-  bool is_closure(const string& s) {
-    return (scalar(s) && scalars.find(scalar_name(s))!=scalars.end());
-  }
-  
   process(lang_lambda) { //lambda(arrow(list(args),body))
     if (src.front()!="arrow")//fixme*func2name(lang_arrow::instance()))
       throw_bad_lambda(lexical_cast<string>(src));

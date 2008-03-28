@@ -71,7 +71,8 @@ struct name_visitor : public arg_visitor<string> {
   string operator()(T t) const { return lexical_cast<string>(t); }
   string operator()(id_t d) const { 
     if (is_lang_arg(d))
-      return '$'+args[lang_arg_cast(d)];
+      return (lang_arg_cast(d)<args.size() ? '$'+args[lang_arg_cast(d)] :
+              '$'+boost::lexical_cast<string>(1+int(lang_arg_cast(d))));
     return symbol2name(d); 
   }
 };

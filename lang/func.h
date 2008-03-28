@@ -57,7 +57,7 @@ struct func : boost::noncopyable {
   
   bool variadic() const { return arity()==variadic_arity; }
   virtual const vtree* body() const { return NULL; }
-  virtual void closure(context&,subvtree) const { assert(false); }
+  virtual bool closure() const { return false; }
 
   virtual arity_t arity() const=0;
   virtual void operator()(context&,const_subvtree,subvtree) const=0;
