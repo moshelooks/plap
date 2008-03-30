@@ -41,29 +41,33 @@ void lang_list::operator()(context& c,const_subvtree s,subvtree d) const {
 
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
   if (_closure) {
-    checkpoint();
     assert(s.childless());
-    std::cout << _body << std::endl;
     checkpoint();
     d=c.ident_binding(this);
     checkpoint();
-
     //foreach(subvtree s,d) { //fixme leaves
     for (subvtree::sub_pre_iterator i=d.begin_sub();i!=d.end_sub();++i) {
+      checkpoint();
       subvtree s=*i;
       if (!s.childless())
         continue;
 
       arity_t a=test_lang_arg_cast(s.root());
-      if (a<_offset)
+      if (a<_offset) {
+        checkpoint();
         s=c.scalar(a);
+        checkpoint();
+      }
       else if (a<_offset+_arity)
         s.root()=lang_arg(a-_offset);
       else
         assert(a==variadic_arity);
+      checkpoint();
     }
     checkpoint();
+    d.insert_above(d.begin(),call(lang_closure::instance()));
   } else {
+    std::cout << s.arity() << " " << int(_arity) << std::endl;
     assert(s.arity()==_arity);
     if (_arity==0) {
       d=c.ident_binding(this);
@@ -79,6 +83,7 @@ void lang_ident::set_body(context& c,subvtree b) {
   assert(_body.empty()); //fixeme for overriding
 
   _body.splice(_body.end(),b); 
+  _closure=false;
   //foreach (vertex v,_body) {//fixme leaves
   for (subvtree::sub_pre_iterator i=_body.begin_sub();i!=_body.end_sub();++i) {
     vertex v=i->root();
@@ -90,13 +95,18 @@ void lang_ident::set_body(context& c,subvtree b) {
       _closure=true;
       return;
     }
+    if (func_t f=test_func_arg_cast(v)) {
+      if (const lang_ident* d=f->closure()) {
+        if (c.owns(this,d) && d-
+        _contains_closure=true;
+      }
+    }
   }
-  if (_arity==0) { //evaluate it now
+  if (!_closure && !_contains_closure && _arity==0) { //evaluate it now
     vtree tmp=vtree(vertex());
     c.eval(_body,tmp);
     std::swap(_body,tmp);
   }
-  _closure=false;
 }
 
 }} //namespace plap::lang

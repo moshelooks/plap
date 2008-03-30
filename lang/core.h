@@ -32,7 +32,7 @@ struct lang_ident : public func {
   arity_t arity() const { return _arity; }
   void operator()(context& c,const_subvtree s,subvtree d) const;
   const vtree* body() const { return &_body; }
-  bool closure() const { return _closure; }
+  const lang_ident* closure() const { return _closure ? this : NULL; }
   friend struct context;
  protected:
   vtree _body;
@@ -40,6 +40,12 @@ struct lang_ident : public func {
   bool _closure;
   void set_body(context& c,subvtree b);
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
+};
+
+struct lang_closure : public stateless_func<lang_closure,1> {
+  void operator()(context& c,const_subvtree s,subvtree d) const { 
+    assert(false); 
+  }
 };
 
 }} //namespace plap::lang
