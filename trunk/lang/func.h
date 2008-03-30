@@ -35,6 +35,7 @@
 namespace plap { namespace lang {
 
 struct context;
+struct lang_ident;
 
 typedef unsigned int  id_t;
 typedef unsigned char arity_t;
@@ -57,7 +58,7 @@ struct func : boost::noncopyable {
   
   bool variadic() const { return arity()==variadic_arity; }
   virtual const vtree* body() const { return NULL; }
-  virtual bool closure() const { return false; }
+  virtual const lang_ident* closure() const { return NULL; }
 
   virtual arity_t arity() const=0;
   virtual void operator()(context&,const_subvtree,subvtree) const=0;

@@ -34,6 +34,7 @@
 #include "parse.h"
 #include "repl.h"
 #include "checkpoint.h"
+#include "pretty_print.h"
 
 namespace plap { namespace lang_io {
 
@@ -233,16 +234,23 @@ struct semantic_analyzer {
 
     vtree body=vtree(vertex());
     arg_idx+=f->arity();
+    bool tmpclosure=found_closure;
+    found_closure=false;
     process_sexpr(src,body);
     arg_idx-=f->arity();
 
+    std::cout << "defined " << body << std::endl;
     c.define(d,body); //create it
+
+    if (found_closure
+      ;
+
+    found_closure=found_closure || tmpclosure;      
 
     name_args(f,transform_it(args.begin_child(),&scalar_name),
               transform_it(args.end_child(),&scalar_name));
     foreach (const string& s,children(args)) 
       scalars.erase(scalar_name(s));
-    std::cout << "PP" << *f->body() << std::endl;
   }
 
   process(lang_lambda) { //lambda(arrow(list(args),body))

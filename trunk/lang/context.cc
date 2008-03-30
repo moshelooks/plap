@@ -35,9 +35,7 @@ void context::erase_last_decl() { _decls.pop_back(); }
 //we must check for some special cases: (1) evaluation of an argument;
 //(2) evaluation of a closure; and (3) a def that's not a function
 void context::eval(const_subvtree src,subvtree dst) {
-  checkpoint();
-  std::cout << src << std::endl;
-
+  std::cout << "evaling " << src << std::endl;
   vertex v=src.root();
   if (src.childless()) {
     arity_t a=test_lang_arg_cast(v);
@@ -52,15 +50,17 @@ void context::eval(const_subvtree src,subvtree dst) {
         if (i!=_idents.end()) {
           eval(i->second.front(),dst);
           return;**/
-        checkpoint();
         if (f->closure()) {
+          checkpoint();
           (*f)(*this,src,dst);
+          checkpoint();
+          std::cout << "res1" << dst << std::endl;
           return;
         } else if (f->arity()==0) { //case 3
-          checkpoint();
           assert(f->body());
           assert(!f->body()->empty());
           dst=*f->body();
+          std::cout << "res2" << dst << std::endl;
           return;
         }
       }
@@ -69,6 +69,20 @@ void context::eval(const_subvtree src,subvtree dst) {
   } else {
     (*call_cast(v))(*this,src,dst);
   }
+  std::cout << "res3" << dst << std::endl;
+}
+
+const_subvtree context::scalar(arity_t idx) const {
+  assert(!_scalars.empty());
+  assert(_scalars.front().first.size()+_scalars.front().second>idx);
+  assert(idx>=_scalars.front().second);
+  /**  scalar_map::const_iterator i=_scalars.begin();
+  while (idx<i->second) {
+    idx
+    ++i;
+    assert(boost::next(i)!=_scalars.end());
+    }**/
+  return _scalars.front().first[idx-_scalars.front().second];
 }
 
 void context::ident_bind(func_t f,const_subvtree binding) {

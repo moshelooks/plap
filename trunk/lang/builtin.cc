@@ -62,13 +62,21 @@ void lang_do::eval(context& c,any_list l,subvtree dst) const {
 
 void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
   vtree tmp=vtree(vertex());
+  checkpoint();
   c.eval(f,tmp);
-  if (tmp.childless()) {
-    (*arg_cast<func_t>(tmp.root()))(c,args.src,dst);
-  } else {
+  checkpoint();
+  if (!tmp.childless() && call_cast(tmp.root())==lang_closure::instance()) {
+    checkpoint();
+    assert(tmp.arity()==1);
     c.scalar_bind(0,args.begin(),args.end());
-    c.eval(tmp,dst);
+    c.eval(tmp.front_sub(),dst);
     c.scalar_unbind(args.size());
+    checkpoint();
+  } else {
+    assert(tmp.childless());
+    checkpoint();
+    (*arg_cast<func_t>(tmp.root()))(c,args.src,dst);
+    checkpoint();
   }
 }
 
