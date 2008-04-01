@@ -108,10 +108,12 @@ bool character(const string& s) { return (s=="'"); }
 string scalar_name(const string& s) { return s.substr(1); }
 
 struct semantic_analyzer {
-  semantic_analyzer(context& co,const_subsexpr r) : c(co),root(r),arg_idx(0) {}
+  semantic_analyzer(context& co,const_subsexpr r)
+      : c(co),root(r),arg_idx(0),contains_closure(false) {}
   context& c;
   const_subsexpr root;
   arity_t arg_idx;
+  bool contains_closure;
 
   typedef std::tr1::unordered_map<string,arity_t> scalar_map;
   scalar_map scalars;
@@ -234,18 +236,13 @@ struct semantic_analyzer {
 
     vtree body=vtree(vertex());
     arg_idx+=f->arity();
-    bool tmpclosure=found_closure;
-    found_closure=false;
+    bool tmp=contains_closure;
+    contains_closure=false;
     process_sexpr(src,body);
     arg_idx-=f->arity();
 
     std::cout << "defined " << body << std::endl;
-    c.define(d,body); //create it
-
-    if (found_closure
-      ;
-
-    found_closure=found_closure || tmpclosure;      
+    contains_closure=c.define(d,body,contains_closure) || tmp; //create it
 
     name_args(f,transform_it(args.begin_child(),&scalar_name),
               transform_it(args.end_child(),&scalar_name));

@@ -38,7 +38,8 @@ struct lang_ident : public func {
   vtree _body;
   arity_t _arity,_offset;
   bool _closure;
-  void set_body(context& c,subvtree b);
+  bool set_body(context& c,subvtree b,bool contains_closure); //true if closure
+  void expand_closure(context& c,subvtree d,arity_t m) const;
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 
