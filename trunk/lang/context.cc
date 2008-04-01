@@ -21,6 +21,7 @@
 #include "checkpoint.h"
 
 #include "pretty_print.h" //fixme
+using namespace std;
 
 namespace plap { namespace lang {
 
@@ -29,7 +30,9 @@ lang_ident* context::declare(arity_t a,arity_t o) {
   return &_decls.back();
 }
 //this splices out body - so if you want to keep it, make a copy
-void context::define(lang_ident* d,subvtree body) { d->set_body(*this,body); }
+bool context::define(lang_ident* d,subvtree body,bool contains_closure) { 
+  return d->set_body(*this,body,contains_closure); 
+}
 void context::erase_last_decl() { _decls.pop_back(); }
 
 //we must check for some special cases: (1) evaluation of an argument;
@@ -49,7 +52,7 @@ void context::eval(const_subvtree src,subvtree dst) {
         /**ident_map::const_iterator i=_idents.find(f);
         if (i!=_idents.end()) {
           eval(i->second.front(),dst);
-          return;**/
+          return;**///fixme
         if (f->closure()) {
           checkpoint();
           (*f)(*this,src,dst);
@@ -74,6 +77,8 @@ void context::eval(const_subvtree src,subvtree dst) {
 
 const_subvtree context::scalar(arity_t idx) const {
   assert(!_scalars.empty());
+  cout << _scalars.front().first.size() << "," << (int)_scalars.front().second
+       << "," << (int)idx << endl;
   assert(_scalars.front().first.size()+_scalars.front().second>idx);
   assert(idx>=_scalars.front().second);
   /**  scalar_map::const_iterator i=_scalars.begin();
