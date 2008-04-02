@@ -34,19 +34,19 @@ struct lang_ident : public func {
   const vtree* body() const { return &_body; }
   const lang_ident* closure() const { return _closure ? this : NULL; }
   friend struct context;
+  bool nested() const { return _nested; }
  protected:
   vtree _body;
   arity_t _arity,_offset;
-  bool _closure;
-  bool set_body(context& c,subvtree b,bool contains_closure); //true if closure
+  bool _closure,_nested;
+  //set_body returns true iff a closure
+  bool set_body(context& c,subvtree b,bool contains_closure,bool nested);
   void expand_closure(context& c,subvtree d,arity_t m) const;
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 
 struct lang_closure : public stateless_func<lang_closure,1> {
-  void operator()(context& c,const_subvtree s,subvtree d) const { 
-    assert(false); 
-  }
+  void operator()(context& c,const_subvtree s,subvtree d) const;
 };
 
 }} //namespace plap::lang

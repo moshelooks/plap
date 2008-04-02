@@ -57,16 +57,16 @@ void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
 void eval_print(std::ostream& out,const_subsexpr s,lang::context& c) {
   using namespace lang;
 
-  out << "goes to sexpr '" << s << "'" << std::endl;
+  //out << "goes to sexpr '" << s << "'" << std::endl;
 
   vtree expr=vtree(vertex());
   analyze(s,expr,c);
-  out << "analyzed" << std::endl;
-  pretty_print(out,expr);
+  //out << "analyzed" << std::endl;
+  //pretty_print(out,expr);
   vtree res=vtree(vertex());
-  out << "OK" << std::endl;
+  //out << "OK" << std::endl;
   c.eval(expr,res);
-  out << "evals to" << std::endl;
+  //out << "evals to" << std::endl;
   pretty_print(out,res);
 }
 

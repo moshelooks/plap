@@ -104,6 +104,8 @@ test_case(test_closure) {
   check_eval("((\\$x -> (\\$y -> $x+$y)) 42) 100","142");
   check_eval("blup $x = \\$y -> $x+$y","[]");
   check_eval("(blup 4) 5","9");
+  check_eval("S $x = \\$y -> \\$z -> ($x $z) ($y $z)","[]");
+  check_eval("((S \\$x -> \\$y -> $x*$y) negative) 3","-9");
 }
 
 test_case(lang_import_and_test) {
