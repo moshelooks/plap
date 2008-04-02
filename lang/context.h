@@ -42,7 +42,7 @@ struct context : public boost::noncopyable {
 
   lang_ident* declare(arity_t a,arity_t o);
   //define splices out the body
-  bool define(lang_ident*,subvtree body,bool contains_closure);
+  bool define(lang_ident*,subvtree body,bool contains_closure,bool in_def);
   void erase_last_decl();  //needed for error recovery
 
   //evaluation methods
@@ -74,6 +74,7 @@ struct context : public boost::noncopyable {
     _scalars.pop_front();
   }
   const_subvtree scalar(arity_t idx) const;
+  arity_t scalar_arity() const { return _scalars.front().first.size(); }
   
   //identifier bindings
   void ident_bind(func_t f,const_subvtree binding);

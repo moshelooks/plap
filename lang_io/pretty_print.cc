@@ -164,6 +164,7 @@ struct pretty_printer {
 } //namespace
 
 void pretty_print(ostream& o,const_subvtree s,size_t indent,size_t linemax) {
+  linemax=999999;
   pretty_printer pp(o,indent,linemax);
   pp(s);
   o << endl;
@@ -177,7 +178,7 @@ void pretty_print(ostream& o,func_t f,size_t indent,size_t linemax) {
     foreach (const std::string& s,func2arg_names(f))
       ss << '$' << s << " ";
     ss << "= ";
-    
+    linemax=999999;
     pretty_printer pp(o,indent,linemax,func2arg_names(f));
     pp(*body,ss.str());
   } else {

@@ -30,8 +30,9 @@ lang_ident* context::declare(arity_t a,arity_t o) {
   return &_decls.back();
 }
 //this splices out body - so if you want to keep it, make a copy
-bool context::define(lang_ident* d,subvtree body,bool contains_closure) { 
-  return d->set_body(*this,body,contains_closure); 
+bool context::define(lang_ident* d,subvtree body,
+                     bool contains_closure,bool in_def) { 
+  return d->set_body(*this,body,contains_closure,in_def); 
 }
 void context::erase_last_decl() { _decls.pop_back(); }
 
@@ -44,6 +45,8 @@ void context::eval(const_subvtree src,subvtree dst) {
     arity_t a=test_lang_arg_cast(v);
     if (a!=variadic_arity) { //case 1
       a-=_scalars.front().second;
+      cout << "XXX" << (int)_scalars.front().second << "PP"
+           << (int)a << " PP " << _scalars.front().first.size() << endl;
       assert(a<_scalars.front().first.size());
       assert(!_scalars.front().first[a].empty());
       dst=_scalars.front().first[a];
@@ -53,17 +56,17 @@ void context::eval(const_subvtree src,subvtree dst) {
         if (i!=_idents.end()) {
           eval(i->second.front(),dst);
           return;**///fixme
-        if (f->closure()) {
-          checkpoint();
+        /**if (f->closure()) {
+          //checkpoint();
           (*f)(*this,src,dst);
-          checkpoint();
-          std::cout << "res1" << dst << std::endl;
+          //checkpoint();
+          //std::cout << "res1" << dst << std::endl;
           return;
-        } else if (f->arity()==0) { //case 3
+          } else**/ if (f->arity()==0) { //case 3
           assert(f->body());
           assert(!f->body()->empty());
           dst=*f->body();
-          std::cout << "res2" << dst << std::endl;
+          //std::cout << "res2" << dst << std::endl;
           return;
         }
       }
@@ -72,13 +75,13 @@ void context::eval(const_subvtree src,subvtree dst) {
   } else {
     (*call_cast(v))(*this,src,dst);
   }
-  std::cout << "res3" << dst << std::endl;
+  //std::cout << "res3" << dst << std::endl;
 }
 
 const_subvtree context::scalar(arity_t idx) const {
   assert(!_scalars.empty());
-  cout << _scalars.front().first.size() << "," << (int)_scalars.front().second
-       << "," << (int)idx << endl;
+//cout << _scalars.front().first.size() << "," << (int)_scalars.front().second
+  //<< "," << (int)idx << endl;
   assert(_scalars.front().first.size()+_scalars.front().second>idx);
   assert(idx>=_scalars.front().second);
   /**  scalar_map::const_iterator i=_scalars.begin();
