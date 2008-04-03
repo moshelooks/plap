@@ -60,7 +60,9 @@ reverse_it(BidirectionalIterator i) { return boost::make_reverse_iterator(i); }
 
 template<typename Predicate,typename Iterator>
 inline boost::filter_iterator<Predicate,Iterator>
-filter_it(Iterator i,Predicate p) { return boost::make_filter_iterator(i,p); }
+filter_it(Iterator i,Iterator j,Predicate p) { 
+  return boost::make_filter_iterator(p,i,j); 
+}
 
 template<typename Value>
 struct repetition_iterator

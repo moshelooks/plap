@@ -34,8 +34,6 @@ I $x = $x
 
 nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
 
-empty $l = $l==[]
-
 sub_helper $list $indices $offset = #fixme
   if (empty $indices) [] 
      if (hd $indices)==$offset 
@@ -70,7 +68,9 @@ filter $pred $l =
   if (empty $l) $l
     (if ($pred (hd $l)) [hd $l] [])~(filter $pred (tl $l))
 
-sort $l = if (empty $l) $l ((sort (filter (\$x -> less (hd $l) $x) (tl $l)))~[(hd $l)]~(sort (filter (\$x -> greater_equal (hd $l) $x) (tl $l))))
+sort $l = 
+  if (empty $l) $l
+     (sort (filter (\$x -> less (hd $l) $x) (tl $l)))~[(hd $l)]~(sort (filter (\$x -> greater_equal (hd $l) $x) (tl $l)))
 
 ##
 # Reversing a String by Word or Character
