@@ -107,6 +107,10 @@ bool boolean(const string& s) {
 bool character(const string& s) { return (s=="'"); }
 string scalar_name(const string& s) { return s.substr(1); }
 
+bool has_var_outside_range(arity_t f,arity_t l,const_subvtree s) {
+  
+}
+
 struct semantic_analyzer {
   semantic_analyzer(context& co,const_subsexpr r)
       : c(co),root(r),arg_idx(0),contains_closure(false),in_def(false) {}

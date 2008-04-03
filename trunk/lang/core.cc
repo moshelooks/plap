@@ -70,18 +70,10 @@ void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
 }
 
 void lang_ident::expand_closure(context& c,subvtree d,arity_t m) const {
-  //checkpoint();
   d=c.ident_binding(this);
   std::cout << "YY to " << d << std::endl;
   //checkpoint();
-  //foreach(subvtree s,d) { //fixme leaves
-  for (subvtree::sub_pre_iterator i=d.begin_sub();i!=d.end_sub();) {
-    //checkpoint();
-    subvtree s=*i;
-    ++i;
-    if (!s.childless())
-      continue;
-
+  foreach(subvtree s,sub_leaves(d)) {
     arity_t a=test_lang_arg_cast(s.root());
     if (a<m) {
       //checkpoint();
@@ -117,12 +109,7 @@ bool lang_ident::set_body(context& c,subvtree b,
   if (_closure=contains_closure)
     return true;
 
-  //foreach (vertex v,_body) {//fixme leaves
-  for (subvtree::sub_pre_iterator i=_body.begin_sub();i!=_body.end_sub();++i) {
-    vertex v=i->root();
-    if (!i->childless())
-        continue;
-  
+  foreach (vertex v,leaves(_body)) {
     arity_t a=test_lang_arg_cast(v);
     if (a!=variadic_arity && a<_offset) {
       _closure=true;
@@ -140,21 +127,14 @@ bool lang_ident::set_body(context& c,subvtree b,
 void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
   assert(s.arity()==1);
   d=s;//[0];
-//fixme leaves
-  for (subvtree::sub_pre_iterator i=d.begin_sub();i!=d.end_sub();) {
-    //checkpoint();
-    subvtree s=*i;
-    ++i;
-    if (!s.childless())
-      continue;
 
+  foreach (subvtree s,sub_leaves(d)) {
     arity_t a=test_lang_arg_cast(s.root());
     if (a<c.scalar_arity()) {
       s=c.scalar(a);
     } else if (a!=variadic_arity) {
       s.root()=lang_arg(a-c.scalar_arity());
     }
-    //checkpoint();
   }
 }
 
