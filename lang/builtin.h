@@ -35,8 +35,8 @@
 
 namespace plap { namespace lang {
 
-typedef const_subvtree   any;
-typedef list_of<any> any_list;
+typedef const_subvtree any;
+typedef list_of<any>   any_list;
 
 template<typename T>
 struct arg_helper {
@@ -109,17 +109,6 @@ struct lang_binary : public builtin<lang_binary<Func,T>(T,T)> {
   void cfeval(T a,T b,subvtree dst) const { dst.root()=arg(Func()(a,b)); }
 };
 
-//core
-/**struct lang_let : public stateless_func<lang_let,2> {
-  void operator()(context& c,const_subvtree s,subvtree d) const;
-  };**/
-
-//closure(f)
-/**
-struct lang_closure : public builtin<lang_closure(func_t)> {
-  void eval(context& c,func_t f,subvtree d) const { f->closure(c,d); }
-  };**/
-
 //control flow
 struct lang_if : public builtin<lang_if(bool,any,any)> {
   void eval(context& c,bool cond,any if_br,any else_br,subvtree dst) const {
@@ -180,17 +169,22 @@ struct lang_cons : public builtin<lang_cons(any,any_list)> {
 };
 struct lang_concat : public builtin<lang_concat(any_list,any_list)> {
   void cfeval(any_list a,any_list b,subvtree dst) const {
+    assert(a.src.root()==b.src.root());
     if (a.empty() && b.empty()) {
+      assert(arg_cast<func_t>(a.src.root())==lang_list::instance());
       dst.root()=nil();
     } else {
-      dst.root()=call(lang_list::instance());
+      dst.root()=a.src.root(); //also works on tuples
       dst.append(a.begin(),a.end());
       dst.append(b.begin(),b.end());
     }
   }
 };
 struct lang_hd : public builtin<lang_hd(any_list)> {
-  void cfeval(any_list a,subvtree dst) const { dst=a.front(); }
+  void cfeval(any_list a,subvtree dst) const {
+     assert(!a.empty());
+     dst=a.front();
+  }
 };
 struct lang_tl : public builtin<lang_tl(any_list)> {
   void cfeval(any_list a,subvtree dst) const { 
@@ -281,6 +275,37 @@ struct lang_expand : public builtin<lang_expand(any)> {
   }
 };
 #endif
+
+//tuple operators
+struct lang_pair : public builtin<lang_pair(any,any)> {
+  void eval(context& c,any a,any b,subvtree dst) const {
+    dst.root()=call(lang_tuple::instance());
+    dst.append(2,vertex());
+    c.eval(a,dst.front_sub());
+    c.eval(b,dst.back_sub());
+  }
+};
+struct lang_left : public builtin<lang_left(any_list)> {
+  void cfeval(any_list a,subvtree dst) const {
+    assert(!a.empty());
+    assert(call_cast(a.src.root())==lang_tuple::instance());
+    dst=a.front();
+  }
+};
+struct lang_right : public builtin<lang_right(any_list)> {
+ void cfeval(any_list a,subvtree dst) const { 
+    assert(a.size()>1);
+    assert(call_cast(a.src.root())==lang_tuple::instance());
+    any_list::iterator i=a.begin();
+    if (++i==a.end()) {
+      dst=a.back();
+    } else {
+      dst.root()=a.src.root();
+      dst.append(i,a.end());
+    }
+  }
+};
+
 }} //namespace plap::lang
 
 #endif //PLAP_LANG_BUILTIN_H__

@@ -61,10 +61,12 @@ struct func : boost::noncopyable {
   virtual const lang_ident* closure() const { return NULL; }
 
   virtual arity_t arity() const=0;
-  virtual void operator()(context&,const_subvtree,subvtree) const=0;
+  //default func applucation copies self and evaluates children
+  virtual void operator()(context&,const_subvtree,subvtree) const;
 
  protected:
   id_t _id;
+
 };
 
 inline func* id2func(id_t s) {
