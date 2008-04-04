@@ -24,6 +24,8 @@
 
 #include "pretty_print.h"//fixme
 #include "checkpoint.h"
+#include "names.h"
+#include <boost/lexical_cast.hpp>
 
 namespace plap { namespace lang {
 
@@ -103,7 +105,10 @@ void lang_ident::set_body(context& c,subvtree b) {
   assert(_body.empty());
   _body.splice(_body.end(),b); 
   _closure=has_var_outside_range(_body);
-  std::cout << "_closure " << _body << " is " << _closure << std::endl;
+  std::cout << "_closure for id#" << id() << ", name=" 
+            << boost::lexical_cast<std::string>(func_t(this))
+            << ", '" << _body << "' is " 
+            << _closure << std::endl;
   if (!_closure && _arity==0) { //evaluate it now
     vtree tmp=vtree(vertex());
     c.eval(_body,tmp);
@@ -131,12 +136,14 @@ bool lang_ident::has_var_outside_range(const_subvtree s) const {
 void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
   d=s;
   bool ready=true;
+  bool rewrap=d.childless() || call_cast(d.root())!=this;
   rec_instantiate(c,d,ready);
   if (ready) {
     vtree tmp=vtree(vertex());
     c.eval(d,tmp);
     std::swap(d,tmp);
-  } else if (d.childless() || call_cast(d.root())!=this) {
+  }
+  if (rewrap) {
     d.append(call(lang_closure::instance()));
     d.splice(d.back_sub().end_child(),d.begin_sub_child(),--d.end_sub_child());
     std::swap(d.root(),d.front());
@@ -154,8 +161,9 @@ void lang_closure::rec_instantiate(context& c,subvtree d,bool& ready) const {
     } else {
       if (func_t f=test_func_arg_cast(s.root())) {
         if (const lang_ident* cl=f->closure()) {
-          s=*cl->body();
-          rec_instantiate(c,s,ready);
+          s.root()=call(lang_closure::instance());
+          s.append(*cl->body());
+          rec_instantiate(c,s.front_sub(),ready);
         }
       }
     }
