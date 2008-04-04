@@ -107,17 +107,10 @@ bool boolean(const string& s) {
 bool character(const string& s) { return (s=="'"); }
 string scalar_name(const string& s) { return s.substr(1); }
 
-bool has_var_outside_range(arity_t f,arity_t l,const_subvtree s) {
-  
-}
-
 struct semantic_analyzer {
-  semantic_analyzer(context& co,const_subsexpr r)
-      : c(co),root(r),arg_idx(0),contains_closure(false),in_def(false) {}
+  semantic_analyzer(context& co) : c(co),arg_idx(0) {}
   context& c;
-  const_subsexpr root;
   arity_t arg_idx;
-  bool contains_closure,in_def;
 
   typedef std::tr1::unordered_map<string,arity_t> scalar_map;
   scalar_map scalars;
@@ -125,7 +118,7 @@ struct semantic_analyzer {
   typedef std::tr1::unordered_map<string,util::slist<func_t> > let_map;
   let_map lets;
   
-  bool nested(const_subsexpr src) { return src.begin()!=root.begin(); }
+  bool nested(const_subsexpr src) { return parent(src.begin())!=src.end(); }
 
   process(sexpr) {
     const string& root=src.root();
@@ -238,27 +231,21 @@ struct semantic_analyzer {
     for_each(args.begin_child(),args.end_child(),count_it(arg_idx),
              bind(&semantic_analyzer::index_scalar,this,_1,_2));
 
-    vtree body=vtree(vertex());
     arg_idx+=f->arity();
-    bool tmp=contains_closure;
-    contains_closure=false;
-    bool tmpdef=in_def;
-    in_def=true;
+    vtree body=vtree(vertex());
     process_sexpr(src,body);
-    in_def=tmpdef;
     arg_idx-=f->arity();
-
-    //std::cout << "defined " << body << std::endl;
-    contains_closure=c.define(d,body,contains_closure,in_def) || tmp;
 
     name_args(f,transform_it(args.begin_child(),&scalar_name),
               transform_it(args.end_child(),&scalar_name));
     foreach (const string& s,children(args)) 
       scalars.erase(scalar_name(s));
+
+    c.define(d,body);
   }
 
   process(lang_lambda) { //lambda(arrow(list(args),body))
-    if (src.front()!="arrow")//fixme*func2name(lang_arrow::instance()))
+    if (src.front()!=arrow_name)
       throw_bad_lambda(lexical_cast<string>(src));
     func_t f=c.declare(src[0][0].arity(),arg_idx);
     try {
@@ -275,36 +262,32 @@ struct semantic_analyzer {
         src.front_sub().childless())
       throw_bad_let(src.root());
     foreach (string s,children(src[0]))
-      if (s!="def") //fixme
+      if (s!=def_name)
         throw_bad_let(src.root());
     
     //create the identifiers
-    std::vector<func_t> idents;
     foreach (const_subsexpr s,sub_children(src[0])) {
-      func_t f=string2func(s.front());
-      if (!f)
-        f=c.declare(s[1].arity(),arg_idx);
-      idents.push_back(f);
-      lets[s.front()].push_front(f);
+      if (string2func(s.front()))
+        throw_arg_shadow(s.front());
+    }
+    std::vector<func_t> idents;
+    foreach (const_subsexpr s,sub_children(src[0])) {    
+      idents.push_back(c.declare(s[1].arity(),arg_idx));
+      lets[s.front()].push_front(idents.back());
+      name_let(idents.back(),s.front());
     }
 
-    //bind them
+    //bind them and analyze the body of the let
     try {
       std::vector<func_t>::iterator ident=idents.begin();
       foreach(const_subsexpr s,sub_children(src.front_sub()))
         make_def(s,s[1],s[2],*ident++);
-    } catch (std::runtime_error e) {
-      foreach(func_t f,idents) {
-        c.erase_last_decl();
-      }
-      throw e;
-    }
-
-    //analyze the body of the let
-    try {
       process_sexpr(src[1],dst);
     } catch (std::runtime_error e) {
-      std::cerr << "EEP" << std::endl;
+      foreach(func_t f,idents)
+        erase_let_name(f);
+      dorepeat(idents.size())
+        c.erase_last_decl();
       throw e;
     }
 
@@ -456,7 +439,8 @@ struct semantic_analyzer {
   }
   void validate_arity(const_subsexpr src,arity_t a) {
     if (a!=variadic_arity && src.arity()!=a)
-      throw_bad_arity(src.root()=="list" ? parent(src.begin_sub())->front() : 
+      throw_bad_arity(src.root()==*func2name(lang_list::instance()) ? 
+                      parent(src.begin_sub())->front() : 
                       src.root(),src.arity(),a);
   }
 
@@ -482,47 +466,11 @@ struct semantic_analyzer {
   }
 };
 
-        
-  
-  /**
-  string lastline,s;
-  string::size_type indent=0;
-  std::stack<string::size_type> oldindents;
-  for (string s=process_line(in,s);!s.empty();process_line(in,s)) {
-    string::size_type newindent=count_whitespace(s);
-    if (newindent>indent)
-      oldindents.push(indent);
-    if (newindent>indent || has_whitespace(lastline))
-      out << lparen;
-    out << lastline << " ";
-    while (newindent<indent) {
-      if (oldindents.empty())
-        throw_bad_indent(s);
-      out << rparen;
-      indent=oldindents.top();
-      oldindents.pop();
-    }
-    bool has=has_whitespace(s,newindent);
-    if (has)
-      out << lparen;
-      out << s;
-      if (has)
-        out << rparen;
-    }    
-    if (!is_whitespace(in.peek()))
-      break;
-    indent=newindent;
-  }
-finalize:
-  if (!oldindents.empty())
-    throw_bad_indent(s);
-  **/
-
 } //namespace
 
 
 void analyze(const_subsexpr src,lang::subvtree dst,lang::context& c) {
-  semantic_analyzer sa(c,src);
+  semantic_analyzer sa(c);
   sa.process_sexpr(src,dst);
 }
 

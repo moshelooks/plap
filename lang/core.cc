@@ -42,7 +42,7 @@ void lang_list::operator()(context& c,const_subvtree s,subvtree d) const {
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
   //std::cout << s.arity() << " " << int(_arity) << std::endl;
   assert(s.arity()==_arity || s.childless());
-  if (_closure) {
+  /** if (_closure) {
     if (!s.childless()) {
       assert(_offset==0);
       c.scalar_bind(0,s.begin_sub_child(),s.end_sub_child());
@@ -60,7 +60,7 @@ void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
     } else {
       expand_closure(c,d,0);
     }
-  } else if (_arity==0) {
+    } else**/ if (_arity==0) {
     d=c.ident_binding(this);
   } else {
     c.scalar_bind(_offset,s.begin_sub_child(),s.end_sub_child());
@@ -81,7 +81,7 @@ void lang_ident::expand_closure(context& c,subvtree d,arity_t m) const {
       //checkpoint();
     } else if (m!=0 && a!=variadic_arity) {
       s.root()=lang_arg(a-m);
-    } else if (a==variadic_arity) {
+    }/* else if (a==variadic_arity) {
       if (func_t f=test_func_arg_cast(s.root())) {
         if (const lang_ident* closure=f->closure()) {
           //if (closure->nested()) {
@@ -90,7 +90,7 @@ void lang_ident::expand_closure(context& c,subvtree d,arity_t m) const {
             //}
         }
       }
-    }
+      }**/
     //checkpoint();
   }
   d.append(call(lang_closure::instance()));
@@ -99,41 +99,65 @@ void lang_ident::expand_closure(context& c,subvtree d,arity_t m) const {
   std::cout << "goes to " << d << std::endl;
 }
 
-bool lang_ident::set_body(context& c,subvtree b,
-                          bool contains_closure,bool nested) {  
-  assert(_body.empty()); //fixeme for overriding
-  _nested=nested;
-
+void lang_ident::set_body(context& c,subvtree b) {  
+  assert(_body.empty());
   _body.splice(_body.end(),b); 
-
-  if (_closure=contains_closure)
-    return true;
-
-  foreach (vertex v,leaves(_body)) {
-    arity_t a=test_lang_arg_cast(v);
-    if (a!=variadic_arity && a<_offset) {
-      _closure=true;
-      return true;
-    }
-  }
-  if (_arity==0) { //evaluate it now
+  _closure=has_var_outside_range(_body);
+  std::cout << "_closure " << _body << " is " << _closure << std::endl;
+  if (!_closure && _arity==0) { //evaluate it now
     vtree tmp=vtree(vertex());
     c.eval(_body,tmp);
     std::swap(_body,tmp);
+  }
+}
+
+bool lang_ident::has_var_outside_range(const_subvtree s) const {
+  foreach (vertex v,leaves(s)) {
+    arity_t a=test_lang_arg_cast(v);
+    if (a!=variadic_arity) {
+      if (a<_offset)
+      return true;
+    } else if (func_t f=test_func_arg_cast(v)) {
+      if (const lang_ident* d=f->closure()) {
+        assert(d->body());
+        if (has_var_outside_range(*d->body()))
+          return true;
+      }
+    }
   }
   return false;
 }
 
 void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
-  assert(s.arity()==1);
-  d=s;//[0];
+  d=s;
+  bool ready=true;
+  rec_instantiate(c,d,ready);
+  if (ready) {
+    vtree tmp=vtree(vertex());
+    c.eval(d,tmp);
+    std::swap(d,tmp);
+  } else if (d.childless() || call_cast(d.root())!=this) {
+    d.append(call(lang_closure::instance()));
+    d.splice(d.back_sub().end_child(),d.begin_sub_child(),--d.end_sub_child());
+    std::swap(d.root(),d.front());
+  }
+}
 
+void lang_closure::rec_instantiate(context& c,subvtree d,bool& ready) const {
   foreach (subvtree s,sub_leaves(d)) {
     arity_t a=test_lang_arg_cast(s.root());
     if (a<c.scalar_arity()) {
       s=c.scalar(a);
     } else if (a!=variadic_arity) {
       s.root()=lang_arg(a-c.scalar_arity());
+      ready=false;
+    } else {
+      if (func_t f=test_func_arg_cast(s.root())) {
+        if (const lang_ident* cl=f->closure()) {
+          s=*cl->body();
+          rec_instantiate(c,s,ready);
+        }
+      }
     }
   }
 }

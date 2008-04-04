@@ -26,10 +26,8 @@ const char def_symbol[]="=";
 const char char_symbol[]="'";
 const char string_symbol[]="\"";
 const char anon_func_name[]="anonymous_function";
-
-/*
-const char apply_symbol[]="(";
-const char cons_symbol[]=":";*/
+const char arrow_name[]="arrow";
+const char def_name[]="def";
 
 namespace lang_io_private {
 #define namef(name) (#name,(func_t)lang_ ## name :: instance())
@@ -79,6 +77,9 @@ func_index func_names=boost::assign::map_list_of
     namef(symbol2index)
     namef(index2symbol)
 
+    //debug - fixme
+    namef(closure)
+
     /**("let",let::instance())
 
     ("pair",pair::instance())**/
@@ -90,6 +91,8 @@ func_index func_names=boost::assign::map_list_of
     //fixmenamef(def)
     //fixmenamef(decl);
 #undef namef
+
+func_index let_names;
 
 arg_index arg_names; //core & builtin functions don't need arg names
 

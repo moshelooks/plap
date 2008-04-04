@@ -41,8 +41,7 @@ struct context : public boost::noncopyable {
   context(context& p) : _parent(&p),_root(_parent->_root) {}
 
   lang_ident* declare(arity_t a,arity_t o);
-  //define splices out the body
-  bool define(lang_ident*,subvtree body,bool contains_closure,bool in_def);
+  void define(lang_ident*,subvtree body);  //splices out the body
   void erase_last_decl();  //needed for error recovery
 
   //evaluation methods

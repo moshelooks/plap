@@ -30,9 +30,8 @@ lang_ident* context::declare(arity_t a,arity_t o) {
   return &_decls.back();
 }
 //this splices out body - so if you want to keep it, make a copy
-bool context::define(lang_ident* d,subvtree body,
-                     bool contains_closure,bool in_def) { 
-  return d->set_body(*this,body,contains_closure,in_def); 
+void context::define(lang_ident* d,subvtree body) {
+  d->set_body(*this,body);
 }
 void context::erase_last_decl() { _decls.pop_back(); }
 
@@ -52,21 +51,15 @@ void context::eval(const_subvtree src,subvtree dst) {
       dst=_scalars.front().first[a];
     } else { 
       if (func_t f=test_func_arg_cast(v)) { //case 2
-        /**ident_map::const_iterator i=_idents.find(f);
-        if (i!=_idents.end()) {
-          eval(i->second.front(),dst);
-          return;**///fixme
-        /**if (f->closure()) {
-          //checkpoint();
-          (*f)(*this,src,dst);
-          //checkpoint();
-          //std::cout << "res1" << dst << std::endl;
+        if (const lang_ident* cl=f->closure()) {
+          lang_closure::instance()->operator()(*this,*cl->body(),dst);
+          std::cout << "res1" << dst << std::endl;
           return;
-          } else**/ if (f->arity()==0) { //case 3
+        } else if (f->arity()==0) { //case 3
           assert(f->body());
           assert(!f->body()->empty());
           dst=*f->body();
-          //std::cout << "res2" << dst << std::endl;
+          std::cout << "res2" << dst << std::endl;
           return;
         }
       }
@@ -75,7 +68,7 @@ void context::eval(const_subvtree src,subvtree dst) {
   } else {
     (*call_cast(v))(*this,src,dst);
   }
-  //std::cout << "res3" << dst << std::endl;
+  std::cout << "res3" << dst << std::endl;
 }
 
 const_subvtree context::scalar(arity_t idx) const {
