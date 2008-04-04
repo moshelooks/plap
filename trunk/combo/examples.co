@@ -12,12 +12,6 @@ fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
 # (http://www.paulgraham.com/accgen.html)
 acc_gen $n = \$i -> set $n ($n+$i)
 
-###****
-#generating unit tests
-#tom dean blog
-#cortex project
-#***
-
 # Combinators
 S $x = \$y -> \$z -> ($x $z) ($y $z)
 K $x = \$y -> $x
@@ -69,8 +63,9 @@ filter $pred $l =
     (if ($pred (hd $l)) [hd $l] [])~(filter $pred (tl $l))
 
 sort $l = 
-  if (empty $l) $l
-     (sort (filter (\$x -> less (hd $l) $x) (tl $l)))~[(hd $l)]~(sort (filter (\$x -> greater_equal (hd $l) $x) (tl $l)))
+  if (empty $l) 
+     $l 
+     (sort (filter (\$x -> less $x (hd $l)) (tl $l)))~[hd $l]~(sort (filter (\$x -> greater_equal $x (hd $l)) (tl $l)))
 
 ##
 # Reversing a String by Word or Character
