@@ -62,16 +62,19 @@ filter $pred $l =
   if (empty $l) $l
     (if ($pred (hd $l)) [hd $l] [])~(filter $pred (tl $l))
 
-sort $l = 
-  if (empty $l) 
-     $l 
-     (sort (filter (\$x -> less $x (hd $l)) (tl $l)))~[hd $l]~(sort (filter (\$x -> greater_equal $x (hd $l)) (tl $l)))
+nonempty $l $f = if ($l==[]) [] ($f (hd $l) (tl $l))
+
+sort $l = #nonempty $l (\$x $xs -> $x:$xs)
+fixme
+#((sort (filter (\$y -> less $y $x) $xs))))
+
+#~[$x]~(sort (filter (\$y -> less $x $y) $xs)))
 
 ##
 # Reversing a String by Word or Character
 ##
 
-reverse $l = if (empty $l) $l (reverse (tl $x))~[hd $x]
+reverse $l = if (empty $l) $l (reverse (tl $l))~[hd $l]
 
 words $l =
   let words_helper $words $word $l = 

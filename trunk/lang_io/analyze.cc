@@ -75,7 +75,7 @@ make_exception(bad_arg_name,"Bad name '"+str+"'");
 make_exception(bad_arg_list,"Bad argument list '"+str+"'");
 make_exception(arg_shadow,"Argument '"+str+"' shadows existing argument.");
 make_exception(arg_unbound,"Invalid reference to unbound argument '"+str+"'.");
-make_exception(bad_pair,"Invalid pair '"+str+"' (arity must be >=2).");
+make_exception(bad_tuple,"Invalid tuple '"+str+"' (arity must be >=2).");
 make_exception(bad_symbol,"Unrecognized symbol or function '"+str+"'.");
 make_exception(bad_redef,"Cannot redifine existing function '"+str+"'.");
 make_exception(bad_lambda,"Malformed lambda expression '"+str+
@@ -133,7 +133,7 @@ struct semantic_analyzer {
     special_case(import,1);
     special_case(lambda,1);
     special_case(let,2);
-    //special_case(pair,variadic_arity);
+    //special_case(tuple,variadic_arity);
 
     if (func_t f=string2func(root)) {
       validate_arity(src,f);
@@ -331,43 +331,14 @@ struct semantic_analyzer {
     process_children(src,dst);
   }
 
-  process(pair) { //pair(arg arg arg ...)
-    arity_t a=src.arity();
+  process(tuple) { //tuple(arg arg arg ...)
+    /** arity_t a=src.arity();
     if (a==0)
-      throw_bad_pair("empty");
+      throw_bad_tuple("empty");
     else if (a==1)
-      throw_bad_pair(src.front());
-
-    pair_rec(src.begin_sub_child(),src.end_sub_child(),dst);
+      throw_bad_tuple(src.front());
+      process_children(src,dst);**/
   }
-  //types = { symbol,char,number,func } there is a 4x4 matrix of possibilities
-  void pair_rec(sexpr::const_sub_child_iterator f,
-                sexpr::const_sub_child_iterator l,subvtree dst) {
-#if 0
-    const string& left=*f++;
-    if (boost::next(f)==l) {
-      const string& right=*f++;
-      // if (number(left)) {
-      //   if (number(right)
-
-
-    switch(a) {
-      case 0:
-        dst.root()=nil();
-      case 1:
-        //sexpr::sub_child_iterator arg0=src.begin_sub_child();
-        //dst.root()=c.get_type<tuple1<number_t> >();
-        //break;
-      default:
-        throw_arity_exceeded(src.root()+"^"+lexical_cast<string>(a));
-    }
-    /***
-        fixme tuple
-        dst.append(string2vertex(src.root()));
-        c.to_tuple(dst);
-    **/
-#endif
-    }
  
   //parsing an individual node always unambiguous (i.e. can be done without any
   //context other than the given context+bindings)

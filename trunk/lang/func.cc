@@ -15,6 +15,7 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "func.h"
+#include "context.h"
 
 namespace plap { namespace lang {
 
@@ -24,5 +25,14 @@ std::vector<func*>& ids() {
   return id_repo;
 }
 } //namespace lang_private
+
+void func::operator()(context& c,const_subvtree s,subvtree d) const { 
+  assert(!s.childless());
+  assert(d.childless());
+  d.root()=call(this);
+  d.append(s.arity(),vertex());
+  util::for_each(s.begin_sub_child(),s.end_sub_child(),d.begin_sub_child(),
+                 boost::bind(&context::eval,&c,_1,_2));
+}
 
 }} //namespace plap::lang

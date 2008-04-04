@@ -58,7 +58,7 @@ const std::vector<infix_map> infix_by_arity=boost::assign::list_of<infix_map>
      ("def","="));
 
 const infix_map infix_variadic=boost::assign::map_list_of   //variadic ops
-    ("pair","(")
+    ("tuple","(")
     ("list","[");
 
 }}} //namespace plap::lang_io::lang_io_private

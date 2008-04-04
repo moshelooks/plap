@@ -57,8 +57,9 @@ func_index func_names=boost::assign::map_list_of
     namef(not)
 
     //list operators
+    namef(list)
     namef(cons)
-    namef(concat)
+    namef(concat) //also operators on tuples
     namef(range)
     namef(xrange)
 
@@ -77,19 +78,14 @@ func_index func_names=boost::assign::map_list_of
     namef(symbol2index)
     namef(index2symbol)
 
-    //debug - fixme
-    namef(closure)
+    //tuple operators
+    namef(tuple)
+    namef(pair)
+    namef(left)
+    namef(right)
 
-    /**("let",let::instance())
-
-    ("pair",pair::instance())**/
-    //core
-    //fixme namef(lambda)
-    //fixmenamef(arrow)
-    //namef(ident)
-    namef(list);
-    //fixmenamef(def)
-    //fixmenamef(decl);
+    //internal constructs
+    namef(closure);
 #undef namef
 
 func_index let_names;
