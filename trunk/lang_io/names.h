@@ -113,6 +113,8 @@ extern const char def_symbol[];
 extern const char char_symbol[];
 extern const char string_symbol[];
 extern const char anon_func_name[];
+extern const char arrow_name[];
+extern const char def_name[];
 
 }} //namespace plap::lang_io
 
