@@ -23,36 +23,6 @@
 
 namespace plap { namespace lang {
 
-//let injects identifier bindings into the context
-/**
-void lang_let::operator()(context& c,const_subvtree s,subvtree d) const { 
-  assert(s.arity()==2);
-  assert(s.front()==call(lang_list::instance()));
-  foreach (vertex v,children(s.front_sub())) {
-    func_t f=arg_cast<func_t>(v);
-    assert(f->body());
-    c.ident_bind(f,*f->body());
-  }
-  c.eval(s.back_sub(),d);
-  foreach (vertex v,children(s.front_sub()))
-    c.ident_unbind(arg_cast<func_t>(v));
-    }**/
-
-//closure(f,list(args))
-/**
-void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
-  assert(s.arity()==2);
-  assert(s[0].childless());
-  assert(arg_cast<func_t>(s.front())->body());
-  assert(s[1].flat());
-
-  func_t f=arg_cast<func_t>(s.front())->body();
-  d=*arg_cast<func_t>(s.front())->body();
-  foreach (vertex v,leaves(s)) {
-    if (
-}
-**/
-  
 void lang_do::eval(context& c,any_list l,subvtree dst) const {
   foreach(any a,l) {
     dst.prune();
@@ -60,23 +30,26 @@ void lang_do::eval(context& c,any_list l,subvtree dst) const {
   }
 }
 
+//three cases for f: f takes a single arg (eval args and pass it), f takes
+//multiple args (pass args one-by-one, f is variadic (behaves like a single
+//arg, but make sure its a list)
+//we must also consider the possibility that f is a closure
 void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
-  vtree tmp=vtree(vertex());
-  //checkpoint();
-  c.eval(f,tmp);
-  //checkpoint();
-  if (!tmp.childless() && call_cast(tmp.root())==lang_closure::instance()) {
-    //checkpoint();
-    assert(tmp.arity()==1);
+  vtree func=vtree(vertex());
+  c.eval(f,func);
+
+  /**,args=vtree(vertex());
+  c.eval(a,args);
+  if (**/
+
+  if (!func.childless() && call_cast(func.root())==lang_closure::instance()) {
+    assert(func.arity()==1);
     c.scalar_bind(0,args.begin(),args.end());
-    c.eval(tmp.front_sub(),dst);
+    c.eval(func.front_sub(),dst);
     c.scalar_unbind(args.size());
-    //checkpoint();
   } else {
-    assert(tmp.childless());
-    //checkpoint();
-    (*arg_cast<func_t>(tmp.root()))(c,args.src,dst);
-    //checkpoint();
+    assert(func.childless());
+    (*arg_cast<func_t>(func.root()))(c,args.src,dst);
   }
 }
 

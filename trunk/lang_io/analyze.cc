@@ -87,7 +87,7 @@ make_exception(nested_import,"Error processing directive '"+str+
                "'; imports must be at global scope.")
 
 #define process(name) \
-  void process_ ## name(const_subsexpr src,subvtree dst)
+  void process_lang_ ## name(const_subsexpr src,subvtree dst)
 #define special_case(name,arity)                                \
   if (src.root()==#name) {                                      \
     validate_arity(src,arity_t(arity));                         \
@@ -120,20 +120,21 @@ struct semantic_analyzer {
   
   bool nested(const_subsexpr src) { return parent(src.begin())!=src.end(); }
 
-  process(sexpr) {
+  void process_sexpr(const_subsexpr src,subvtree dst) {
     const string& root=src.root();
-
-    if (src.childless()) {
-      dst.root()=string2arg(root);
-      return;
-    }
 
     special_case(def,3);
     special_case(decl,2);
     special_case(import,1);
     special_case(lambda,1);
     special_case(let,2);
-    //special_case(tuple,variadic_arity);
+    special_case(tuple,variadic_arity);
+    special_case(list,variadic_arity);
+
+    if (src.childless()) {
+      dst.root()=string2arg(root);
+      return;
+    }
 
     if (func_t f=string2func(root)) {
       validate_arity(src,f);
@@ -157,18 +158,21 @@ struct semantic_analyzer {
       dst.root()=call(lang_apply::instance());
       dst.append(string2scalar(root));
       dst.append(vertex());
-      process_list(src,dst.back_sub());
+      if (src.arity()==1)
+        process_sexpr(src.front_sub(),dst.back_sub());
+      else
+        process_lang_tuple(src,dst.back_sub());
     }
   }
 
-  process(children) {
+  void process_children(const_subsexpr src,subvtree dst) {
     assert(!src.childless());
     dst.append(src.arity(),vertex());
     for_each(src.begin_sub_child(),src.end_sub_child(),dst.begin_sub_child(),
              bind(&semantic_analyzer::process_sexpr,this,_1,_2));
   }
 
-  process(lang_import) {
+  process(import) {
     if (nested(src))
       throw_nested_import(lexical_cast<string>(src));
     process_sexpr(src[0],dst);
@@ -189,7 +193,7 @@ struct semantic_analyzer {
     }
   }
 
-  process(lang_def) { //def(name list(arg1 arg2 ...) body)
+  process(def) { //def(name list(arg1 arg2 ...) body)
     //validate and set up arguments
     const string& name=sexpr2identifier(src[0]);
     func_t f=string2func(name);
@@ -244,7 +248,7 @@ struct semantic_analyzer {
     c.define(d,body);
   }
 
-  process(lang_lambda) { //lambda(arrow(list(args),body))
+  process(lambda) { //lambda(arrow(list(args),body))
     if (src.front()!=arrow_name)
       throw_bad_lambda(lexical_cast<string>(src));
     func_t f=c.declare(src[0][0].arity(),arg_idx);
@@ -257,7 +261,7 @@ struct semantic_analyzer {
     dst.root()=arg(f);
   }
 
-  process(lang_let) { //let(list(def1 ...) body)
+  process(let) { //let(list(def1 ...) body)
     if (src.front()!=*func2name(lang_list::instance()) || 
         src.front_sub().childless())
       throw_bad_let(src.root());
@@ -297,7 +301,7 @@ struct semantic_analyzer {
     }
   }
 
-  process(lang_decl) { //decl(name arity)
+  process(decl) { //decl(name arity)
     const string& name=sexpr2identifier(src[0]);
     if (string2func(name))
       throw_bad_decl_exists(name);
@@ -320,6 +324,8 @@ struct semantic_analyzer {
   }
   
   process(list) { //list(arg arg arg ...)
+    if (src.childless())
+      throw std::runtime_error("Bad list - must take arguments.");
     dst.root()=call(lang_list::instance());
     for (sexpr::const_sub_child_iterator i=src.begin_sub_child();
          i!=src.end_sub_child();++i) {
@@ -331,13 +337,15 @@ struct semantic_analyzer {
     process_children(src,dst);
   }
 
+  //a tuple with <2 constituents is not allowed
   process(tuple) { //tuple(arg arg arg ...)
-    /** arity_t a=src.arity();
+    arity_t a=src.arity();
     if (a==0)
       throw_bad_tuple("empty");
     else if (a==1)
       throw_bad_tuple(src.front());
-      process_children(src,dst);**/
+    dst.root()=call(lang_tuple::instance());
+    process_children(src,dst);
   }
  
   //parsing an individual node always unambiguous (i.e. can be done without any
