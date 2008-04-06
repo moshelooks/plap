@@ -68,8 +68,6 @@ bool special_name(const string& s,subsexpr d) {
   return true;
 }
 
-void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d);
-
 inline string tostr(const tree_node<node_val_data<> >& s) {
     return string(s.value.begin(),s.value.end());
 }
@@ -123,7 +121,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       mlt    = neg      >> *(root_node_d[ch_p('*')|'/']            >> neg);
       neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
-      prime  = sexpr | term | listh | rangeh;// | "()";
+      prime  = sexpr | term | listh | rangeh | commah;// | "()";
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
              | lexeme_d[token_node_d
                         [!ch_p('$') >> (alpha_p | '_') >> *(alnum_p | '_') 

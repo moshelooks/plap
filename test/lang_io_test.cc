@@ -91,11 +91,11 @@ test_case(parse_infix) {
   check_parse("(1 2 3) (list 4 5 6)","(apply (1 2 3) (list (list 4 5 6)))");
   check_parse("(1 2 3) [] 4 5 6","(apply (1 2 3) (list [] 4 5 6))");
 
-  check_parse("(1,2)","(pair 1 2)");
+  check_parse("(1,2)","(tuple 1 2)");
   check_parse("([1,2])","(list 1 2)");
-  check_parse("([1,2],3)","(pair (list 1 2) 3)");
+  check_parse("([1,2],3)","(tuple (list 1 2) 3)");
 
-  check_parse("bla (a,b,c) 1+2","(bla (pair a b c) (plus 1 2))");
+  check_parse("bla (a,b,c) 1+2","(bla (tuple a b c) (plus 1 2))");
 }
 
 test_case(parse_fail_infix) {
@@ -133,7 +133,7 @@ test_case(parse_indents) {
   check_parse("[1,2,\n 3,4]","(list 1 2 3 4)");
   check_parse("a b [1,2,\n 3,4] c d\n e f","(a b (list 1 2 3 4) c d (e f))");
   check_parse("a b c\\\nd e f","(a b c d e f)");
-  check_parse("(a b c,\nd e f)","(pair (a b c) (d e f))");
+  check_parse("(a b c,\nd e f)","(tuple (a b c) (d e f))");
 }
 
 test_case(parse_quotes) {
