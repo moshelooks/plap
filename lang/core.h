@@ -14,6 +14,9 @@
 //
 // Author: madscience@google.com (Moshe Looks)
 
+// Core language classes: list, tuple, and identifier (used for defs and
+// functions)
+
 #ifndef PLAP_LANG_CORE_H__
 #define PLAP_LANG_CORE_H__
 
@@ -31,24 +34,29 @@ struct lang_ident : public func {
   arity_t arity() const { return _arity; }
   void operator()(context& c,const_subvtree s,subvtree d) const;
   const vtree* body() const { return &_body; }
-  const lang_ident* closure() const { return _closure ? this : NULL; }
+  arity_t offset() const { return _offset; }
+
   friend struct context;
+  friend const lang_ident* test_ident_arg_cast(vertex);
  protected:
   vtree _body;
   arity_t _arity,_offset;
   bool _closure;
 
+  void eval_leaf(context& c,subvtree d,bool expand_bindings=true) const;
   void set_body(context& c,subvtree b);
   bool has_var_outside_range(const_subvtree s) const;
+  void instantiate_closure(context& c,subvtree d) const; 
+  void rec_instantiate(context& c,subvtree d,bool& ready) const;
 
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 
-struct lang_closure : public stateless_func<lang_closure,1> {
-  void operator()(context& c,const_subvtree s,subvtree d) const;
- protected:
-  void rec_instantiate(context& c,subvtree d,bool& ready) const;
-};
+inline const lang_ident* test_ident_arg_cast(vertex v) {
+  if (func_t f=test_func_arg_cast(v))
+    return dynamic_cast<const lang_ident*>(f);
+  return NULL;
+}
 
 }} //namespace plap::lang
 

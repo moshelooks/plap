@@ -35,55 +35,34 @@ void context::define(lang_ident* d,subvtree body) {
 }
 void context::erase_last_decl() { _decls.pop_back(); }
 
-//we must check for some special cases: (1) evaluation of an argument;
-//(2) evaluation of a closure; and (3) a def that's not a function
 void context::eval(const_subvtree src,subvtree dst) {
   std::cout << "evaling " << src << std::endl;
   vertex v=src.root();
   if (src.childless()) {
     arity_t a=test_lang_arg_cast(v);
-    if (a!=variadic_arity) { //case 1
+    if (a!=variadic_arity) { //argument
       a-=_scalars.front().second;
-      cout << "XXX" << (int)_scalars.front().second << "PP"
-           << (int)a << " PP " << _scalars.front().first.size() << endl;
+    
       assert(a<_scalars.front().first.size());
       assert(!_scalars.front().first[a].empty());
+      
       dst=_scalars.front().first[a];
-    } else { 
-      if (func_t f=test_func_arg_cast(v)) { //case 2
-        if (const lang_ident* cl=f->closure()) {
-          //need to pass cl->_offset to lang_closure call
-          lang_closure::instance()->operator()(*this,*cl->body(),dst);
-          std::cout << "res1" << dst << std::endl;
-          return;
-        } else if (f->arity()==0) { //case 3
-          assert(f->body());
-          assert(!f->body()->empty());
-          dst=*f->body();
-          std::cout << "res2" << dst << std::endl;
-          return;
-        }
-      }
+    } else if (const lang_ident* ident=test_ident_arg_cast(v)) { //ident
+      ident->eval_leaf(*this,dst);
+    } else {  //number/char/symbol/builtin
       dst.root()=v;
     }
   } else {
     (*call_cast(v))(*this,src,dst);
   }
-  std::cout << "res3" << dst << std::endl;
+  std::cout << "evaled to " << dst << std::endl;
 }
 
 const_subvtree context::scalar(arity_t idx) const {
   assert(!_scalars.empty());
-//cout << _scalars.front().first.size() << "," << (int)_scalars.front().second
-  //<< "," << (int)idx << endl;
   assert(_scalars.front().first.size()+_scalars.front().second>idx);
   assert(idx>=_scalars.front().second);
-  /**  scalar_map::const_iterator i=_scalars.begin();
-  while (idx<i->second) {
-    idx
-    ++i;
-    assert(boost::next(i)!=_scalars.end());
-    }**/
+
   return _scalars.front().first[idx-_scalars.front().second];
 }
 

@@ -74,6 +74,7 @@ struct context : public boost::noncopyable {
   }
   const_subvtree scalar(arity_t idx) const;
   arity_t scalar_arity() const { return _scalars.front().first.size(); }
+  arity_t scalar_offset() const { return _scalars.front().second; }
   
   //identifier bindings
   void ident_bind(func_t f,const_subvtree binding);

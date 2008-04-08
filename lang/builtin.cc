@@ -47,13 +47,13 @@ void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
              call_cast(args.src.root())==lang_tuple::instance());
       (*arg_cast<func_t>(func.root()))(c,args.src,dst);
     }
-  } else {
-    assert(call_cast(func.root())==lang_closure::instance());
+  } else { //closure
+    std::cout << "Apply " << func << std::endl;
     assert(func.arity()==1);
     assert(!args.empty());
 
-    c.scalar_bind(0,args.begin(),args.end());
-    c.eval(func.front_sub(),dst);
+    c.scalar_bind(call_cast(func.root())->offset(),args.begin(),args.end());
+    c.eval(func,dst);
     c.scalar_unbind(args.size());
   }
 }
