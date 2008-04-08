@@ -54,6 +54,12 @@ test_case(lang_def_examples) {
   check_eval("blub $x $y $z $q = moo","[]");
 }
 
+test_case(lang_apply_examples) {
+  check_eval("apply plus [1,2,3]","6");
+  check_eval("apply plus (1,2,3)","6");
+  check_eval("apply plus []","plus");
+}
+
 test_case(lang_if_examples) {
   check_eval("if true 0 1","0");
   check_eval("if false 0 1","1");

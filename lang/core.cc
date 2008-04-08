@@ -22,6 +22,7 @@ namespace plap { namespace lang {
 
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
   assert(s.arity()==_arity || s.childless());
+  assert(!_closure);
   if (_arity==0) {
     d=c.ident_binding(this);
   } else {
@@ -60,6 +61,7 @@ bool lang_ident::has_var_outside_range(const_subvtree s) const {
 }
 
 void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
+  std::cout << "doing " << s << std::endl; 
   d=s;
   bool ready=true;
   bool rewrap=d.childless() || call_cast(d.root())!=this;
@@ -74,13 +76,18 @@ void lang_closure::operator()(context& c,const_subvtree s,subvtree d) const {
     d.splice(d.back_sub().end_child(),d.begin_sub_child(),--d.end_sub_child());
     std::swap(d.root(),d.front());
   }
+  std::cout << "done " << d << std::endl;  
 }
 
 void lang_closure::rec_instantiate(context& c,subvtree d,bool& ready) const {
+  arity_t _offset=0;//fixme
   foreach (subvtree s,sub_leaves(d)) {
     arity_t a=test_lang_arg_cast(s.root());
-    if (a<c.scalar_arity()) {
-      s=c.scalar(a);
+    if (a<c.scalar_arity()+_offset) {
+      assert(a>=_offset);
+      std::cout << "PPP" << std::endl;
+      s=c.scalar(a-_offset);
+      std::cout << "ooo" << std::endl;
     } else if (a!=variadic_arity) {
       s.root()=lang_arg(a-c.scalar_arity());
       ready=false;

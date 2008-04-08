@@ -29,20 +29,19 @@ I $x = $x
 nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
 
 sub_helper $list $indices $offset = #fixme
-  if (empty $indices) [] 
-     if (hd $indices)==$offset 
-        (hd $list):(sub_helper (tl $list) (tl $indices) $offset+1)
-        sub_helper (tl $list) $indices $offset+1
+  split $list \$y $ys -> split $indices \$x $xs ->
+    if $x==$offset $y:(sub_helper $ys $xs $offset+1) 
+                   sub_helper $ys $indices $offset+1
   
 sub $list $indices = 
     sub_helper $list $indices 0
 subs $list $from $len = sub $list [$from..$from+$len-1]
 
-last $l = if (empty (tl $l)) (hd $l) (last (tl $l))
+last $l = if (tl $l)==[] (hd $l) (last (tl $l))
 
-length $l = if (empty $l) 0 1+(length (tl $l))
+length $l = if $l==[] 0 1+(length (tl $l))
 
-lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n-1)
+lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n)
 
 ##
 # Converting Between ASCII Characters and Values

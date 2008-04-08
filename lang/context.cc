@@ -52,6 +52,7 @@ void context::eval(const_subvtree src,subvtree dst) {
     } else { 
       if (func_t f=test_func_arg_cast(v)) { //case 2
         if (const lang_ident* cl=f->closure()) {
+          //need to pass cl->_offset to lang_closure call
           lang_closure::instance()->operator()(*this,*cl->body(),dst);
           std::cout << "res1" << dst << std::endl;
           return;

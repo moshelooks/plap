@@ -157,11 +157,8 @@ struct semantic_analyzer {
     } else { //see if its a scalar - if so, need to introduce an apply node
       dst.root()=call(lang_apply::instance());
       dst.append(string2scalar(root));
-      dst.append(vertex());
-      if (src.arity()==1)
-        process_sexpr(src.front_sub(),dst.back_sub());
-      else
-        process_lang_tuple(src,dst.back_sub());
+      dst.append(call(lang_list::instance()));
+      process_children(src,dst.back_sub());
     }
   }
 
