@@ -55,15 +55,12 @@ struct func : boost::noncopyable {
   virtual ~func() { lang_private::ids()[_id]=NULL; }
 
   id_t id() const { return _id; }
-  
   bool variadic() const { return arity()==variadic_arity; }
   virtual const vtree* body() const { return NULL; }
-  virtual const lang_ident* closure() const { return NULL; }
-
+  virtual arity_t offset() const { return 0; }
   virtual arity_t arity() const=0;
   //default func applucation copies self and evaluates children
   virtual void operator()(context&,const_subvtree,subvtree) const;
-
  protected:
   id_t _id;
 

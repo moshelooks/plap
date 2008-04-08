@@ -108,10 +108,24 @@ test_case(let_test) {
 
 test_case(test_closure) {
   check_eval("((\\$x -> (\\$y -> $x+$y)) 42) 100","142");
+  
   check_eval("blup $x = \\$y -> $x+$y","[]");
   check_eval("(blup 4) 5","9");
+  
   check_eval("S $x = \\$y -> \\$z -> ($x $z) ($y $z)","[]");
   check_eval("((S \\$x -> \\$y -> $x*$y) negative) 3","-9");
+  
+  check_eval("pdff $x = \\$a -> \\$b -> $a+$b","[]");
+  check_eval("((pdff 1) 2) 3","5");
+  
+  check_eval("pdfx $x = \\$a -> \\$b -> $x+$a+$b","[]");
+  check_eval("((pdfx 1) 2) 3","6");
+
+  check_eval("ll $x = let [zz = $x+1] \\$y -> zz+10","[]");
+  check_eval("(ll 5) 4.2","16");
+  
+  check_eval("ll2 $x = let [zz = $x+1] \\$y -> zz+10+$y","[]");
+  check_eval("(ll2 5) 4.2","20.2");
 }
 
 test_case(lang_import_and_test) {
