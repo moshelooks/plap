@@ -28,8 +28,6 @@
 #include "func.h"
 #include "core.h"
 
-#include "pretty_print.h"//fixme
-
 namespace plap { namespace lang {
 
 struct context : public boost::noncopyable {
@@ -57,9 +55,6 @@ struct context : public boost::noncopyable {
   //scalar bindings
   template<typename Iterator>
   void scalar_bind(arity_t offset,Iterator f,Iterator l) {
-    std::cout << "scalar bind " << int(offset)
-              << "|" << std::distance(f,l)
-              << "|" << *f << std::endl;
     //first eval, then add (we must not mung _scalars until after evaling)
     vtree_seq args;
     args.reserve(std::distance(f,l));
@@ -68,17 +63,13 @@ struct context : public boost::noncopyable {
         args.push_back(vtree(vertex()));
         eval(s,args.back());
       } else {
-        std::cout << "NOOOEVAL" << std::endl;
         args.push_back(vtree(s));
       }
-    }        
-    //util::for_each(f,l,args.begin(),boost::bind(&context::eval,this,_1,_2));
-
+    }
     _scalars.push_front(make_pair(vtree_seq(),offset));
     std::swap(args,_scalars.front().first);
   }
   void scalar_unbind(arity_t n) {
-    std::cout << "unbind!" << std::endl;
     assert(_scalars.front().first.size()==n);
     _scalars.pop_front();
   }

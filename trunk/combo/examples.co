@@ -8,10 +8,6 @@ fact2 $n = accumulate times [1..$n] 1
 # Fibonacci
 fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
 
-# Paul Graham's accumulator generator (though in general set should be avoided)
-# (http://www.paulgraham.com/accgen.html)
-acc_gen $n = \$i -> set $n ($n+$i)
-
 # Combinators
 S $x = \$y -> \$z -> ($x $z) ($y $z)
 K $x = \$y -> $x

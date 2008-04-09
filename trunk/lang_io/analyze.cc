@@ -33,7 +33,6 @@
 #include "io.h"
 #include "parse.h"
 #include "repl.h"
-#include "checkpoint.h"
 #include "pretty_print.h"
 
 namespace plap { namespace lang_io {

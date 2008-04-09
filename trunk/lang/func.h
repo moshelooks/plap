@@ -23,8 +23,6 @@
 #include <boost/integer_traits.hpp>
 #include "vtree_fwd.h"
 
-#include <iostream> //fixme
-
 #ifndef LANG_LIMIT_ARITY //determines the maximal arity of defs in the language
 #  define LANG_LIMIT_ARITY 4
 #endif
@@ -67,7 +65,6 @@ struct func : boost::noncopyable {
 };
 
 inline func* id2func(id_t s) {
-  //  std::cout << s << " "  << func::_ids.size() << std::endl;
   assert(s<lang_private::ids().size());
   assert(lang_private::ids()[s]);
   return lang_private::ids()[s];
