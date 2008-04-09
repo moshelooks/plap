@@ -61,8 +61,18 @@ struct context : public boost::noncopyable {
               << "|" << std::distance(f,l)
               << "|" << *f << std::endl;
     //first eval, then add (we must not mung _scalars until after evaling)
-    vtree_seq args(std::distance(f,l),vtree(vertex()));
-    util::for_each(f,l,args.begin(),boost::bind(&context::eval,this,_1,_2));
+    vtree_seq args;
+    args.reserve(std::distance(f,l));
+    foreach(const_subvtree s,std::make_pair(f,l)) {
+      if (s.childless() || !closure(s)) {
+        args.push_back(vtree(vertex()));
+        eval(s,args.back());
+      } else {
+        std::cout << "NOOOEVAL" << std::endl;
+        args.push_back(vtree(s));
+      }
+    }        
+    //util::for_each(f,l,args.begin(),boost::bind(&context::eval,this,_1,_2));
 
     _scalars.push_front(make_pair(vtree_seq(),offset));
     std::swap(args,_scalars.front().first);

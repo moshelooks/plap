@@ -37,7 +37,7 @@ struct lang_ident : public func {
   arity_t offset() const { return _offset; }
 
   friend struct context;
-  friend const lang_ident* test_ident_arg_cast(vertex);
+  friend bool closure(const_subvtree);
  protected:
   vtree _body;
   arity_t _arity,_offset;
@@ -47,7 +47,8 @@ struct lang_ident : public func {
   void set_body(context& c,subvtree b);
   bool has_var_outside_range(const_subvtree s) const;
   void instantiate_closure(context& c,subvtree d) const; 
-  void rec_instantiate(context& c,subvtree d,bool& ready) const;
+  void rec_instantiate(context& c,subvtree d,bool& ready,
+                       bool nested=false) const;
 
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
@@ -57,6 +58,16 @@ inline const lang_ident* test_ident_arg_cast(vertex v) {
     return dynamic_cast<const lang_ident*>(f);
   return NULL;
 }
+inline bool closure(const_subvtree s) {
+  if (s.childless()) {
+    if (const lang_ident* ident=test_ident_arg_cast(s.root()))
+      return ident->_closure;
+  } else if (const lang_ident* ident=
+             dynamic_cast<const lang_ident*>(call_cast(s.root()))) {
+    return ident->_closure;
+  }
+  return false;
+}  
 
 }} //namespace plap::lang
 

@@ -29,7 +29,7 @@ I $x = $x
 nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
 
 sub_helper $list $indices $offset = #fixme
-  split $list \$y $ys -> split $indices \$x $xs ->
+  split $list \$y $ys -> split $indices \$x $xs -> 
     if $x==$offset $y:(sub_helper $ys $xs $offset+1) 
                    sub_helper $ys $indices $offset+1
   
@@ -46,28 +46,26 @@ lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n)
 ##
 # Converting Between ASCII Characters and Values
 ##
+
 upchars $l = map $l \$x -> index2symbol (symbol2index $x)+1
 
 ##
 # Processing a String One Character at a Time
 ##
 
+empty $l = $l==[]
+
 uniq $l =
   let 
     [uniq_h $x $l2 = if (empty $l2) [$x] (if $x==(hd $l2) [] [$x])~(uniq_h (hd $l2) (tl $l2))]
     if (empty $l) $l (uniq_h (hd $l) (tl $l))
     
-filter $pred $l = 
+filter $l $pred = 
   if (empty $l) $l
-    (if ($pred (hd $l)) [hd $l] [])~(filter $pred (tl $l))
+    (if ($pred (hd $l)) [hd $l] [])~(filter (tl $l) $pred)
 
-nonempty $l $f = if ($l==[]) [] ($f (hd $l) (tl $l))
-
-sort $l = #nonempty $l (\$x $xs -> $x:$xs)
-fixme
-#((sort (filter (\$y -> less $y $x) $xs))))
-
-#~[$x]~(sort (filter (\$y -> less $x $y) $xs)))
+sort $l = split $l \$x $xs -> 
+  ((sort (filter $xs (\$y -> less $y $x))))~[$x]~(sort (filter $xs (\$y -> less $x $y)))
 
 ##
 # Reversing a String by Word or Character
@@ -75,65 +73,17 @@ fixme
 
 reverse $l = if (empty $l) $l (reverse (tl $l))~[hd $l]
 
-words $l =
-  let words_helper $words $word $l = 
-    if (empty $l) $word:$words
+words_helper $words $word $l = 
+    if (empty $l) 
+      if (empty $word) $words $word:$words
       if (hd $l)==' '
         words_helper $word:$words [] (tl $l)
         words_helper $words $word~[hd $l] (tl $l)
-  words_helper [] [] $l
+
+join $joiner $words = split $words \$x $xs -> 
+  $x~(if $xs==[] [] $joiner~(join $joiner $xs))
+
+words $l = reverse (words_helper [] [] $l)
 
 long_palindromes $words = 
-  filter \$s -> $s == (reverse $s) && (length $s)>4
-
-##
-# Operating on a Series of Integers
-##
-
-print "Infancy is: "
-map [0..2] \$e -> print (to_str $e)~" "
-println ""
-print "Infancy is: "
-print (fold [0..2] "" \$x $y-> (to_str $x)~" "~$y)
-println ""
-
-##
-#  Generating Random Numbers
-##
-
-$randnum = rand [$x..75]                 # $randnum is in [25,75]
-$password = power 8 "" \$x -> rand chars
-
-# Finding Elements in One (Sorted) List but Not Another
-difference $a $b = if (empty $b)||(empty $a) $a
-  cond 
-    hd $a<hd $b -> [$a]~difference (tl $a) $b
-    hd $b<hd $a -> [$a]~difference $a (tl $b)
-    true        -> difference (tl $a) (tl $b)
-
-# Finding the Most Common Anything
-max $a $b $cmp = if ($cmp $a $b) $b $a
-max_elem $l $cmp = 
-  if (empty (tl $l))
-    hd $l
-    max (hd $l) (max_elem (tl $l)) $cmp
-most_common $l =
-  let most_common_helper $l =
-    let group $n $x $l =
-      if (empty $l) [($n+1,$x)]
-        if ($x==(hd $l)) (group ($n+1) $x (tl $l))
-          ($n,$x):(group 0 (hd $l) (tl $l))
-    group 0 (hd $l) (tl $l)
-  right (max_elem (most_common_helper (sort $l)) \$x $y -> (left $x)<(left $y))
-
-# Representing Relationships Between Data
-<- father Cain  Adam
-<- father Abel  Adam
-<- father Seth  Adam
-<- father Enoch Cain
-
-foreach (satisfying_set \$x $y -> father $x $y)
-        \$x $y -> println "The father of "~$x~" is "~$y~"."
-
-foreach (satisfying_set \$x $y -> father $y $x)
-        \$x $y -> println $x~" begat "~$y~"."
+  filter $words \$s -> $s==(reverse $s) && (length $s)>4

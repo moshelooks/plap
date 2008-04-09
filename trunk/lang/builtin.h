@@ -169,13 +169,21 @@ struct lang_cons : public builtin<lang_cons(any,any_list)> {
 };
 struct lang_concat : public builtin<lang_concat(any_list,any_list)> {
   void cfeval(any_list a,any_list b,subvtree dst) const {
-    assert(a.src.root()==b.src.root());
-    if (a.empty() && b.empty()) {
-      assert(arg_cast<func_t>(a.src.root())==lang_list::instance());
-      dst.root()=nil();
+    assert(a.empty() || b.empty() || a.src.root()==b.src.root());
+    assert(a.empty() ||call_cast(a.src.root())==lang_list::instance() || 
+           call_cast(a.src.root())==lang_tuple::instance());
+    assert(b.empty() || call_cast(b.src.root())==lang_list::instance() || 
+           call_cast( b.src.root())==lang_tuple::instance());
+     
+    if (a.empty()) {
+      if (b.empty())
+        dst.root()=nil();
+      else
+        dst=b.src;
+    } else if (b.empty()) {
+      dst=a.src;
     } else {
-      dst.root()=a.src.root(); //also works on tuples
-      dst.append(a.begin(),a.end());
+      dst=a.src;
       dst.append(b.begin(),b.end());
     }
   }
