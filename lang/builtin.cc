@@ -18,7 +18,6 @@
 #include <boost/lexical_cast.hpp>
 #include <iostream>
 #include "foreach.h"
-#include "checkpoint.h"
 #include "pretty_print.h"
 
 namespace plap { namespace lang {
@@ -48,7 +47,6 @@ void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
       (*arg_cast<func_t>(func.root()))(c,args.src,dst);
     }
   } else { //closure
-    std::cout << "Apply " << func << std::endl;
     assert(func.arity()==1);
     assert(!args.empty());
 

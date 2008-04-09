@@ -112,8 +112,8 @@ test_case(test_closure) {
   check_eval("blup $x = \\$y -> $x+$y","[]");
   check_eval("(blup 4) 5","9");
   
-  check_eval("S $x = \\$y -> \\$z -> ($x $z) ($y $z)","[]");
-  check_eval("((S \\$x -> \\$y -> $x*$y) negative) 3","-9");
+  check_eval("Sss $x = \\$y -> \\$z -> ($x $z) ($y $z)","[]");
+  check_eval("((Sss \\$x -> \\$y -> $x*$y) negative) 3","-9");
   
   check_eval("pdff $x = \\$a -> \\$b -> $a+$b","[]");
   check_eval("((pdff 1) 2) 3","5");
@@ -133,6 +133,7 @@ test_case(lang_import_and_test) {
   check_throw(str2vtr("import 1+1"));
 
   //this contains a bunch of assertion tests written in combo
-  //fixmecheck_eval("import \"combo/test.co\"","[]");
+  check_eval("import \"combo/lib.co\"","[]");
+  check_eval("import \"combo/test.co\"","[]");
 }
 

@@ -18,10 +18,6 @@
 #include "core.h"
 #include "foreach.h"
 #include "names.h"
-#include "checkpoint.h"
-
-#include "pretty_print.h" //fixme
-using namespace std;
 
 namespace plap { namespace lang {
 
@@ -36,7 +32,6 @@ void context::define(lang_ident* d,subvtree body) {
 void context::erase_last_decl() { _decls.pop_back(); }
 
 void context::eval(const_subvtree src,subvtree dst) {
-  std::cout << "evaling " << src << std::endl;
   vertex v=src.root();
   if (src.childless()) {
     arity_t a=test_lang_arg_cast(v);
@@ -55,12 +50,6 @@ void context::eval(const_subvtree src,subvtree dst) {
   } else {
     (*call_cast(v))(*this,src,dst);
   }
-  std::cout << "evaled to " << dst << std::endl;
-  /*  if (!dst.childless() && call_cast(dst.root())!=lang_list::instance() &&
-      call_cast(dst.root())!=lang_tuple::instance()) {
-    for (vtree tmp=vtree(vertex());tmp!=dst;std::swap(tmp,dst))
-      eval(dst,tmp);
-      }*/
 }
 
 const_subvtree context::scalar(arity_t idx) const {

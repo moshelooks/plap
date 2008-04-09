@@ -21,19 +21,10 @@
 namespace plap { namespace lang {
 
 void lang_ident::operator()(context& c,const_subvtree s,subvtree d) const {
-  //  assert(s.arity()==_arity || s.childless() || _closure);fixme
   if (_closure) {
     assert(s.arity()==1);
     d=s.front_sub();
     instantiate_closure(c,d);
-    std::cout << "inst1" << std::endl;
-    std::cout << "XXX" << s << " | " << d << std::endl;
-    /*  if (!closure(d)) {
-      std::cout << "foo!" << std::endl;
-      vtree tmp=vtree(vertex());
-      c.eval(d,tmp);
-      std::swap(tmp,d);
-      }*/
   } else {
     assert(s.arity()==arity());
     c.scalar_bind(_offset,s.begin_sub_child(),s.end_sub_child());
@@ -47,13 +38,11 @@ void lang_ident::eval_leaf(context& c,subvtree d,bool expand_bindings) const {
     if (arity()==0) {
       vtree tmp=_body;
       instantiate_closure(c,tmp);
-      std::cout << "inst2" << std::endl;
       c.eval(tmp,d);
     } else {          
       d.root()=call(this);
       d.append(_body);
       instantiate_closure(c,d.front_sub());
-      std::cout << "inst3" << std::endl;
     }
   } else if (expand_bindings && arity()==0) {
     d=c.ident_binding(this);
@@ -71,8 +60,6 @@ void lang_ident::set_body(context& c,subvtree b) {
     c.eval(_body,tmp);
     std::swap(_body,tmp);
   }
-  std::cout << "set body #" << id() << " _closure=" << _closure << " "
-            << _body << std::endl;
 }
 
 bool lang_ident::has_var_outside_range(const_subvtree s) const {
@@ -90,7 +77,6 @@ bool lang_ident::has_var_outside_range(const_subvtree s) const {
 }
 
 void lang_ident::instantiate_closure(context& c,subvtree d) const {
-  std::cout << "instantiating " << d << std::endl;
   bool ready=true;
   rec_instantiate(c,d,ready);
   if (ready) {
@@ -98,7 +84,6 @@ void lang_ident::instantiate_closure(context& c,subvtree d) const {
     c.eval(d,tmp);
     std::swap(d,tmp);
   }
-  std::cout << "instantiated " << d << std::endl;
 }
 
 void lang_ident::rec_instantiate(context& c,subvtree d,bool& ready,
@@ -108,15 +93,10 @@ void lang_ident::rec_instantiate(context& c,subvtree d,bool& ready,
       arity_t a=test_lang_arg_cast(s.root());
       if (a<c.scalar_arity()+c.scalar_offset()) {
         assert(a>=c.scalar_offset());
-        s=c.scalar(a);//-c.scalar_offset());
+        s=c.scalar(a);
       } else if (a!=variadic_arity) {
-        if (!nested || a>=_offset+_arity || a<_offset) {
-          std::cout << "unready - " << (int)a << " " << (int)_offset
-                  << " " << (int)_arity << " "
-                    << closure(d) << " | " << d << " | " 
-                    << vtree(arg(this)) << std::endl;
+        if (!nested || a>=_offset+_arity || a<_offset)
           ready=false;
-        }
       } else if (const lang_ident* ident=test_ident_arg_cast(s.root())) {
         if (ident->_closure) {
           s.root()=call(ident);
@@ -132,38 +112,5 @@ void lang_ident::rec_instantiate(context& c,subvtree d,bool& ready,
     }
   }
 }
-#if 0
-
-
-  foreach (subvtree s,sub_leaves(d)) {
-    arity_t a=test_lang_arg_cast(s.root());
-    if (a<c.scalar_arity()+c.scalar_offset()) {
-      //std::cout << "XX" << (int)a << ">=?" << (int)_offset << std::endl;
-      assert(a>=c.scalar_offset());
-      //      std::cout << "PPP" << std::endl;
-      s=c.scalar(a);//-c.scalar_offset());
-      //std::cout << "ooo" << std::endl;
-    } else if (a!=variadic_arity) {
-      //std::cout << (int)a << (int)
-      //if (a>=_offset+_arity || a<_offset) {// || !closure(d.root())) {
-        std::cout << "unready - " << (int)a << " " << (int)_offset
-                  << " " << (int)_arity << " "
-                  << closure(d) << " | " << d << std::endl;
-        ready=false;
-        //  }
-      //s.root()=lang_arg(a-c.scalar_arity());
-
-    } else if (const lang_ident* ident=test_ident_arg_cast(s.root())) {
-      //  ident->eval_leaf(c,s,false);
-      if (ident->_closure) {
-        s.root()=call(ident);
-        s.append(*ident->body());
-        ident->rec_instantiate(c,s,ready);
-        //ident->rec_instantiate(c,s.front_sub(),ready);
-      }
-    }
-  }
-}
-#endif
 
 }} //namespace plap::lang

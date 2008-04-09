@@ -241,13 +241,6 @@ struct lang_println : public builtin<lang_println(any)> {
   void eval(context& c,any a,subvtree dst) const;
 };
 
-struct lang_set : public builtin<lang_set(any,any)> {
-  void eval(context& c,any lhs,any rhs,subvtree d) const {
-    c.eval(rhs,d);
-    (*reinterpret_cast<subvtree*>(&lhs))=d;
-  }
-};
-
 struct lang_symbol2index : public builtin<lang_symbol2index(id_t)> {
   void cfeval(id_t i,subvtree d) const { d.root()=arg(number_t(i)); }
 };
