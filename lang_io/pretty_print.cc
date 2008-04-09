@@ -40,7 +40,8 @@ using namespace std;
 
 bool is_string(const_subvtree& loc,func_t& f) {
   return (lexical_cast<string>(f)==*func2name(lang_list::instance()) &&
-          is_char(loc.front()));
+          find_if(loc.begin_child(),loc.end_child(),
+                  !bind(&is_char,_1))==loc.end_child());
 }
 
 struct directive {

@@ -56,6 +56,11 @@ void context::eval(const_subvtree src,subvtree dst) {
     (*call_cast(v))(*this,src,dst);
   }
   std::cout << "evaled to " << dst << std::endl;
+  /*  if (!dst.childless() && call_cast(dst.root())!=lang_list::instance() &&
+      call_cast(dst.root())!=lang_tuple::instance()) {
+    for (vtree tmp=vtree(vertex());tmp!=dst;std::swap(tmp,dst))
+      eval(dst,tmp);
+      }*/
 }
 
 const_subvtree context::scalar(arity_t idx) const {

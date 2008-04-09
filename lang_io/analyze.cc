@@ -131,19 +131,7 @@ struct semantic_analyzer {
     special_case(tuple,variadic_arity);
     special_case(list,variadic_arity);
 
-    if (src.childless()) {
-      dst.root()=string2arg(root);
-      return;
-    }
-
-    if (func_t f=string2func(root)) {
-      validate_arity(src,f);
-      dst.root()=call(f);
-      process_children(src,dst);
-    } else if (root==char_symbol) { //char literal
-      assert(src.arity()==1 && src.front().length()==1);
-      dst.root()=arg(src.front()[0]);
-    } else if (root==string_symbol) { //string literal
+    if (root==string_symbol) { //string literal
       if (src.childless()) {
         dst.root()=nil();
       } else {
@@ -153,7 +141,16 @@ struct semantic_analyzer {
           assert(s.length()==1);
           dst.append(arg(s[0]));
         }
-      }        
+      }
+    } else if (src.childless()) {
+        dst.root()=string2arg(root);
+    } else if (func_t f=string2func(root)) {
+      validate_arity(src,f);
+      dst.root()=call(f);
+      process_children(src,dst);
+    } else if (root==char_symbol) { //char literal
+      assert(src.arity()==1 && src.front().length()==1);
+      dst.root()=arg(src.front()[0]);
     } else { //see if its a scalar - if so, need to introduce an apply node
       dst.root()=call(lang_apply::instance());
       dst.append(string2scalar(root));
