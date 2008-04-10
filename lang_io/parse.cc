@@ -27,6 +27,8 @@
 #include "indent.h"
 #include "builtin.h"
 
+#include <iostream>//fixme
+
 namespace plap { namespace lang_io {
 
 namespace {
@@ -155,7 +157,9 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
 
 bool indent_parse(std::istream& in,sexpr& dst) {
   std::stringstream ss;
+  std::cout << "parsing.." << std::endl;
   util::indent2parens(in,ss);
+  std::cout << "XX " << ss.str() << std::endl;
   return paren_parse(ss.str(),dst);
 }
 

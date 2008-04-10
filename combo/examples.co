@@ -19,18 +19,17 @@ I $x = $x
 # which is in turn based on examples from the Perl Cookbook
 
 ##
-# Accessing Substrings
+# Accessing Sublists
 ##
 
 nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
-
-sub_helper $list $indices $offset = #fixme
-  split $list \$y $ys -> split $indices \$x $xs -> 
-    if $x==$offset $y:(sub_helper $ys $xs $offset+1) 
-                   sub_helper $ys $indices $offset+1
   
 sub $list $indices = 
-    sub_helper $list $indices 0
+  let [helper $list $indices $offset = 
+         split $list \$y $ys -> split $indices \$x $xs -> 
+           if $x==$offset $y:(helper $ys $xs $offset+1) 
+                          helper $ys $indices $offset+1]
+  helper $list $indices 0
 subs $list $from $len = sub $list [$from..$from+$len-1]
 
 last $l = if (tl $l)==[] (hd $l) (last (tl $l))
@@ -46,22 +45,20 @@ lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n)
 upchars $l = map $l \$x -> index2symbol (symbol2index $x)+1
 
 ##
-# Processing a String One Character at a Time
+# List transformation
 ##
 
-empty $l = $l==[]
-
-uniq $l =
-  let 
-    [uniq_h $x $l2 = if (empty $l2) [$x] (if $x==(hd $l2) [] [$x])~(uniq_h (hd $l2) (tl $l2))]
-    if (empty $l) $l (uniq_h (hd $l) (tl $l))
+uniq $l = 
+  let [helper $x $xs = 
+         if (empty $xs) [$x] 
+            (if $x==(hd $xs) [] [$x])~(uniq_h (hd $xs) (tl $xs))]
+  split $l helper
     
-filter $l $pred = 
-  if (empty $l) $l
-    (if ($pred (hd $l)) [hd $l] [])~(filter (tl $l) $pred)
+filter $l $pred = split $l \$x $xs ->
+  (if ($pred (hd $l)) [$x] [])~(filter $xs $pred)
 
-sort $l = split $l \$x $xs -> 
-  ((sort (filter $xs (\$y -> less $y $x))))~[$x]~(sort (filter $xs (\$y -> less $x $y)))
+sort $l = let [rec $list $pred = sort (filter $list $pred)]
+  split $l \$x $xs -> (rec $xs (\$y -> $y<$x))~[$x]~(rec $xs \$y -> $x<$y)
 
 ##
 # Reversing a String by Word or Character
