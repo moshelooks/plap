@@ -19,8 +19,11 @@
 #include <stack>
 #include <stdexcept>
 #include <cassert>
+#include <sstream>
 #include "io.h"
 #include "dorepeat.h"
+
+#include <iostream>//fixme
 
 namespace plap { namespace util {
 
@@ -37,7 +40,7 @@ struct indent_parser {
   indent_parser() : mode(indenting),indent(0) {}// brackets.push(0); }
 
   enum { indenting,commaed,incomment,escaped,normal } mode;
-  string::size_type indent;
+  string::size_type indent,loc;
   std::stack<string::size_type> indents;
   //std::stack<int> brackets;fixme
 
@@ -53,6 +56,7 @@ struct indent_parser {
 
   bool operator()(istream& in,ostream& out) {
     char c=in.get();
+    ++loc;
     
     if (c=='#' && mode!=escaped) {
       mode=incomment;
@@ -64,11 +68,11 @@ struct indent_parser {
         return true;
     }
 
-
     if (mode==indenting && whitespace(c)) {
       ++indent;
       return true;
     } else if (newline(c)) {
+      loc=0;
       if (mode!=commaed && mode!=escaped) {
         mode=indenting;
         indent=0;
@@ -107,6 +111,23 @@ struct indent_parser {
       mode=normal;
     }
 
+    out << c;
+    /*  if (c=='[') {
+      std::stringstream ss;
+      dorepeat(loc) ss << ' ';
+      while (true) {
+        std::cout << "P" << c << std::endl;
+        in >> c;
+        ++loc;
+        if (c==']')
+          break;
+        if (!in.good())
+          throw std::runtime_error("Bad indentation inside list.");
+        ss << c;
+      }
+      io_loop(ss,out,indent_parser(),true);
+      out << c;
+      }*/
     /**  if (c=='[') {
       brackets.push(0);
     } 
@@ -124,7 +145,6 @@ struct indent_parser {
         throw std::runtime_error("Unmatched right bracket.");
     }**/
 
-    out << c;
     return true;
   }
 };
