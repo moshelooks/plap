@@ -1,6 +1,5 @@
 # Definitions of standard library functions that are not implemented in C++
 
-# list operations
 (map $l $f = if $l==[] [] ($f (hd $l)):(map (tl $l) $f))
 (foreach $l $f = if $l==[] [] (do ($f (hd $l)) (foreach (tl $l) $f)))
 (split $l $f = if ($l==[]) [] ($f (hd $l) (tl $l)))

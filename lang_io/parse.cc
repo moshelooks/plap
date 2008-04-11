@@ -17,6 +17,7 @@
 #include "parse.h"
 #include <vector>
 #include <streambuf> 
+#include <sstream>
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/tree/ast.hpp>
 #include <boost/spirit/tree/parse_tree.hpp>
@@ -79,7 +80,7 @@ inline string tostr(const TreeNode& s) {
 }
 
 //debug
-//#if 0
+#if 0
 template<typename TreeNode>
 void tosexpr(const TreeNode& s,subsexpr d) {
   d.root()=tostr(s);
@@ -87,8 +88,8 @@ void tosexpr(const TreeNode& s,subsexpr d) {
   for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),
            &tosexpr<TreeNode>);
 }
-//#endif
-#if 0
+#endif
+//#if 0
 template<typename TreeNode>
 void tosexpr(const TreeNode& s,subsexpr d) {
   d.append(s.children.size(),string());
@@ -112,7 +113,7 @@ void tosexpr(const TreeNode& s,subsexpr d) {
     d.root()=operator2name(name,s.children.size());
   }
 }
-#endif
+//#endif
 
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
@@ -171,74 +172,55 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
   };
 };
 
-bool whitespace(char c) { return (c==' ' || c=='\t'); }
-bool newline(char c) { return (c=='\n'); }
-bool eof(char c) { return (c==EOF); }
-
-struct reader {
-  reader() : mode(normal) {}
-  mutable enum { incomment,escaped,normal } mode;
-  mutable std::vector<char> buffer;
-  mutable tree_parse_info<std::vector<char>::iterator> t;
-
-  bool operator()(std::istream& in) const {
-    char c=in.get();
-    
-    if (c=='#' && mode!=escaped) {
-      mode=incomment;
-      return true;
-    }
-    if (newline(c)) {
-      mode=normal;
-      if (parses())
-        return false;
-    }
-    if (mode!=incomment) {
-      if (c=='\\')
-        mode=escaped;
-      else
-        mode=normal;
-      buffer.push_back(c);
-    }
-
-    return !eof(c);
-  }
-
-  bool parses() const {
-    t=ast_parse(buffer.begin(),buffer.end(),sexpr_grammar(),space_p);
-    return (t.match && t.full && t.trees.size()==1);
+struct line_reader {
+  line_reader() : l(0),r(0) {}
+  std::size_t l,r;
+  bool operator()(std::istream& in,std::ostream& out) {
+    std::string tmp;
+    std::getline(in,tmp);
+    l+=std::count(tmp.begin(),tmp.end(),'(');
+    r+=std::count(tmp.begin(),tmp.end(),')');
+    if (r>l)
+      throw std::runtime_error("Unbalanced parens around '"+tmp+"'.");
+    out << tmp << ' ';
+    return (l!=r);
   }
 };
+
 } //namespace
 
 bool parse(std::istream& in,sexpr& dst,bool interactive) {
-  dst=sexpr(string());
-
+  std::string s;
   if (interactive) {
-    reader r;
-    util::input_loop(in,r);
-    if (r.buffer.empty() || eof(r.buffer.back())) {
+    std::stringstream ss;
+    ss << '(';
+    util::io_loop(in,ss,line_reader(),false);
+    ss << ')';
+    s=ss.str();
+    if (s=="( )")
+      return parse(in,dst,interactive);
+    else if (s=="()") {
       dst.clear();
       return false;
     }
-    std::cout << "XX" << string(r.buffer.begin(),r.buffer.end()) 
-              << "XX" << std::endl;
-    std::cout << "XX" << std::distance(r.buffer.begin(),r.t.stop) << std::endl;
-    std::cout << std::distance(r.t.stop,r.buffer.end()) << std::endl;
-    if (!r.t.match || !r.t.full || r.t.trees.size()!=1 || 
-        r.t.stop!=r.buffer.end())
-      throw std::runtime_error("Couldn't parse expression.");
-    tosexpr(r.t.trees.front(),dst);
   } else {
-    typedef multi_pass<std::istreambuf_iterator<char>,
-                       multi_pass_policies::input_iterator,
-                       multi_pass_policies::first_owner> iterator_t;
-    iterator_t from=iterator_t(std::istreambuf_iterator<char>(in)),to;
-    tree_parse_info<iterator_t> t=ast_parse(from,to,sexpr_grammar(),space_p);
-    if (!t.match || t.trees.size()!=1)
-      throw std::runtime_error("Couldn't parse expression.");
-    tosexpr(t.trees.front(),dst);
+    util::read_balanced(in,s);
+    if (!in.good()) {
+      dst.clear();
+      return false;
+    }
   }
+
+  tree_parse_info<string::iterator> t=ast_parse(s.begin(),s.end(),
+                                                sexpr_grammar(),space_p);
+  if (!t.match || !t.full)
+    throw std::runtime_error("Couldn't parse expression.");
+  assert(t.trees.size()==1);
+  std::cout << "XX" << std::distance(s.begin(),t.stop)
+            << " " << t.length <<std::endl;
+  std::cout << "XX '" << s << "'" << std::endl;
+  dst=sexpr(string());
+  tosexpr(t.trees.front(),dst);
   std::cout << "parsed " << dst << std::endl;
   return true;
 }

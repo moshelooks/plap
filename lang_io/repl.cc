@@ -86,6 +86,7 @@ void load_lib(std::istream& in,lang::context& c) {
   std::stringstream tmp;
   util::io_loop<sexpr>(in,tmp,boost::bind(&parse,_1,_2,false),
                        boost::bind(&eval_quiet,_2,boost::ref(c)),"");
+  std::cout << "GOOD" << in.good() << std::endl;
 }
 
 }} //namespace plap::lang_io
