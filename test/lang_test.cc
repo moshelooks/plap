@@ -23,7 +23,7 @@ static vtree vtr;
     stringstream ss;                                    \
     ss << src;                                          \
     tree<string> tmpXXX;                                \
-    indent_parse(ss,tmpXXX);                            \
+    parse(ss,tmpXXX);                                   \
     analyze(tmpXXX,vtr,c);                              \
   }
 #define check_eval(src,goal) {                  \

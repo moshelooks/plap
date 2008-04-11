@@ -23,8 +23,7 @@
 
 namespace plap { namespace lang_io {
 
-bool indent_parse(std::istream& in,sexpr& dst);
-bool paren_parse(const std::string& str,sexpr& dst);
+bool parse(std::istream& in,sexpr& dst);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_PARSE_H__

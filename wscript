@@ -24,7 +24,6 @@ lang_io/operators.cc
 lang_io/parse.cc
 lang_io/pretty_print.cc
 lang_io/repl.cc
-util/indent.cc
 util/io.cc
 util/tree_io.cc
 '''

@@ -22,7 +22,7 @@ int main() {
   try {
     plap::lang_io::repl(std::cin,std::cout);
   } catch (...) {
-    std::cerr << "\033[22;31munkown exception caught - failing...\033[00;m" 
+    std::cerr << "\033[22;31munknown exception caught - failing...\033[00;m" 
               << std::endl;
     return 1;
   }
