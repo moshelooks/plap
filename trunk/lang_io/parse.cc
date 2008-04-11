@@ -29,7 +29,6 @@
 #include "names.h"
 #include "builtin.h"
 
-
 #include <iostream>//fixme
 #include "tree_io.h"
 
@@ -80,7 +79,7 @@ inline string tostr(const TreeNode& s) {
 }
 
 //debug
-#if 0
+//#if 0
 template<typename TreeNode>
 void tosexpr(const TreeNode& s,subsexpr d) {
   d.root()=tostr(s);
@@ -88,8 +87,8 @@ void tosexpr(const TreeNode& s,subsexpr d) {
   for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),
            &tosexpr<TreeNode>);
 }
-#endif
-//#if 0
+//#endif
+#if 0
 template<typename TreeNode>
 void tosexpr(const TreeNode& s,subsexpr d) {
   d.append(s.children.size(),string());
@@ -113,13 +112,12 @@ void tosexpr(const TreeNode& s,subsexpr d) {
     d.root()=operator2name(name,s.children.size());
   }
 }
-//#endif
+#endif
 
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
-      foo    = listh | rangeh | commah | def | term;
       sexpr  = no_node_d[ch_p('(')] >> +list >> root_node_d[ch_p(')')];
  
       list   = range    |  listh;
@@ -143,7 +141,7 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       mlt    = neg      >> *(root_node_d[ch_p('*')|'/']            >> neg);
       neg    =             ! root_node_d[ch_p('!')|ch_p('-')]      >> prime;
 
-      prime  = sexpr | term | listh | rangeh | commah;// | "()";
+      prime  = sexpr | term | listh | rangeh | commah;
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
              | lexeme_d[token_node_d
                         [!ch_p('$') >> (alpha_p | '_') >> *(alnum_p | '_') 
@@ -166,10 +164,10 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       declh  = ((alpha_p | '_') >> *(alnum_p | '_') >> root_node_d[ch_p('^')] 
                 >> int_p);
     }
-    rule<Scanner> foo,sexpr,list,range,comma,def,lambda,fact,decl,arrow,seq;
+    rule<Scanner> sexpr,list,range,comma,def,lambda,fact,decl,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
     rule<Scanner> prime,term,str,chr,listh,rangeh,commah,lambdah,declh;
-    const rule<Scanner>& start() const { return foo; }//sexpr; }
+    const rule<Scanner>& start() const { return sexpr; }
   };
 };
 
@@ -223,9 +221,12 @@ bool parse(std::istream& in,sexpr& dst,bool interactive) {
       dst.clear();
       return false;
     }
-    //std::cout << "XX" << string(r.buffer.begin(),r.buffer.end()) 
-    //        << "XX" << std::endl;
-    if (!r.t.match || !r.t.full || r.t.trees.size()!=1)
+    std::cout << "XX" << string(r.buffer.begin(),r.buffer.end()) 
+              << "XX" << std::endl;
+    std::cout << "XX" << std::distance(r.buffer.begin(),r.t.stop) << std::endl;
+    std::cout << std::distance(r.t.stop,r.buffer.end()) << std::endl;
+    if (!r.t.match || !r.t.full || r.t.trees.size()!=1 || 
+        r.t.stop!=r.buffer.end())
       throw std::runtime_error("Couldn't parse expression.");
     tosexpr(r.t.trees.front(),dst);
   } else {
@@ -238,7 +239,7 @@ bool parse(std::istream& in,sexpr& dst,bool interactive) {
       throw std::runtime_error("Couldn't parse expression.");
     tosexpr(t.trees.front(),dst);
   }
-  //std::cout << "parsed " << dst << std::endl;
+  std::cout << "parsed " << dst << std::endl;
   return true;
 }
 
