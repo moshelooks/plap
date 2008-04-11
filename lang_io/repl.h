@@ -32,7 +32,7 @@ namespace plap { namespace lang_io {
 //reads from in and writes to out as long as in is good, 
 //throws on language errors
 void repl(std::istream& in,std::ostream& out,
-          const std::string& prompt="\033[22;32m> \033[00;m\n");
+          const std::string& prompt="\033[22;32m> \033[00;m");
 
 void eval_print(std::ostream& out,const_subsexpr s,lang::context& c);
 void eval_quiet(const_subsexpr s,lang::context& c);
