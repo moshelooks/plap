@@ -34,8 +34,8 @@ void read_balanced(std::istream& in,std::string& str,
   c=in.get(); }
 
 template<typename In,typename Reader,typename Writer>
-void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
-             const std::string& prompt="") {
+void io_loop(std::istream& in,std::ostream& out,const Reader& read,
+             const Writer& write,const std::string& prompt="") {
   UTIL_IO_begin_loop;
   In i;
   if (!read(in,i))
@@ -44,7 +44,7 @@ void io_loop(std::istream& in,std::ostream& out,Reader read,Writer write,
   UTIL_IO_end_loop;
 }
 template<typename ReadWrite>
-void io_loop(std::istream& in,std::ostream& out,ReadWrite rw,
+void io_loop(std::istream& in,std::ostream& out,const ReadWrite& rw,
              bool final_call,const std::string& prompt="") {
   UTIL_IO_begin_loop;
   if (!rw(in,out))
@@ -55,6 +55,16 @@ void io_loop(std::istream& in,std::ostream& out,ReadWrite rw,
 }
 #undef UTIL_IO_begin_loop
 #undef UTIL_IO_end_loop
+template<typename Reader>
+void input_loop(std::istream& in,const Reader& r) {
+  char c=in.get();
+  while (in.good()) {
+    in.putback(c);
+    if (!r(in))
+      return;
+    c=in.get();
+  }
+}
 
 }} //namespace plap::util
 #endif //PLAP_UTIL_IO_H__

@@ -1,0 +1,169 @@
+# Factorial - 3 flavors
+fact $n = if $n==0 1 $n*(fact $n-1)
+# or
+fact1 $n = apply times [1..$n]
+# or
+fact2 $n = accumulate times [1..$n] 1
+
+println "Table of Factorials:"
+foreach [1..10] \$x -> println (to_str $x)~", "~(fact $x)
+
+# Fibonacci
+fib $n = if $n<=1 1 (fib $n-2)+(fib $n-1)
+
+println "Table of Fibonaccis:"
+foreach [1..10] \$x -> println (to_str $x)~", "~(fib $x)
+
+# Paul Graham's accumulator generator (though in general set should be avoided)
+# (http://www.paulgraham.com/accgen.html)
+acc_gen $n = \$i -> set $n ($n+$i)
+
+# Combinators
+S $x = \$y -> \$z -> ($x $z) ($y $z)
+K $x = \$y -> $x
+I $x = $x
+# Note that you can't do much with these, because every expression must have a
+#  definite type (maybe)
+
+# The following is loosely based on http://merd.sourceforge.net/cookbook.html,
+# which is in turn based on examples from the Perl Cookbook
+
+##
+# Accessing Substrings
+##
+
+nth $l $n = if $n==0 (hd $l) (nth (tl $l) $n-1)
+
+empty $l = $l==[]
+
+sub $list $indices = 
+  let 
+    (helper $list $indices $offset =
+      if (empty $indices) [] 
+         if (hd $indices)=$offset 
+            (hd $list):(helper (tl $list) (tl $indices) $offset+1)
+            helper (tl $list) $indices $offset
+    )
+    helper $list $indices 0
+
+subs $list $from $len = sub $list [$from..$from+$len-1]
+
+last $l = if (empty (tl $l)) (hd $l) (last (tl $l))
+
+length $l = if (empty $l) 0 1+(length (tl $l))
+
+lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n-1)
+
+##
+# Converting Between ASCII Characters and Values
+##
+upchars $l = map $l " \$x -> char (int $x)+1
+
+println "Who made HAL?"
+map "HAL" \$x -> char (int $x)+1            # "IBM"
+
+##
+# Processing a String One Character at a Time
+##
+
+uniq $l =
+  let uniq_h $x $l = 
+    if (empty $l) [$x]
+      (if $x==(hd $l) [] [$x])~(uniq (hd $l) (tl $l))
+  if (empty $l) $l (uniq_h (hd $l) (tl $l))
+    
+filter $pred $l = 
+  if (empty $l) $l
+    (if ($p (hd $l)) [hd $l] [])~(filter $p (tl $l))
+
+sort $l = 
+  if (empty $l) $l
+    (sort (filter (less (hd $l)) (tl $l)))~[(hd $l)]~
+     sort (filter (greater_equal (hd $l) (tl $l)))
+
+##
+# Reversing a String by Word or Character
+##
+
+reverse $l = if (empty $l) $l (reverse (tl $x))~[hd $x]
+
+words $l =
+  let words_helper $words $word $l = 
+    if (empty $l) $word:$words
+      if (hd $l)==' '
+        words_helper $word:$words [] (tl $l)
+        words_helper $words $word~[hd $l] (tl $l)
+  words_helper [] [] $l
+
+long_palindromes $words = 
+  filter \$s -> $s == (reverse $s) && (length $s)>4
+
+println "unique chars in \"an apple a day\" are: "~
+        uniq (sort "an apple a day")
+
+println "\"foobar\" backwards is: "~(reverse s)
+println "reversing the words \"foo bar baz\" gives: "~
+        join " " (reverse (words s))
+
+println "long palindroms are: "~
+        long_palindromes ["foof","foofoof","blaalb","asdfasdf]
+
+##
+# Operating on a Series of Integers
+##
+
+print "Infancy is: "
+map [0..2] \$e -> print (to_str $e)~" "
+println ""
+print "Infancy is: "
+print (fold [0..2] "" \$x $y-> (to_str $x)~" "~$y)
+println ""
+
+
+##
+#  Generating Random Numbers
+##
+
+$randnum = rand [$x..75]                 # $randnum is in [25,75]
+$password = power 8 "" \$x -> rand chars
+
+print "randoms in [25..75]:"~
+      join " " (repeat 10 (rand [25..75]))
+print "good password: "~(power "" 12 \$l -> [rand ['a'..'z']~['0'..'9']]:$l)
+
+# Finding Elements in One (Sorted) List but Not Another
+difference $a $b = if (empty $b)||(empty $a) $a
+  cond 
+    hd $a<hd $b -> [$a]~difference (tl $a) $b
+    hd $b<hd $a -> [$a]~difference $a (tl $b)
+    true        -> difference (tl $a) (tl $b)
+
+# Finding the Most Common Anything
+max $a $b $cmp = if ($cmp $a $b) $b $a
+max_elem $l $cmp = 
+  if (empty (tl $l))
+    hd $l
+    max (hd $l) (max_elem (tl $l)) $cmp
+most_common $l =
+  let most_common_helper $l =
+    let group $n $x $l =
+      if (empty $l) [($n+1,$x)]
+        if ($x==(hd $l)) (group ($n+1) $x (tl $l))
+          ($n,$x):(group 0 (hd $l) (tl $l))
+    group 0 (hd $l) (tl $l)
+  right (max_elem (most_common_helper (sort $l)) \$x $y -> (left $x)<(left $y))
+
+let x = "blabla lala"
+    println "Most common char in "~x~" is "~(most_common x)~"."
+
+# Representing Relationships Between Data
+<- father Cain  Adam
+<- father Abel  Adam
+<- father Seth  Adam
+<- father Enoch Cain
+
+foreach (satisfying_set \$x $y -> father $x $y)
+        \$x $y -> println "The father of "~$x~" is "~$y~"."
+
+foreach (satisfying_set \$x $y -> father $y $x)
+        \$x $y -> println $x~" begat "~$y~"."

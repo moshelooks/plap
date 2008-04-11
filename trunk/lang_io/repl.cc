@@ -49,7 +49,7 @@ void repl(std::istream& in,std::ostream& out,const std::string& prompt) {
   out << util::sexpr_format << "ctrl+D exits" << endl;
   while (true) {
     try {
-      util::io_loop<sexpr>(in,out,&parse,
+      util::io_loop<sexpr>(in,out,boost::bind(&parse,_1,_2,true),
                            boost::bind(&eval_print,_1,_2,ref(c)),ref(prompt));
       break;
     } catch (std::runtime_error e) {
@@ -84,7 +84,7 @@ void eval_quiet(const_subsexpr s,lang::context& c) {
 
 void load_lib(std::istream& in,lang::context& c) {
   std::stringstream tmp;
-  util::io_loop<sexpr>(in,tmp,&parse,
+  util::io_loop<sexpr>(in,tmp,boost::bind(&parse,_1,_2,false),
                        boost::bind(&eval_quiet,_2,boost::ref(c)),"");
 }
 

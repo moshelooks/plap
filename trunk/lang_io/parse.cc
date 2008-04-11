@@ -15,8 +15,7 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "parse.h"
-#include <stdexcept>
-#include <sstream>
+#include <vector>
 #include <streambuf> 
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/tree/ast.hpp>
@@ -24,6 +23,7 @@
 #include <boost/spirit/utility/confix.hpp>
 #include <boost/spirit/iterator/multi_pass.hpp>
 #include "algorithm.h"
+#include "io.h"
 #include "tree.h"
 #include "operators.h"
 #include "names.h"
@@ -79,6 +79,17 @@ inline string tostr(const TreeNode& s) {
     return string(s.value.begin(),s.value.end());
 }
 
+//debug
+#if 0
+template<typename TreeNode>
+void tosexpr(const TreeNode& s,subsexpr d) {
+  d.root()=tostr(s);
+  d.append(s.children.size(),string());
+  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),
+           &tosexpr<TreeNode>);
+}
+#endif
+//#if 0
 template<typename TreeNode>
 void tosexpr(const TreeNode& s,subsexpr d) {
   d.append(s.children.size(),string());
@@ -102,11 +113,13 @@ void tosexpr(const TreeNode& s,subsexpr d) {
     d.root()=operator2name(name,s.children.size());
   }
 }
+//#endif
 
 struct sexpr_grammar : public grammar<sexpr_grammar> {
   template<typename Scanner>
   struct definition {
     definition(const sexpr_grammar&) {
+      foo    = listh | rangeh | commah | def | term;
       sexpr  = no_node_d[ch_p('(')] >> +list >> root_node_d[ch_p(')')];
  
       list   = range    |  listh;
@@ -134,8 +147,8 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       term   = inner_node_d[ch_p('(') >> term >> ch_p(')')] | "[]" | str | chr
              | lexeme_d[token_node_d
                         [!ch_p('$') >> (alpha_p | '_') >> *(alnum_p | '_') 
-                         >> ~eps_p(('.' >> ~ch_p('.')) | alnum_p | '$')]
-                 | (real_p >> ~eps_p('.' | alnum_p | '$'))];
+                         >> ~eps_p(('.' >> ~ch_p('.')) | alnum_p | '$')] |
+                        (real_p >> ~eps_p('.' | alnum_p | '$'))];
       str    = lexeme_d[root_node_d[ch_p('\"')] 
                         >> *((ch_p('\\') >> '\"') | anychar_p - '\"')
                         >> no_node_d[ch_p('\"')]];
@@ -153,26 +166,79 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
       declh  = ((alpha_p | '_') >> *(alnum_p | '_') >> root_node_d[ch_p('^')] 
                 >> int_p);
     }
-    rule<Scanner> sexpr,list,range,comma,def,lambda,fact,decl,arrow,seq;
+    rule<Scanner> foo,sexpr,list,range,comma,def,lambda,fact,decl,arrow,seq;
     rule<Scanner> or_op,and_op,cons,eq,cmp,add,cat,mlt,neg;
     rule<Scanner> prime,term,str,chr,listh,rangeh,commah,lambdah,declh;
-    const rule<Scanner>& start() const { return sexpr; }
+    const rule<Scanner>& start() const { return foo; }//sexpr; }
   };
 };
 
+bool whitespace(char c) { return (c==' ' || c=='\t'); }
+bool newline(char c) { return (c=='\n'); }
+bool eof(char c) { return (c==EOF); }
+
+struct reader {
+  reader() : mode(normal) {}
+  mutable enum { incomment,escaped,normal } mode;
+  mutable std::vector<char> buffer;
+  mutable tree_parse_info<std::vector<char>::iterator> t;
+
+  bool operator()(std::istream& in) const {
+    char c=in.get();
+    
+    if (c=='#' && mode!=escaped) {
+      mode=incomment;
+      return true;
+    }
+    if (newline(c)) {
+      mode=normal;
+      if (parses())
+        return false;
+    }
+    if (mode!=incomment) {
+      if (c=='\\')
+        mode=escaped;
+      else
+        mode=normal;
+      buffer.push_back(c);
+    }
+
+    return !eof(c);
+  }
+
+  bool parses() const {
+    t=ast_parse(buffer.begin(),buffer.end(),sexpr_grammar(),space_p);
+    return (t.match && t.full && t.trees.size()==1);
+  }
+};
 } //namespace
 
-bool parse(std::istream& in,sexpr& dst) {
+bool parse(std::istream& in,sexpr& dst,bool interactive) {
   dst=sexpr(string());
-  typedef multi_pass<std::istreambuf_iterator<char> > iterator_t;
-  tree_parse_info<iterator_t> t=ast_parse
-      (iterator_t(std::istreambuf_iterator<char>(in)),
-       iterator_t(std::istreambuf_iterator<char>()),sexpr_grammar(),space_p);
-  
-  if (!t.match || t.trees.size()!=1)
-    throw std::runtime_error("Couldn't parse expression.");
-  tosexpr(t.trees.front(),dst);
-  std::cout << "parsed " << dst << std::endl;
+
+  if (interactive) {
+    reader r;
+    util::input_loop(in,r);
+    if (r.buffer.empty() || eof(r.buffer.back())) {
+      dst.clear();
+      return false;
+    }
+    //std::cout << "XX" << string(r.buffer.begin(),r.buffer.end()) 
+    //        << "XX" << std::endl;
+    if (!r.t.match || !r.t.full || r.t.trees.size()!=1)
+      throw std::runtime_error("Couldn't parse expression.");
+    tosexpr(r.t.trees.front(),dst);
+  } else {
+    typedef multi_pass<std::istreambuf_iterator<char>,
+                       multi_pass_policies::input_iterator,
+                       multi_pass_policies::first_owner> iterator_t;
+    iterator_t from=iterator_t(std::istreambuf_iterator<char>(in)),to;
+    tree_parse_info<iterator_t> t=ast_parse(from,to,sexpr_grammar(),space_p);
+    if (!t.match || t.trees.size()!=1)
+      throw std::runtime_error("Couldn't parse expression.");
+    tosexpr(t.trees.front(),dst);
+  }
+  //std::cout << "parsed " << dst << std::endl;
   return true;
 }
 

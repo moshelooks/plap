@@ -23,7 +23,7 @@
 
 namespace plap { namespace lang_io {
 
-bool parse(std::istream& in,sexpr& dst);
+bool parse(std::istream& in,sexpr& dst,bool interactive=false);
 
 }} //namespace plap::lang_io
 #endif //PLAP_LANG_PARSE_H__

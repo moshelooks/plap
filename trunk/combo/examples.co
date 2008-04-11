@@ -24,12 +24,12 @@ I $x = $x
 
 nth $l $n = (if $n==0 (hd $l) (nth (tl $l) $n-1))
   
-sub $list $indices = 
+sub $l $i = 
 (let [helper $list $indices $offset = 
       split $list \$y $ys -> split $indices \$x $xs -> 
         if $x==$offset $y:(helper $ys $xs $offset+1) 
                        helper $ys $indices $offset+1]
- (helper $list $indices 0))
+ (helper $l $i 0))
 subs $list $from $len = (sub $list [$from..$from+$len-1])
 
 last $l = (if (tl $l)==[] (hd $l) (last (tl $l)))
