@@ -415,27 +415,6 @@ struct semantic_analyzer {
                       parent(src.begin_sub())->front() : 
                       src.root(),src.arity(),a);
   }
-
-  void replace_args(const_subsexpr args,subsexpr body) {
-    if (!args.flat())
-      throw_bad_args(lexical_cast<string>(args));
-    std::map<string,arity_t> arg2idx(pair_it(args.begin_child(),count_it(0)),
-                                     pair_it(args.end_child(),count_it(-1)));
-    if (!scalar(arg2idx.begin()->first) || !scalar(arg2idx.rbegin()->first))
-      throw_bad_args(lexical_cast<string>(args));
-
-    foreach (string& s,body) {
-      if (s[0]=='#')
-        throw_bad_identifier(s);
-      if (scalar(s)) {
-        std::map<string,arity_t>::const_iterator i=arg2idx.find(s);
-        if (i==arg2idx.end())
-          throw_unbound_scalar(s);
-        s[0]='#';
-        s[1]=char(i->second);
-      }
-    }
-  }
 };
 
 } //namespace

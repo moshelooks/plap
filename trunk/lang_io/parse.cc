@@ -15,19 +15,23 @@
 // Author: madscience@google.com (Moshe Looks)
 
 #include "parse.h"
+#include <stdexcept>
 #include <sstream>
+#include <streambuf> 
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/tree/ast.hpp>
 #include <boost/spirit/tree/parse_tree.hpp>
 #include <boost/spirit/utility/confix.hpp>
+#include <boost/spirit/iterator/multi_pass.hpp>
 #include "algorithm.h"
 #include "tree.h"
 #include "operators.h"
 #include "names.h"
-#include "indent.h"
 #include "builtin.h"
 
+
 #include <iostream>//fixme
+#include "tree_io.h"
 
 namespace plap { namespace lang_io {
 
@@ -70,11 +74,13 @@ bool special_name(const string& s,subsexpr d) {
   return true;
 }
 
-inline string tostr(const tree_node<node_val_data<> >& s) {
+template<typename TreeNode>
+inline string tostr(const TreeNode& s) {
     return string(s.value.begin(),s.value.end());
 }
 
-void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
+template<typename TreeNode>
+void tosexpr(const TreeNode& s,subsexpr d) {
   d.append(s.children.size(),string());
   string name=tostr(s);
 
@@ -82,11 +88,12 @@ void tosexpr(const tree_node<node_val_data<> >& s,subsexpr d) {
     assert(d.size()==d.arity()+1);
     d.root()=string_symbol;
     std::transform(s.children.begin(),s.children.end(),d.begin_sub_child(),
-                   &tostr);
+                   &tostr<TreeNode>);
     return;
   }
 
-  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),&tosexpr);
+  for_each(s.children.begin(),s.children.end(),d.begin_sub_child(),
+           &tosexpr<TreeNode>);
 
   if (!special_name(name,d)) {
     if (*name.rbegin()=='.' && name!="." && name!=".." && name!="...")
@@ -155,27 +162,18 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
 
 } //namespace
 
-bool indent_parse(std::istream& in,sexpr& dst) {
-  std::stringstream ss;
-  std::cout << "parsing.." << std::endl;
-  util::indent2parens(in,ss);
-  std::cout << "XX " << ss.str() << std::endl;
-  return paren_parse(ss.str(),dst);
-}
-
-bool paren_parse(const std::string& str,sexpr& dst) {
-  if (str.empty()) {
-    dst.clear();
-    return false;
-  }
-
+bool parse(std::istream& in,sexpr& dst) {
   dst=sexpr(string());
-  const char* s=str.data();
-  tree_parse_info<> t=ast_parse(s,s+str.length(),sexpr_grammar(),space_p);
-  if (!t.match || !t.full || t.trees.size()!=1)
-    throw std::runtime_error("bad tree structure parsing '"+str+"'");
+  typedef multi_pass<std::istreambuf_iterator<char> > iterator_t;
+  tree_parse_info<iterator_t> t=ast_parse
+      (iterator_t(std::istreambuf_iterator<char>(in)),
+       iterator_t(std::istreambuf_iterator<char>()),sexpr_grammar(),space_p);
+  
+  if (!t.match || t.trees.size()!=1)
+    throw std::runtime_error("Couldn't parse expression.");
   tosexpr(t.trees.front(),dst);
+  std::cout << "parsed " << dst << std::endl;
   return true;
 }
-  
+
 }} //namespace plap::lang
