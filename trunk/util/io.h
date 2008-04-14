@@ -22,8 +22,28 @@
 
 namespace plap { namespace util {
 
-void read_balanced(std::istream& in,std::string& str,
-                   char lparen='(',char rparen=')',bool ignore_comments=false);
+inline bool lparen(char c) { return (c=='(' || c=='[' || c=='{'); }
+inline bool rparen(char c) { return (c==')' || c==']' || c=='}'); }
+inline bool whitespace(char c) { return (c==' ' || c=='\t' || c=='\n'); }
+bool all_whitespace(const std::string& s);
+
+struct sexpr_getter {
+  sexpr_getter(std::istream& i,char m='#')
+      : _in(&i),_marker(m),_mode(normal),_nparen(0) {}
+  void get_balanced(std::string&); //uses get (must be in parens)
+  void get_balanced_lines(std::string&); //uses getline (parens optional)
+  bool balanced() const { return _nparen==0; }
+
+  char get();
+  void getline(std::string&);
+ protected:
+  std::istream* _in;
+  char _marker;
+  enum { normal,incomment,inquote,escaped } _mode;
+  std::string::size_type _nparen;
+
+  void error(const std::string&);
+};
 
 #define UTIL_IO_begin_loop                      \
   out << prompt; out.flush();                   \

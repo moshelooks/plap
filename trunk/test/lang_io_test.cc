@@ -22,7 +22,7 @@ namespace plap { namespace test {
     stringstream ss;                                    \
     ss << src;                                          \
     tree<string> tmpXXX;                                \
-    parse(ss,tmpXXX);                                   \
+    parse(ss,tmpXXX,true);                              \
     check_eq(lexical_cast<string>(tmpXXX),goal);        \
   }
 #define check_parse_throw(src) {                        \
@@ -30,7 +30,7 @@ namespace plap { namespace test {
     stringstream ss;                                    \
     ss << src;                                          \
     tree<string> tmpXXX;                                \
-    check_throw(parse(ss,tmpXXX));                      \
+    check_throw(parse(ss,tmpXXX,true));                 \
   }
 
 test_case(parse_sexpr) {
@@ -71,7 +71,7 @@ test_case(parse_infix) {
 
   check_parse("(\"  \")","(\"    )");
   check_parse("(\"foo \\\" ff\")","(\" f o o   \\ \"   f f)");
-  check_parse("(\"sfs\\sdf\")","(\" s f s \\ s d f)");
+  check_parse("(\"sfs\\\\sdf\")","(\" s f s \\ s d f)");
   check_parse("(\"df\\\"fa\\\"\\\"fds\")",
               "(\" d f \\ \" f a \\ \" \\ \" f d s)");
 
@@ -125,21 +125,21 @@ test_case(parse_fail_infix) {
 test_case(parse_comments) {
   check_parse("#nothing here","");
   check_parse("1 2 3 ### 456","(1 2 3)");
-  check_parse("1 2 3 #blabla\n  7 8","(1 2 3 (7 8))");
+  check_parse("1 2 3 #blabla\n  (7 8)","(1 2 3 (7 8))");
 }
 
-test_case(parse_indents) {
-  check_parse("1 2 3\n 4 5\n 6","(1 2 3 (4 5) 6)");
+test_case(parse_across_lines) {
+  check_parse("(1 2 3\n(4 5)\n 6)","(1 2 3 (4 5) 6)");
   check_parse("[1,2,\n 3,4]","(list 1 2 3 4)");
-  check_parse("a b [1,2,\n 3,4] c d\n e f","(a b (list 1 2 3 4) c d (e f))");
-  check_parse("a b c\\\nd e f","(a b c d e f)");
+  check_parse("(a b [1,2,\n 3,4] c d\n (e f))",
+              "(a b (list 1 2 3 4) c d (e f))");
+  check_parse("(a b c\nd e f)","(a b c d e f)");
   check_parse("(a b c,\nd e f)","(tuple (a b c) (d e f))");
 }
 
 test_case(parse_quotes) {
   check_parse("\"([\" \"](\"","(apply (\" ( [) (list (\" ] ()))");
-  check_parse("a b c #comment\n \"a\\# fake\"",
-              "(a b c (\" a \\ #   f a k e))");
+  check_parse("a b c #comment\n \"a\\# fake\"","(a b c (\" a #   f a k e))");
 }
 
 }} //namespace plap::test

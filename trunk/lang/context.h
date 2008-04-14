@@ -55,6 +55,12 @@ struct context : public boost::noncopyable {
   //scalar bindings
   template<typename Iterator>
   void scalar_bind(arity_t offset,Iterator f,Iterator l) {
+    /**std::cout << "bind ";
+    for (Iterator i=f;i!=l;++i) {
+      std::cout << "(" << offset+1+std::distance(f,i) << "|"
+                << *i << ") " ;
+    }
+    std::cout << std::endl;**/
     //first eval, then add (we must not mung _scalars until after evaling)
     vtree_seq args;
     args.reserve(std::distance(f,l));
@@ -69,7 +75,8 @@ struct context : public boost::noncopyable {
     _scalars.push_front(make_pair(vtree_seq(),offset));
     std::swap(args,_scalars.front().first);
   }
-  void scalar_unbind(arity_t n) {
+  void scalar_unbind(arity_t n) { 
+    //std::cout << "unbind" << std::endl;
     assert(_scalars.front().first.size()==n);
     _scalars.pop_front();
   }

@@ -23,7 +23,7 @@ static vtree vtr;
     stringstream ss;                                    \
     ss << src;                                          \
     tree<string> tmpXXX;                                \
-    parse(ss,tmpXXX);                                   \
+    parse(ss,tmpXXX,true);                              \
     analyze(tmpXXX,vtr,c);                              \
   }
 #define check_eval(src,goal) {                  \
@@ -136,4 +136,3 @@ test_case(lang_import_and_test) {
   check_eval("import \"combo/lib.co\"","[]");
   check_eval("import \"combo/test.co\"","[]");
 }
-
