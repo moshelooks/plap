@@ -36,7 +36,7 @@ void lang_do::eval(context& c,any_list l,subvtree dst) const {
 void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
   vtree func=vtree(vertex());
   c.eval(f,func);
-
+  
   if (func.childless()) {
     if (args.src.childless()) {
       assert(args.src.root()==nil());
@@ -71,22 +71,25 @@ void lang_accumulate::eval(context& c,
   }
 }
 
-void lang_assert::eval(context& c,any a,subvtree dst) const {
+void lang_assert::operator()(context& c,const_subvtree s,subvtree dst) const {
   using boost::lexical_cast;
   using std::string;
-  if (a.root()==call(lang_equal::instance())) {
-    vtree tmp=vtree(vertex());
-    c.eval(a[0],tmp);
-    c.eval(a[1],dst);
-    if (tmp!=dst)
-      throw std::runtime_error("Failed equality assertion: "+
-                               lexical_cast<string>(tmp)+" doesn't equal "+
-                               lexical_cast<string>(dst)+".");
-  } else {
-    c.eval(a,dst);
-    if (!dst.childless() || !arg_cast<bool>(dst.root()))
-      throw std::runtime_error("Failed assertion: "+
-                               lexical_cast<string>(a)+".");
+  foreach (const_subvtree a,sub_children(s)) {
+    if (a.root()==call(lang_equal::instance())) {
+      vtree tmp=vtree(vertex());
+      dst=tmp;
+      c.eval(a[0],tmp);
+      c.eval(a[1],dst);
+      if (tmp!=dst)
+        throw std::runtime_error("Failed equality assertion: "+
+                                 lexical_cast<string>(tmp)+" doesn't equal "+
+                                 lexical_cast<string>(dst)+".");
+    } else {
+      c.eval(a,dst);
+      if (!dst.childless() || !arg_cast<bool>(dst.root()))
+        throw std::runtime_error("Failed assertion: "+
+                                 lexical_cast<string>(a)+".");
+    }
   }
   dst.prune();
   dst.root()=nil();

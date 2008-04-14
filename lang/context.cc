@@ -32,6 +32,7 @@ void context::define(lang_ident* d,subvtree body) {
 void context::erase_last_decl() { _decls.pop_back(); }
 
 void context::eval(const_subvtree src,subvtree dst) {
+  //std::cout << "evaling " << src << std::endl;
   vertex v=src.root();
   if (src.childless()) {
     arity_t a=test_lang_arg_cast(v);
@@ -50,6 +51,7 @@ void context::eval(const_subvtree src,subvtree dst) {
   } else {
     (*call_cast(v))(*this,src,dst);
   }
+  //std::cout << "evaled to " << dst << std::endl;
 }
 
 const_subvtree context::scalar(arity_t idx) const {

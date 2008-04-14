@@ -77,7 +77,25 @@ struct tree_grammar : public grammar<tree_grammar> {
 
 std::istream& operator>>(std::istream& in,tree<std::string>& dst) {
   std::string str;
-  read_balanced(in,str);
+  std::string::size_type nparen=0;
+  char c;
+  bool started=false;
+  do {
+    c=in.get();
+    if (lparen(c)) {
+      started=true;
+      ++nparen;
+    } else if (rparen(c)) {
+      --nparen;
+    }
+    str.push_back(c);
+  } while (in && c!=EOF && (nparen>0 || !started));
+  if (c==EOF || c==' ' || c=='\t' || c=='\n') {
+    in.putback(c);
+    str.erase(str.length()-1); //get rid of trailing space
+  }
+  if (nparen!=0)
+    throw std::runtime_error("paren mismatch reading: '"+str+"'");
   
   dst.clear();
   tr=&dst;

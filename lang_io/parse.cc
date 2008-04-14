@@ -30,9 +30,6 @@
 #include "names.h"
 #include "builtin.h"
 
-#include <iostream>//fixme
-#include "tree_io.h"
-
 namespace plap { namespace lang_io {
 
 namespace {
@@ -172,56 +169,28 @@ struct sexpr_grammar : public grammar<sexpr_grammar> {
   };
 };
 
-struct line_reader {
-  line_reader() : l(0),r(0) {}
-  std::size_t l,r;
-  bool operator()(std::istream& in,std::ostream& out) {
-    std::string tmp;
-    std::getline(in,tmp);
-    l+=std::count(tmp.begin(),tmp.end(),'(');
-    r+=std::count(tmp.begin(),tmp.end(),')');
-    if (r>l)
-      throw std::runtime_error("Unbalanced parens around '"+tmp+"'.");
-    out << tmp << ' ';
-    return (l!=r);
-  }
-};
-
 } //namespace
 
 bool parse(std::istream& in,sexpr& dst,bool interactive) {
   std::string s;
-  if (interactive) {
-    std::stringstream ss;
-    ss << '(';
-    util::io_loop(in,ss,line_reader(),false);
-    ss << ')';
-    s=ss.str();
-    if (s=="( )")
-      return parse(in,dst,interactive);
-    else if (s=="()") {
-      dst.clear();
-      return false;
-    }
-  } else {
-    util::read_balanced(in,s);
-    if (!in.good()) {
-      dst.clear();
-      return false;
-    }
+  util::sexpr_getter sg(in);
+
+  interactive ? sg.get_balanced_lines(s) : sg.get_balanced(s);
+  if (util::all_whitespace(s)) {
+    dst.clear();
+    return false;
   }
+  if (interactive)
+    s='('+s+')';
 
   tree_parse_info<string::iterator> t=ast_parse(s.begin(),s.end(),
                                                 sexpr_grammar(),space_p);
   if (!t.match || !t.full)
     throw std::runtime_error("Couldn't parse expression.");
   assert(t.trees.size()==1);
-  std::cout << "XX" << std::distance(s.begin(),t.stop)
-            << " " << t.length <<std::endl;
-  std::cout << "XX '" << s << "'" << std::endl;
+
   dst=sexpr(string());
   tosexpr(t.trees.front(),dst);
-  std::cout << "parsed " << dst << std::endl;
   return true;
 }
 

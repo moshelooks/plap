@@ -60,6 +60,8 @@ void lang_ident::set_body(context& c,subvtree b) {
     c.eval(_body,tmp);
     std::swap(_body,tmp);
   }
+  /**std::cout << "set body #" << id() << " _closure=" << _closure << " "
+               << _body << std::endl;**/
 }
 
 bool lang_ident::has_var_outside_range(const_subvtree s) const {
@@ -94,6 +96,11 @@ void lang_ident::rec_instantiate(context& c,subvtree d,bool& ready,
       if (a<c.scalar_arity()+c.scalar_offset()) {
         assert(a>=c.scalar_offset());
         s=c.scalar(a);
+        if (closure(s)) {
+          s.prepend(call(lang_dummy::instance()));
+          s.splice(s[0].end_child(),++s.begin_child(),s.end_child());
+          std::swap(s.root(),s.front());
+        }
       } else if (a!=variadic_arity) {
         if (!nested || a>=_offset+_arity || a<_offset)
           ready=false;
@@ -107,7 +114,7 @@ void lang_ident::rec_instantiate(context& c,subvtree d,bool& ready,
     } else if (closure(s)) {
       dynamic_cast<const lang_ident*>(call_cast(s.root()))->
           rec_instantiate(c,s,ready,true);
-    } else {
+    } else if (call_cast(s.root())!=lang_dummy::instance()) {
       rec_instantiate(c,s,ready,nested);
     }
   }

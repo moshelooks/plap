@@ -81,7 +81,11 @@ func_index func_names=boost::assign::map_list_of
     namef(tuple)
     namef(pair)
     namef(left)
-    namef(right);
+    namef(right)
+
+    namef(dummy)
+
+    ;
 #undef namef
 
 func_index let_names;

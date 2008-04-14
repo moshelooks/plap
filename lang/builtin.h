@@ -230,8 +230,8 @@ struct lang_accumulate : public builtin<lang_accumulate(any,any_list,any)> {
 };
 
 //util
-struct lang_assert : public builtin<lang_assert(any)> {
-  void eval(context& c,any a,subvtree dst) const;
+struct lang_assert : public stateless_func<lang_assert,variadic_arity> {
+  void operator()(context& c,const_subvtree s,subvtree d) const;
 };
 struct lang_print : public builtin<lang_print(any)> {
   static std::ostream* print_to;
@@ -260,6 +260,7 @@ struct lang_expand : public builtin<lang_expand(any)> {
       dst=a;
   }
 };
+
 #if 0
 
 struct lang_expand : public builtin<lang_expand(any)> {

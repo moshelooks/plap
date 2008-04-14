@@ -53,6 +53,10 @@ struct lang_ident : public func {
   lang_ident(arity_t a,arity_t o) : _arity(a),_offset(o) {}
 };
 
+struct lang_dummy : public stateless_func<lang_dummy,1> {
+  void operator()(context& c,const_subvtree s,subvtree dst) const { dst=s[0]; }
+};
+
 inline const lang_ident* test_ident_arg_cast(vertex v) {
   if (func_t f=test_func_arg_cast(v))
     return dynamic_cast<const lang_ident*>(f);
