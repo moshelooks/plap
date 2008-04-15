@@ -1,4 +1,4 @@
-#summary conceptual introduction to plap and toc
+#summary table of contents and conceptual introduction to plap
 
 =Probabilistic Learning and Programming=
 
