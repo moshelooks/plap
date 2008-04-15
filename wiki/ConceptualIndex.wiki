@@ -16,8 +16,7 @@
  declaring what training experience should be given to each "to be learned"
  subroutine, when, and with what safeguards against arbitrary changes to
  program behavior. - Tom Mitchell,
- [http://reports-archive.adm.cs.cmu.edu/anon/anon/ml/CMU-ML-06-108.pdf The
- Discipline of Machine Learning]
+ [http://reports-archive.adm.cs.cmu.edu/anon/anon/ml/CMU-ML-06-108.pdf The Discipline of Machine Learning]
 
 ==Summary and Disclaimer==
 
