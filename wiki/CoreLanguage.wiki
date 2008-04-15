@@ -2,10 +2,18 @@
 
 ===== Preliminaries =====
 
-  * Unless otherwise specified, a sequence of entities may be empty, and the entities themselves are separated by whitespace.
-  * Whitespace is one or more spaces and/or tabs. Unless otherwise specified, any ammount of whitespace may occur between any two consecutive entities.
+  * Unless otherwise specified, a sequence of entities may be empty, and the
+    entities themselves are separated by whitespace.
+
+  * Whitespace is one or more spaces and/or tabs. Unless otherwise specified,
+    any ammount of whitespace may occur between any two consecutive entities.
+
   * A name is an identifier or a scalar.
-    * An identifier is a nonempty sequences of digits, letters, and underscores, not beginning with a digit, containing no whitespace, that is not a keyword. A keyword is any word appearing in `codeface` in this document.
+    * An identifier is a nonempty sequences of digits, letters, and
+      underscores, not beginning with a digit, containing no whitespace, that
+      is not a keyword. A keyword is any word appearing in `codeface` in this
+      document.
+
     * A scalar is dollar sign (`$`) followed by an identifier, with no intervening whitespace.
   * Matched parentheses (`(` and `)`) may be placed around any entity. Any entity that contains whitespace and is nested inside another entity ''must'' be put in parentheses.
 
