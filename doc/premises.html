@@ -16,9 +16,9 @@ understanding (premise #2 elaborate why this is the case).
 
 <h5>Rationale</h5>
 
-Given in <a href="http://metacog.org/aicog.pdf">Mixing Cognitive Science
-Concepts with Computer Science Algorithms and Data Structures</a>, by Moshe
-Looks and Ben Goertzel.
+See <a href="http://metacog.org/aicog.pdf">Mixing Cognitive Science Concepts
+with Computer Science Algorithms and Data Structures</a>, by Moshe Looks and
+Ben Goertzel.
 
 <h4><u>Premise #1: Insufficient Knowledge and Resources</u></h4>
 
@@ -27,10 +27,10 @@ Wang</a> has termed the <i>assumption of insufficient knowledge and
 resources</i> (AIKR). The system resembles a functional programming language
 inasmuch as it contains the usual mechanisms for defining and invoking
 functions, passing around arguments (including functions themselves),
-etc. However, it is a programming language designed from the ground up such
-that individual functions, and in many cases pieces of functions, are not only
-organized by type and scope, but also by degree of belief, expected utility,
-and computational overhead.<br><br>
+etc. However, it is a programming language designed such that individual
+functions, and in many cases pieces of functions, are not only organized by
+type and scope, but also by degree of belief, expected utility, and
+computational overhead.<br><br>
 
 The system has the top-level goal of obtaining the most certain result or range
 of results of executing the user's program, given user-specified constraints on
@@ -44,31 +44,31 @@ programming language, the system can either evaluate an expression to obtain
 
 <h5>Rationale</h5>
 
-Well-discussed in the literature - cf. <a
-href="http://nars.wang.googlepages.com/wang.logic_intelligence.pdf">The Logic
-of Intelligence</a>, by Pei Wang.
+See <a href="http://nars.wang.googlepages.com/wang.logic_intelligence.pdf">The
+Logic of Intelligence</a>, by Pei Wang.
 
 <h4><u>Premise #2: Understanding = Compression</u></h4>
 
 As clearly articulated by <a href="http://whatisthought.com/">Eric Baum</a>
-(among others), understanding is in many respects equivalent to compression. A
-compact program that accurately models some dataset not only deciphers the
-structure of the data; it will also aid us in understanding related data. Many
-problems are thus best solved by searching for compact programs that exploit
-(i.e. map to) problem structure.<br><br>
+(and as has been observed dating back to Leibnitz), understanding is in many
+respects equivalent to compression. A compact program that accurately models
+some dataset not only deciphers the structure of the data; it will also aid us
+in understanding related data. Many problems are thus best solved by searching
+for compact programs that exploit (i.e. map to) problem structure.<br><br>
 
 One important refinement to the classical Kolmogorov complexity approach to
 defining compact programs is needed, however. This is to consider compactness
 in terms of general resource consumption (program length, speed, runtime memory
 usage, etc.), rather than program length alone. This loses some useful
 theoretical properties, but gains a very important one (the complexity measure
-is now computable), and in practice has few downsides.
+is now computable), and in practice has few downsides. Two examples of this
+approach are Levin-s Kt and Schmidhuber's <a
+href="http://www.idsia.ch/~juergen/speedprior.html">Speed Prior</a>.
 
 <h5>Rationale</h5>
 
-Well-discussed in the literature - cf. <a
-href="http://whatisthought.com/working.pdf">A Working Hypothesis for General
-Intelligence</a>, by Eric Baum.
+See <a href="http://whatisthought.com/working.pdf">A Working Hypothesis for
+General Intelligence</a>, by Eric Baum.
 
 <h4><u>Premise #3: Necessary Inductive Bias</u></h4>
 
@@ -85,11 +85,11 @@ hard problems across diverse domains, assuming present-day hardware
 capabilities and software toolchains.<br><br>
 
 Which biases are pertinent here? The aim is not to encode "commonsense
-knowledge", but rather sufficient bias to make it possible to tractably
-<i>learn</i> common sense. These are the inductive biases pertaining to: space,
-time, action, perception, causality, theory-of-mind, and reflection. Expressing
-and teaching such biases will require embodiment in one or more dynamic
-contexts.
+knowledge", but rather sufficient bias to make <i>the learning of</i> common
+sense tractable. These are the inductive biases pertaining to: space, time,
+action, perception, causality, theory-of-mind, and reflection. Teaching (and
+compactly describing) biases across all of these areas will require embodiment
+in one or more interactive, partially observable environments.
 
 <h5>Rationale</h5>
 
