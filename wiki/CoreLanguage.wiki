@@ -1,6 +1,8 @@
 #summary description of the Combo Lisp dialect
 
-===== Preliminaries =====
+= Combo Lisp: Core Language =
+
+== Preliminaries ==
 
   * Unless otherwise specified, a sequence of entities may be empty, and the
     entities themselves are separated by whitespace.
@@ -14,23 +16,56 @@
       is not a keyword. A keyword is any word appearing in `codeface` in this
       document.
 
-    * A scalar is dollar sign (`$`) followed by an identifier, with no intervening whitespace.
-  * Matched parentheses (`(` and `)`) may be placed around any entity. Any entity that contains whitespace and is nested inside another entity ''must'' be put in parentheses.
+    * A scalar is dollar sign (`$`) followed by an identifier, with no
+      intervening whitespace.
+
+  * Matched parentheses (`(` and `)`) may be placed around any entity. Any
+    entity that contains whitespace and is nested inside another entity
+    _must_ be put in parentheses.
 
 ===== Core Syntax =====
 
-A program is a sequence of expressions and imports, each separated by one or more newlines.
+A program is a sequence of expressions and imports, each separated by one or
+more newlines.
 
   * An expression is a name, a literal, or a function application
-    * A literal is a Boolean literal, number literal, character literal, or nil.
+
+    * A literal is a Boolean literal, number literal, character literal, or
+      nil.
+
       * A Boolean literal is `true` or `false`.
-      * A number literal is a nonempty sequence of digits (`0-9`), optionally preceded by a minus sign (`-`), optionally containing exactly one period (`.`) in some position other than the last, containing no whitespace. [[BR]]''Examples:'' `-3.14`, `2003.0`, `.5`, `42`, `109`, `-00`
-      * A character literal is a normal character literal or an escaped character literal.
-        * A normal character literal is single quote (`'`), followed by a single character other than a single quote or a hash (`#`), followed by a single quote.
-        * An escaped character literal is a single quote, followed by a backslash (`\`), followed by a `t` (tab), `n` (newline), `#`, `\`, `'`, or `"`. [[BR]]''Examples:'' `'a'`, `'\n'`, `'\\'`
+
+      * A number literal is a nonempty sequence of digits (`0-9`), optionally
+        preceded by a minus sign (`-`), optionally containing exactly one
+        period (`.`) in some position other than the last, containing no
+        whitespace. 
+        
+        _Examples:_ `-3.14`, `2003.0`, `.5`, `42`, `109`, `-00`
+
+      * A character literal is a normal character literal or an escaped 
+          character literal.
+        * A normal character literal is single quote (`'`), followed by a 
+     	  single character other than a single quote or a hash (`#`), followed 
+	  by a single quote.
+
+        * An escaped character literal is a single quote, followed by a
+          backslash (`\`), followed by a `t` (tab), `n` (newline), `#`, `\`,
+          `'`, or `"`. 
+
+	  _Examples:_ `'a'`, `'\n'`, `'\\'`
+
       * Nil is an empty pair of brackets (`[]`), or the keyword `nil`.
-    * A function application is an identifier, followed by a nonempty sequence of expressions. [[BR]]''Examples:'' `foo 1 2 'x' (bar $x)`, `bla ()`, `baz 3.4 [] 1 2 3 []`
-  * An import is the keyword `import`, followed by an expression. [[BR]]''Examples:'' `import ants`, `import blocksworld`
+
+    * A function application is an identifier, followed by a nonempty sequence
+      of expressions. 
+
+      _Examples:_ `foo 1 2 'x' (bar $x)`, `bla ()`, `baz 3.4 [] 1 2 3 []`
+
+  * An import is the keyword `import`, followed by an
+    expression.
+
+    _Examples:_ `import ants`, `import blocksworld`
+
 
 ===== Syntactic Sugar =====
 
@@ -40,7 +75,7 @@ Every combo program may be expressed using nothing but the core syntax. For conv
 
 A number of special operators (primaily infix, but some prefix as well) are provided; each is equivalent to some function application expression. The operators are listed in ascending order of precedence. The arity of an expression may be the same for both forms or may be different, as indicated in the table. Infix operations of equal precedence are left-associative, except for `pair` (`,`) and `cons` (`:`), which are right-associative.
 
-|| '''Infix''' || '''Arity''' || '''Example Special Expression''' || '''Equivalent Function Application Expression''' ||
+|| _'Infix_' || _'Arity_' || _'Example Special Expression_' || _'Equivalent Function Application Expression_' ||
 || [,] || variadic || [a b c,[],foo (foo bar)] || (list (a b c) nil (foo (foo bar))) ||
 || [..] || 2 || [foo bar..42] || (range (foo bar) 42) ||
 || [...] || 2 || [1...10] || (xrange 1 10) ||
@@ -63,7 +98,7 @@ A number of special operators (primaily infix, but some prefix as well) are prov
 
 ====== String literals ======
 
-A string in double-quotes, with same escape-sequences recognized in character literals, is sugar for the equivalent list of characters. So for example `"foobar"` is equivalent to `['f', 'o', 'o', 'b', 'a', 'r']`, and `"b'la\"bla"` is equivalent to `['b' '\'', 'l', 'a', '"', 'b', 'l', 'a']`, etc.
+A string in double-quotes, with same escape-sequences recognized in character literals, is sugar for the equivalent list of characters. So for example `"foobar"` is equivalent to `['f', 'o', 'o', 'b', 'a', 'r']`, and `"b'la\"bla"` is equivalent to `['b' '\_, 'l', 'a', '"', 'b', 'l', 'a']`, etc.
 
 ====== Comments ======
 
@@ -75,16 +110,16 @@ Note that since newlines are not considered whitespace, every expression that us
 
 Indentation may also be used to control parsing and expression grouping, according to the following simple rules:
 
-  1. A line that is indented at the same level or a level less than that of the line above it creates ''n+1'' right-parens (`)`) at the begining of the line, where ''n'' is the number of levels it decreases the indentation by.
+  1. A line that is indented at the same level or a level less than that of the line above it creates _n+1_ right-parens (`)`) at the begining of the line, where _n_ is the number of levels it decreases the indentation by.
   1. A line that is indented (and immediately below a line containing an expression or part of an expression) is parsed as part of that expression, and creates a left-paren (`(`) at the begining of the line. This left-paren appears after any right-parens that might appear from applying rules one and two.
   1. Lines that end in a comma are have their newlines escaped in the same manner as lines ending in a backslash, overriding the above rules. Note that unlike a backslash, a comma ending a line is not ignored, but is considered as part of the input.
-  1. If the final line in an expression is indented ''n'' levels, ''n'' right-parens are created at the end of the line.
+  1. If the final line in an expression is indented _n_ levels, _n_ right-parens are created at the end of the line.
 
 Note that by rule one, indentation levels must match - if we first indent by two spaces, and then by two more, we can indent the following line by two or four spaces, or more than four spaces, but not by one or three spaces. Every increase in indentation corresponds to a single new indentation level, regardless of the number of whitespace characters it increases indentation by.
 
-''Examples:''[[BR]][[BR]]
+_Examples:_[[BR]][[BR]]
 
-|| '''Indented''' || '''Equvalent Unindented''' ||
+|| _'Indented_' || _'Equvalent Unindented_' ||
 || {{{ a
   b
    c
