@@ -2,45 +2,25 @@
 
 = Combo Lisp: Core Language =
 
-== Preliminaries ==
-
-  * Unless otherwise specified, a sequence of entities may be empty, and the
-    entities themselves are separated by whitespace.
-
-  * Whitespace is one or more spaces and/or tabs. Unless otherwise specified,
-    any ammount of whitespace may occur between any two consecutive entities.
-
+======= Preliminaries ====
+  * Unless otherwise specified, a sequence of entities may be empty, and the entities themselves are separated by whitespace.
+  * Whitespace is one or more spaces and/or tabs. Unless otherwise specified, any amount of whitespace may occur between any two consecutive entities.
   * A name is an identifier or a scalar.
-    * An identifier is a nonempty sequences of digits, letters, and
-      underscores, not beginning with a digit, containing no whitespace, that
-      is not a keyword. A keyword is any word appearing in `codeface` in this
-      document.
+    * An identifier is a nonempty sequences of digits, letters, and underscores, not beginning with a digit, containing no whitespace, that is not a keyword. A keyword is any word appearing in `codeface` in this document.
 
-    * A scalar is dollar sign (`$`) followed by an identifier, with no
-      intervening whitespace.
+    * A scalar is dollar sign (`$`) followed by an identifier, with no intervening whitespace.
 
-  * Matched parentheses (`(` and `)`) may be placed around any entity. Any
-    entity that contains whitespace and is nested inside another entity
-    _must_ be put in parentheses.
+  * Matched parentheses (`(` and `)`) may be placed around any entity. Any entity that contains whitespace and is nested inside another entity _must_ be put in parentheses.
 
-===== Core Syntax =====
+====== Core Syntax ======
 
-A program is a sequence of expressions and imports, each separated by one or
-more newlines.
+A program is a sequence of expressions and imports, each separated by one or more newlines.
 
   * An expression is a name, a literal, or a function application
-
-    * A literal is a Boolean literal, number literal, character literal, or
-      nil.
-
+    * A literal is a Boolean literal, number literal, character literal, or nil.
       * A Boolean literal is `true` or `false`.
-
-      * A number literal is a nonempty sequence of digits (`0-9`), optionally
-        preceded by a minus sign (`-`), optionally containing exactly one
-        period (`.`) in some position other than the last, containing no
-        whitespace. 
-        
-        _Examples:_ `-3.14`, `2003.0`, `.5`, `42`, `109`, `-00`
+      * A number literal is a nonempty sequence of digits (`0-9`), optionally preceded by a minus sign (`-`), optionally containing exactly one period (`.`) in some position other than the last, containing no whitespace. 
+      *: _Examples:_ `-3.14`, `2003.0`, `.5`, `42`, `109`, `-00`
 
       * A character literal is a normal character literal or an escaped 
           character literal.
@@ -67,11 +47,11 @@ more newlines.
     _Examples:_ `import ants`, `import blocksworld`
 
 
-===== Syntactic Sugar =====
+====== Syntactic Sugar =====
 
 Every combo program may be expressed using nothing but the core syntax. For convenience however, the following syntactic sugar is provided. Every sugared program corresponds to exactly one unsugared program.
 
-====== Special operators ======
+======= Special operators ======
 
 A number of special operators (primaily infix, but some prefix as well) are provided; each is equivalent to some function application expression. The operators are listed in ascending order of precedence. The arity of an expression may be the same for both forms or may be different, as indicated in the table. Infix operations of equal precedence are left-associative, except for `pair` (`,`) and `cons` (`:`), which are right-associative.
 
@@ -96,15 +76,15 @@ A number of special operators (primaily infix, but some prefix as well) are prov
 || / || 2 || a+b/c*d || (plus a (times (div b c) d)) ||
 || ! - || 1 || !a || -b || (or (not a) (less (negative b) c)) ||
 
-====== String literals ======
+======= String literals ======
 
 A string in double-quotes, with same escape-sequences recognized in character literals, is sugar for the equivalent list of characters. So for example `"foobar"` is equivalent to `['f', 'o', 'o', 'b', 'a', 'r']`, and `"b'la\"bla"` is equivalent to `['b' '\_, 'l', 'a', '"', 'b', 'l', 'a']`, etc.
 
-====== Comments ======
+======= Comments ======
 
 Comments begin with a `#` and run until a newline is reached, with the exception of escaped `#`s within string literals, which do not begin comments. Whenever a comment appears it is equivalent to the empty string.
 
-====== Significant indentation ======
+======= Significant indentation ======
 
 Note that since newlines are not considered whitespace, every expression that uses only the core syntax must be one a single line. To stretch an expression over multiple lines without otherwise affecting parsing, newlines may be escaped (i.e. ended with a backslash). An escaped newline is treated as a single character of whitespace.
 
