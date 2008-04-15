@@ -7,13 +7,5 @@
 (filter $l $pred = 
  split $l \$x $xs -> (if ($pred $x) [$x] [])~(filter $xs $pred))
 
-
-#(sort $l = split $l \$x $xs -> 
-# (filter $xs (\$y -> $y<$x))~[$x]~(rec $xs \$y -> $x<$y)
-
 (sort $l = let [rec $list $pred = sort (filter $list $pred)]
  (split $l \$x $xs -> (rec $xs \$y -> $y<=$x)~[$x]~(rec $xs \$y -> $x<$y)))
-
-#(sort $l = split $l \$x $xs -> 
-# (filter $xs (\$y -> $y<$x)))
-#~[$x]~(rec $xs \$y -> $x<$y)))
