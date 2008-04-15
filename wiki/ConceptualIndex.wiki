@@ -19,19 +19,10 @@
  [http://reports-archive.adm.cs.cmu.edu/anon/anon/ml/CMU-ML-06-108.pdf The
  Discipline of Machine Learning]
 
-==Summary and Disclamer==
+==Summary and Disclaimer==
 
 This is not a complete design for an
-[http://www.agiri.org/wiki/index.php?title=Artificial_General_Intelligence
-artificial general intelligence] (AGI). It _is_ a set of core components that,
-with future augmentation, will lead to a complete AGI design. The current
-system is essentially intended to function as a read-eval-print loop for an
-unusual Lisp dialect (Combo Lisp). This language is based on probabilistic
-semantics, and operates under assumptions of insufficient knowledge and
-resources. When no definite answer to a user's query is available, the
-Probabilistic Learning And Programming (Plap) System (comprising Combo Lisp and
-its attendant libraries as described herein) can return speculative answers
-synthesized through program induction, analogical mapping, and/or inference.
+[http://www.agiri.org/wiki/index.php?title=Artificial_General_Intelligence artificial general intelligence] (AGI). It _is_ a set of core components that, with future augmentation, will lead to a complete AGI design. The current system is essentially intended to function as a read-eval-print loop for an unusual Lisp dialect (Combo Lisp). This language is based on probabilistic semantics, and operates under assumptions of insufficient knowledge and resources. When no definite answer to a user's query is available, the Probabilistic Learning And Programming (Plap) System (comprising Combo Lisp and its attendant libraries as described herein) can return speculative answers synthesized through program induction, analogical mapping, and/or inference.
 
 ==Table of Contents==
 

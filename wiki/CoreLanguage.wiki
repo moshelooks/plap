@@ -10,7 +10,7 @@
     * A scalar is dollar sign (`$`) followed by an identifier, with no intervening whitespace.
   * Matched parentheses (`(` and `)`) may be placed around any entity. Any entity that contains whitespace and is nested inside another entity _must_ be put in parentheses.
 
-== Core Syntax ====
+== Core Syntax ===
 
 A program is a sequence of expressions and imports, each separated by one or more newlines.
 
@@ -22,18 +22,18 @@ A program is a sequence of expressions and imports, each separated by one or mor
       * A character literal is a normal character literal or an escaped character literal.
         * A normal character literal is single quote (`'`), followed by a single character other than a single quote or a hash (`#`), followed by a single quote.
         * An escaped character literal is a single quote, followed by a backslash (`\`), followed by a `t` (tab), `n` (newline), `#`, `\`, `'`, or `"`. 
-	  _Examples:_ `'a'`, `'\n'`, `'\\'`
+	  * _Examples:_ `'a'`, `'\n'`, `'\\'`
       * Nil is an empty pair of brackets (`[]`), or the keyword `nil`.
     * A function application is an identifier, followed by a nonempty sequence of expressions. 
       * _Examples:_ `foo 1 2 'x' (bar $x)`, `bla ()`, `baz 3.4 [] 1 2 3 []`
   * An import is the keyword `import`, followed by an expression.
     * _Examples:_ `import ants`, `import blocksworld`
 
-====== Syntactic Sugar =====
+== Syntactic Sugar ===
 
 Every combo program may be expressed using nothing but the core syntax. For convenience however, the following syntactic sugar is provided. Every sugared program corresponds to exactly one unsugared program.
 
-======= Special operators ======
+=== Special operators ===
 
 A number of special operators (primaily infix, but some prefix as well) are provided; each is equivalent to some function application expression. The operators are listed in ascending order of precedence. The arity of an expression may be the same for both forms or may be different, as indicated in the table. Infix operations of equal precedence are left-associative, except for `pair` (`,`) and `cons` (`:`), which are right-associative.
 
@@ -47,26 +47,26 @@ A number of special operators (primaily infix, but some prefix as well) are prov
 || `<-`	   || `1` || `<- x y z` || `(fact (x y z))` ||
 || `^` 	   || `2` || `foo^3` || `(decl foo 3)` ||
 || `->`    || `2` || `foo bar -> baz bap` || `(arrow (foo bar) (baz bap))` ||
-|| `||`	   || `variadic` || `a || b || c` || `(or a b c)` ||
+|| `|`|`   || `variadic` || `a |``| b |``| c` |``| `(or a b c)` ||
 || `&&`	   || `variadic` || `a && b && c` || `(and a b c)` ||
-|| `:` 	   || `2` || `()` ||
+|| `:` 	   || `2` || 4:[3,2,1] || (cons 4 (list 3 2 1)) ||
 || `== !=` || `2` || `a==b && c!=d` || `(and (equal a b) (not_equal c d))` ||
 || `<= >= < >` || `2` || `a<=b` || `x+y>d || q>=r` || `(or (less_equal a b) (greater (plus x y) d) (greater_equal q r))` ||
 || `+ -`   || `variadic` || `a+b-c` || `(minus (plus a b) c)` ||
 || `~`     || `variadic` || `a~b~c` || `(concat a b c)` ||
 || `*` 	   || `variadic` || `a*b+c*d` || `(plus (times a b) (times c d))` ||
 || `/`     || `2` || `a+b/c*d` || `(plus a (times (div b c) d))` ||
-|| `! -`   || `1` || `!a` || `-b` || `(or (not a) (less (negative b) c))` ||
+|| `! -`   || `1` || `!a |``| -b<c` || `(or (not a) (less (negative b) c))` ||
 
-======= String literals ======
+=== String literals ===
 
 A string in double-quotes, with same escape-sequences recognized in character literals, is sugar for the equivalent list of characters. So for example `"foobar"` is equivalent to `['f', 'o', 'o', 'b', 'a', 'r']`, and `"b'la\"bla"` is equivalent to `['b' '\_, 'l', 'a', '"', 'b', 'l', 'a']`, etc.
 
-======= Comments ======
+=== Comments ===
 
 Comments begin with a `#` and run until a newline is reached, with the exception of escaped `#`s within string literals, which do not begin comments. Whenever a comment appears it is equivalent to the empty string.
 
-======= Significant indentation ======
+=== Significant indentation ===
 
 Note that since newlines are not considered whitespace, every expression that uses only the core syntax must be one a single line. To stretch an expression over multiple lines without otherwise affecting parsing, newlines may be escaped (i.e. ended with a backslash). An escaped newline is treated as a single character of whitespace.
 
