@@ -68,6 +68,7 @@ func_index func_names=boost::assign::map_list_of
     namef(accumulate)
     namef(hd)
     namef(tl)
+    namef(length)
 
     //util
     namef(assert)

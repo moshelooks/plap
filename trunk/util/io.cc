@@ -62,6 +62,8 @@ char sexpr_getter::get() {
             error("");
         } else if (c=='"') {
           _mode=inquote;
+        } else if (c=='\'') {
+          _mode=inchar;
         } else if (c==_marker) {
           _mode=incomment;
           return get();
@@ -89,6 +91,15 @@ char sexpr_getter::get() {
           throw std::runtime_error("Unrecognized escape sequence '\\"+
                                    std::string(1,c)+std::string("'."));
         _mode=inquote;
+        break;
+      case inchar:
+        if (c=='\'') {
+          _mode=normal;
+        } else if (c=='\\') {
+          _mode=charescaped;
+          if (_in->peek()!='\'')
+            return get();
+        }
         break;
     }
   }

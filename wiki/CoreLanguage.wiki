@@ -3,103 +3,82 @@
 = Combo Lisp: Core Language =
 
 == Preliminaries ==
+
   * Unless otherwise specified, a sequence of entities may be empty, and the entities themselves are separated by whitespace.
-  * Whitespace is one or more spaces and/or tabs. Unless otherwise specified, any amount of whitespace may occur between any two consecutive entities.
+  * Whitespace is one or more spaces, tabs, and/or newlines. Unless otherwise specified, any amount of whitespace may occur between any two consecutive entities.
   * A name is an identifier or a scalar.
-    * An identifier is a nonempty sequences of digits, letters, and underscores, not beginning with a digit, containing no whitespace, that is not a keyword. A keyword is any word appearing in `codeface` in this document.
+    * An identifier is a nonempty sequences of digits, letters, and underscores, not beginning with a digit, containing no whitespace.
     * A scalar is dollar sign (`$`) followed by an identifier, with no intervening whitespace.
-  * Matched parentheses (`(` and `)`) may be placed around any entity. Any entity that contains whitespace and is nested inside another entity _must_ be put in parentheses.
+  * Matched parentheses (`(` and `)`) may be placed around any entity.
 
 == Core Syntax ===
 
-A program is a sequence of expressions and imports, each separated by one or more newlines.
-
-  * An expression is a name, a literal, or a function application
+A program is a sequence of expressions.
+  * An expression is a name, a literal, or a function application.
     * A literal is a Boolean literal, number literal, character literal, or nil.
       * A Boolean literal is `true` or `false`.
       * A number literal is a nonempty sequence of digits (`0-9`), optionally preceded by a minus sign (`-`), optionally containing exactly one period (`.`) in some position other than the last, containing no whitespace. 
         * _Examples:_ `-3.14`, `2003.0`, `.5`, `42`, `109`, `-00`
       * A character literal is a normal character literal or an escaped character literal.
         * A normal character literal is single quote (`'`), followed by a single character other than a single quote or a hash (`#`), followed by a single quote.
-        * An escaped character literal is a single quote, followed by a backslash (`\`), followed by a `t` (tab), `n` (newline), `#`, `\`, `'`, or `"`. 
-	  * _Examples:_ `'a'`, `'\n'`, `'\\'`
-      * Nil is an empty pair of brackets (`[]`), or the keyword `nil`.
-    * A function application is an identifier, followed by a nonempty sequence of expressions. 
-      * _Examples:_ `foo 1 2 'x' (bar $x)`, `bla ()`, `baz 3.4 [] 1 2 3 []`
-  * An import is the keyword `import`, followed by an expression.
-    * _Examples:_ `import ants`, `import blocksworld`
+        * An escaped character literal is a single quote, followed by a backslash (`\`), followed by a `t` (tab), `n` (newline), `#`, `\`,  or single quote.
+	  * _Examples:_ `'a'`, `'\n'`, `'\'`, `'\''`
+      * Nil is an empty pair of brackets (`[]`).
+    * A function application is a left paren (`(`), followed by an identifier, followed by a nonempty sequence of expressions, followed by a right paren (`)`).
+      * _Examples:_ `(foo 1 2 'x' (bar $x))`, `(bla ())`, `(baz 3.4 [] 1 2 3 [])`
 
 == Syntactic Sugar ===
 
-Every combo program may be expressed using nothing but the core syntax. For convenience however, the following syntactic sugar is provided. Every sugared program corresponds to exactly one unsugared program.
+Every combo program may be expressed using nothing but the core syntax. For convenience however, the following syntactic sugar is provided. Every sugared program corresponds to exactly one unsugared program. For historical reasons, sugared expressions are known as m-expressions, while unsugared programs are known as s-expressions.
 
-=== Special operators ===
+=== Operators ===
 
-A number of special operators (primaily infix, but some prefix as well) are provided; each is equivalent to some function application expression. The operators are listed in ascending order of precedence. The arity of an expression may be the same for both forms or may be different, as indicated in the table. Infix operations of equal precedence are left-associative, except for `pair` (`,`) and `cons` (`:`), which are right-associative.
+A number of operators (primaily infix, but some prefix as well) are provided; each is equivalent to some function application expression. The operators are listed in ascending order of precedence. The arity of an expression may be the same for both forms or may be different, as indicated in the table. Infix operations of equal precedence are left-associative, except for `tuple` (`,`) and `cons` (`:`), which are right-associative.
 
-|| _Infix_ || _Arity_ || _Example Special Expression_ || _Equivalent Function Application Expression_ ||
+|| _Infix_ || _Arity_ || _Example M-Expression_ || _Equivalent Function Application S-Expression_ ||
 || `[,]`   || `variadic` || `[a b c,[],foo (foo bar)]` || `(list (a b c) nil (foo (foo bar)))` ||
 || `[..]`  || `2` || `[foo bar..42]` || `(range (foo bar) 42)` ||
 || `[...]` || `2` || `[1...10]` || `(xrange 1 10)` ||
-|| `(,)`   || `variadic, 2` || `(a,b,c,d e f,[])` || `(pair a (pair b (pair c (pair (d e f) nil))))` ||
+|| `(,)`   || `variadic, 2` || `(a,b,c,d e f,[])` || `(tuple a b c (d e f) nil)` ||
 || `=` 	   ||  `variadic, 3` || `foo $x $y = bla bla` || `(def foo (list $x $y) (bla bla))` ||
 || `\`	   || `1` || `\foo bar baz` || `(lambda (foo bar baz))` ||
 || `<-`	   || `1` || `<- x y z` || `(fact (x y z))` ||
 || `^` 	   || `2` || `foo^3` || `(decl foo 3)` ||
 || `->`    || `2` || `foo bar -> baz bap` || `(arrow (foo bar) (baz bap))` ||
-|| `|`|`   || `variadic` || `a |``| b |``| c` |``| `(or a b c)` ||
+|| `|``|`   || `variadic` || `a |``| b |``| c` || `(or a b c)` ||
 || `&&`	   || `variadic` || `a && b && c` || `(and a b c)` ||
-|| `:` 	   || `2` || 4:[3,2,1] || (cons 4 (list 3 2 1)) ||
+|| `:` 	   || `2` || `4:[3,2,1]` || `(cons 4 (list 3 2 1))` ||
 || `== !=` || `2` || `a==b && c!=d` || `(and (equal a b) (not_equal c d))` ||
-|| `<= >= < >` || `2` || `a<=b` || `x+y>d || q>=r` || `(or (less_equal a b) (greater (plus x y) d) (greater_equal q r))` ||
+|| `<= >= < >` || `2` || `a<=b |``| x+y>d |``| q>=r` || `(or (less_equal a b) (greater (plus x y) d) (greater_equal q r))` ||
 || `+ -`   || `variadic` || `a+b-c` || `(minus (plus a b) c)` ||
 || `~`     || `variadic` || `a~b~c` || `(concat a b c)` ||
 || `*` 	   || `variadic` || `a*b+c*d` || `(plus (times a b) (times c d))` ||
 || `/`     || `2` || `a+b/c*d` || `(plus a (times (div b c) d))` ||
 || `! -`   || `1` || `!a |``| -b<c` || `(or (not a) (less (negative b) c))` ||
 
+Operator expressions may be nested without parentheses, as shown in many of the examples - ambiguity is resolved according to precedence, with function application having the lowest order of precedence, e.g `(f a+b)` is equivalent to `(f (plus a b))`. However, all top-level expressions must be enclosed in parentheses, even operator expressions.
+
+== Application ===
+
+Function applications in the core language consist of an identifier followed by a sequence of expressions. For convenience, an m-expression consisting of non-empty sequences of expressions, even when the initial expression is not an identifier. In such cases, the equivalent s-expression is a function application expression consisting of the identifier `apply`, followed by the initial expression, followed by the remaining expressions, if any, grouped as a list (a function-application expression with the identifier `list`). For example, `((if foo bar baz) la di da)` is equivalent to `(apply (if foo bar baz) (list la di da))`.
+
 === String literals ===
 
-A string in double-quotes, with same escape-sequences recognized in character literals, is sugar for the equivalent list of characters. So for example `"foobar"` is equivalent to `['f', 'o', 'o', 'b', 'a', 'r']`, and `"b'la\"bla"` is equivalent to `['b' '\_, 'l', 'a', '"', 'b', 'l', 'a']`, etc.
+A string in double-quotes (`"`) is sugar for the equivalent list of characters.  The same escape-sequences recognized in character literals are recognized in string literals, with the exception of the escaped single-quote, and the addition of the escaped double-quote.
+So for example `"foobar"` is equivalent to `['f', 'o', 'o', 'b', 'a', 'r']`, and `"b'la\"bla"` is equivalent to `['b' '\'', 'l', 'a', '"', 'b', 'l', 'a']`, etc.
 
 === Comments ===
 
-Comments begin with a `#` and run until a newline is reached, with the exception of escaped `#`s within string literals, which do not begin comments. Whenever a comment appears it is equivalent to the empty string.
+Comments begin with a `#` and run until a newline is reached, with the exception of escaped `#`s within character and string literals, which do not begin comments. Whenever a comment appears it is equivalent to the empty string.
 
-=== Significant indentation ===
+== Core Semantics ==
 
-Note that since newlines are not considered whitespace, every expression that uses only the core syntax must be one a single line. To stretch an expression over multiple lines without otherwise affecting parsing, newlines may be escaped (i.e. ended with a backslash). An escaped newline is treated as a single character of whitespace.
+Combo semantics describe how expressions are _evaluated_ to produce new expressions (results of computations). Individual functions 
 
-Indentation may also be used to control parsing and expression grouping, according to the following simple rules:
+=== Literals ===
 
-  1. A line that is indented at the same level or a level less than that of the line above it creates _n+1_ right-parens (`)`) at the begining of the line, where _n_ is the number of levels it decreases the indentation by.
-  1. A line that is indented (and immediately below a line containing an expression or part of an expression) is parsed as part of that expression, and creates a left-paren (`(`) at the begining of the line. This left-paren appears after any right-parens that might appear from applying rules one and two.
-  1. Lines that end in a comma are have their newlines escaped in the same manner as lines ending in a backslash, overriding the above rules. Note that unlike a backslash, a comma ending a line is not ignored, but is considered as part of the input.
-  1. If the final line in an expression is indented _n_ levels, _n_ right-parens are created at the end of the line.
+Literal expressions evaluate to themselves.
 
-Note that by rule one, indentation levels must match - if we first indent by two spaces, and then by two more, we can indent the following line by two or four spaces, or more than four spaces, but not by one or three spaces. Every increase in indentation corresponds to a single new indentation level, regardless of the number of whitespace characters it increases indentation by.
 
-_Examples:_[[BR]][[BR]]
 
-|| _'Indented_' || _'Equvalent Unindented_' ||
-|| {{{ a
-  b
-   c
-  e
-   f
- }}} || {{{ a (b (c)) (e (f))
- }}} ||
-|| {{{ foo (bar,
-      baz,
-      bap) buz [blub,
-                shlub] tub
-   a b
-   c d
-     e
-   f
- }}} || {{{ foo (bar,baz,bap) buz [blub,shlub] tub (a b) (c d (e))
- }}} ||
-|| {{{ a b\
- c d
- }}} || {{{ a b c d
- }}} ||
+Nested expressions naturally correspond to a treelike structure. For example, in `(plus (times a b) c)`, `plus` is the root node and has two children, the subtree `(times a b)` and the leaf `c`. Combo Lisp does no

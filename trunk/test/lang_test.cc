@@ -128,6 +128,19 @@ test_case(test_closure) {
   check_eval("(ll2 5) 4.2","20.2");
 }
 
+test_case(parse_quotes) {
+  check_parse("foo\\\\","foo\\\\");
+  check_eval("length \"foo\\\"\"","4");
+  check_parse("\"blub\\\"blub\"","\"blub\"blub\"");
+  check_parse("'\t'","'\t'");
+  check_parse("'\\''","'\\''");
+  check_parse("'\\n'","'\\n'");
+  check_parse("'\\#'","'\\#'");
+  check_parse("\"\\\"\"'","\"\\\"\"");
+  check_throw(str2vtr("\"\\'\""));
+  check_throw(str2vtr("'\\\"'"));
+}
+
 test_case(lang_import_and_test) {
   check_throw(str2vtr("import \"nonexistent_fileadfkasdf\""));
   check_throw(str2vtr("import 1+1"));
