@@ -34,8 +34,6 @@
 
 (last $l = if (tl $l)==[] (hd $l) (last (tl $l)))
 
-(length $l = if $l==[] 0 1+(length (tl $l)))
-
 (lasts $l $n = if (length $l)<=$n $l (lasts (tl $l) $n))
 
 ##

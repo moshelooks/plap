@@ -202,6 +202,11 @@ struct lang_tl : public builtin<lang_tl(any_list)> {
     dst.append(i,a.end());
   }
 };
+struct lang_length : public builtin<lang_length(any_list)> {
+  void cfeval(any_list a,subvtree dst) const { 
+    dst.root()=arg(number_t(a.size()));
+  }
+};
 
 template<long X>
 struct lang_range_op : public builtin<lang_range_op<X>(number_t,number_t)> {

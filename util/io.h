@@ -39,7 +39,7 @@ struct sexpr_getter {
  protected:
   std::istream* _in;
   char _marker;
-  enum { normal,incomment,inquote,escaped } _mode;
+  enum { normal,incomment,inquote,escaped,inchar,charescaped } _mode;
   std::string::size_type _nparen;
 
   void error(const std::string&);
