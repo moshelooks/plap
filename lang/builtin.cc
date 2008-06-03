@@ -58,16 +58,18 @@ void lang_apply::eval(context& c,any f,any_list args,subvtree dst) const {
 
 void lang_accumulate::eval(context& c,
                           any ft,any_list l,any a,subvtree dst) const {
-  func_t f=c.eval_to<func_t>(ft);
-  vtree tmp=util::tree_of(vertex())(vertex(),vertex());
+  vtree tmp=util::tree_of(call(lang_apply::instance()))
+      (vertex(),util::tree_of(call(lang_list::instance()))
+       (vertex(),vertex()));
+  tmp[0]=ft;
   c.eval(a,dst);
   foreach(const_subvtree s,l) {
-    tmp[0]=s;
-    assert(!tmp[1].empty());
+    tmp[1][0]=s;
+    assert(!tmp[1][1].empty());
     assert(!dst.empty());
-    std::swap(tmp[1],dst);
-    std::swap(tmp[0],tmp[1]);
-    (*f)(c,tmp,dst);
+    std::swap(tmp[1][1],dst);
+    std::swap(tmp[1][0],tmp[1][1]);
+    c.eval(tmp,dst);
   }
 }
 

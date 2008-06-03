@@ -1,0 +1,392 @@
+\documentclass[letterpaper]{article}
+\usepackage{epsfig,algpseudocode,algorithm,amsmath}
+\setlength{\pdfpagewidth}{8.5in}
+\setlength{\pdfpageheight}{11in}
+\topmargin 4.5pc
+\advance\topmargin by -1.1in
+\textheight 660pt
+%\makeatletter
+%\def\NAT@parse{\typeout{This is a fake Natbib command to fool Hyperref.}}
+%\makeatother
+%\usepackage[hyperfootnotes=false]{hyperref}
+\usepackage{hyperref}
+\hypersetup{
+  letterpaper,
+  pdfpagemode=none,
+  pdftitle=
+  {Normal Forms and Generalized Schemata}
+  pdfauthor={Moshe Looks},
+}
+\begin{document}
+\sloppy
+\title
+{Normal Forms, Program Transformations, and Generalized Schemata}
+\author{
+  Moshe Looks
+  \href{mailto:moshe@metacog.org}{\emph{madscience@google.com}}
+}
+\maketitle
+
+\begin{abstract}
+  I describe a family of normal forms, transformations, metric spaces, and
+  schema spaces for a general class of programs. The schema space is closed
+  under conjunction and negation.
+\end{abstract}
+
+\section{Normal Forms}
+
+Normal forms are provided for $Boolean$ and $number$ primitive types, and the
+following parameterized types:
+\begin{itemize}
+\item list types, $list_T$, where $T$ is a type with a normal form,
+\item tuple types, $(T_1,T_2, ... T_N)$, where all $T_i$ ($1 \leq i \leq N$)
+  are types with normal forms, and $N$ is a positive natural number,
+\item enum types, $enum_{N,M}$, where $N$ and $M$ are positive natural
+  numbers,
+\item action result types, $action\_result_N$, where $N$ is a positive natural
+  number.
+\end{itemize}
+
+The normal form for some type $T$ is a set of elementary functions (with
+codomain $T$), a set of constants (of type $T$), and a tree grammar. The
+grammar must be such that, for all valid sentences, all of the internal nodes
+are elementary functions, and all of the leaves are the symbol \verb|T_var| or
+the symbol \verb|T_constant|.
+
+Sentences in a normal form grammar may be transformed into normal form
+expressions. The expressions that may be generated are a function of a set of
+bound variables and a set of (typed) external functions that must be
+provided. The transformation is as follows:
+\begin{itemize}
+\item leaves labeled \verb|T_constant| are replaced with constants of type $T$,
+\item leaves labeled \verb|T_var| are replaced to either bound variables
+  matching type $T$, or expressions of the form $f(expr_1, expr_2,
+  ... expr_M)$, where $f$ is an external function of type $T_1, T_2, ... T_M
+  \rightarrow T$, and each $expr_i$ is a normal form expression of type $T_i$
+  (given the available bound variables and external functions).
+\end{itemize}
+
+While this scheme does not provide normal forms for higher-order functions, it
+\emph{can} represent functions that call ``instantiations'' of higher-order
+functions. For example, the instantiation of $map : (\alpha \rightarrow \beta),
+list_{\alpha} \rightarrow list_{\beta}$ with $\alpha = Boolean$, $\beta =
+number$ could be used as an external function for the number normal form.
+
+\subsection{Boolean Normal Form}
+
+The elementary functions for Boolean normal form are $and$, $or$, and
+$not$. The constants are $\{true, false\}$. The grammar:
+\begin{verbatim}
+Boolean_root = or_form | and_form | literal | Boolean_constant
+literal      = Boolean_var | not( Boolean_var )
+or_form      = or( {and_form | literal}{2,} )
+and_form     = and( {or_form | literal}{2,} ) .
+\end{verbatim}
+
+The construct \verb|foo{x,}| refers to \verb|x| or more matches of \verb|foo|
+(e.g. \verb!{or_form | literal}{2,}! is two or more items in sequences where
+each item is either an \verb|or_form| or a \verb|literal|).
+
+\subsection{Number Normal Form}
+
+The elementary functions for number normal form are $times$ and $plus$. The
+constants are some specified subset of the rationals (e.g. those with
+corresponding IEEE single-precision floating-point representations). The normal
+form is as follows:
+\begin{verbatim}
+num_root   = times_form | plus_form | num_constant | num_var
+times_form = times( {num_constant | plus_form} plus_form{1,} ) 
+           | num_var
+plus_form  = plus( {num_constant | times_form} times_form{1,} ) 
+           | num_var .
+\end{verbatim}
+
+\subsection{List Normal Form}
+
+For list function types $list_T$, the elementary functions are $list$ (an
+$n$-ary list constructor) and $concat$. The only constant is the empty list
+($nil$). The normal form is as follows:
+\begin{verbatim}
+list_T_root = concat_form | list_form | list_T_var
+            | list_T_constant
+concat_form = concat( {list_form  | list_T_var}{2,} )
+list_form   = list( T_root{1,} ) .
+\end{verbatim}
+
+\subsection{Tuple Normal Form}
+
+For tuple types $(T_1,T_2, ... T_N)$, the only elementary function is the tuple
+constructor ($tuple$). The constants are $T_1$\verb|_constant|$ \times
+T_2$\verb|_constant|$ \times ... \times T_N$\verb|_constant|. The normal form
+consists simply of either a constant, a var, or \verb|tuple( |
+$T_1$\verb|_root | $T_2$\verb|_root |$... T_N$\verb|_root )|.
+
+\subsection{Enum Normal Form}
+
+The enum type $enum_{N,M}$ corresponds to ``the $N$th enum of arity
+$M$''. Enums are atomic tokens with no internal structure - accordingly, there
+are no elementary functions. The constants are $\{symbol_{N,M,i}|1 \leq i \leq
+M\}$. The normal form is either a constant or a var.
+
+\subsection{Action Result Normal Form}
+
+The action result type $action\_result_N$, corresponds to the result of taking
+an action in some world types, $world_N$. World types have corresponding
+\emph{perceptions} - predicates whose results may change over time, and
+\emph{actions} - function calls with side-effects that return special
+action-result types. Both perceptions and actions, by convention, take a world
+as their first argument. Note that an action-result expression cannot appear
+nested inside an expression of any other type - consequently, there is no way
+to convert an action result to a Boolean, for instance. This is required
+because mathematical operations in our language have classical semantics;
+\emph{x and y} must equal \emph{y and x}, which will not generally be the case
+if $x$ or $y$ can have side-effects. Instead, there are special sequential
+versions of logical functions which may be used instead.
+
+The elementary functions for action result types are $andseq$ (sequential and,
+equivalent to $C$'s short-circuiting \verb|&&|), $orseq$ (sequential or,
+equivalent to $C$'s short-circuiting \verb!||!), and $fails$ (negates success
+to failure and vice versa). The constants may vary from type to type but must
+at least contain $success$, indicating absolute success in
+execution.\footnote{Note that a $do(arg_1,arg_2,...,arg_N)$ statement ($do$ is
+  also known as $progn$), which evaluates its arguments sequentially regardless
+  of success or failure, is equivalent to $andseq(orseq(arg_1,success),
+  orseq(arg_2,success), ... orseq(arg_N,success)$.} The normal form is as
+follows:
+\begin{verbatim}
+action_res_N_root = orseq_form | andseq_form | seqlit
+seqlit            = act | fails( act )
+act               = action_res_N_constant | action_res_N_var
+orseq_form        = orseq( {andseq_form | seqlit}{2,} )
+andseq_form       = andseq( {orseq_form | seqlit}{2,} ) .
+\end{verbatim}
+
+
+\section{Program Transformations}
+
+A program transformation is any type-preserving mapping from expressions to
+expressions. Transformations may be semantics preserving, or may potentially
+alter semantics. In the context of program evolution there is an intermediate
+category of fitness preserving transformations that may or may not alter
+semantics. In general the only way that fitness preserving transformations will
+be uncovered is by scoring programs that have had their semantics potentially
+transformed to determine their fitness.
+
+\subsection{Reductions}
+
+Reductions are semantics preserving transformations that do not increase some
+size measure (typically number of discrete symbols) of expressions, and are
+idempotent. A set of \emph{canonical reductions} is defined for every type that
+has a normal form\footnote{These are omitted for brevity -
+  cf.~\cite{Me,MosesWiki}.} An expression is \emph{reduced} if it maps to
+itself under all canonical reductions for its type, and all of its
+children are reduced.
+
+Another important set of reductions are the \emph{compressive abstractions},
+which reduce (or keep constant) the size of expressions by introducing
+subfunctions. Consider the normal-form expression
+\begin{verbatim}
+list( times( plus( a, p, q ) r ), times( plus( b, p, q ) r ) ),
+\end{verbatim}
+containing $13$ symbols). By introducing the subfunction 
+\begin{verbatim}
+f( x ) = times( plus( x, p, q ) r )
+\end{verbatim} 
+and transforming the expression to 
+\begin{verbatim}
+list( f( a, b ), f( d, e ) ),
+\end{verbatim}
+the total number of symbols is reduced to $6 + 6 = 12$. One can quite naturally
+generalize this notion to consider compressive abstractions across a set of
+programs, as in Goertzel's PLEASURE approach~\cite{PLEASURE}. Compressive
+abstractions unfortunately appear to be rather expensive to uncover although
+perhaps not prohibitively so.
+
+\subsection{Neutral Transformations}
+
+Semantics preserving transformations that are not necessarily reductions are
+not useful on their own - they can only have value when followed by additional
+transformations in some other class. The are thus more speculative than
+reductions, and more costly to consider. I will refer to these as
+\emph{strongly neutral transformations}. This list is nearly identical to those
+used by Roland Olsson~\cite{ADATE}).
+
+\begin{itemize}
+\item \textbf{abstraction} - given an expression $E$ containing non-overlapping
+  subexpressions $E_1$, $E_2$, ... $E_N$, let $E'$ be $E$ with all $E_i$
+  replaced with the unbound variables $v_i$ ($1 \le i \le N$), and replace $E$
+  with
+\begin{verbatim}
+f( v1, v2, ... v3 ) = E'
+f( E1, E2, ... EN ) .
+\end{verbatim}
+  Abstraction is a distinct from compressive abstraction in that only a single
+  call to the synthesized function $f$ is introduced, whereas in
+  compressive abstraction there will be at least two (so that the number
+  of symbols will not be increased).
+\item \textbf{inverse abstraction} - replace a call to a user-defined
+  function with the body of the function, with arguments instantiated (note
+  that this can also be used to invert a compressive abstraction).
+\item \textbf{distribution} - Given an expression $E_1$ with root node $f$ and
+  subexpression $E_2 = g(arg_1,arg_2,...,arg_N)$ such that $f$ is distributive
+  over $g$'s (or over a subset of $g$'s arguments), let $D(E')$ be
+  equal to $E_1$ with its subexpression $E_2$ replaced by $E'$ (e.g. $D(E_2) =
+  E_1$). Now, replace $E_1$ with $g(D(arg_1),D(arg_2),...,D(arg_N))$. Consider
+  the expression
+\begin{verbatim}
+plus( x, times( y, if-then-else( cond, a, b ) ) ) .
+\end{verbatim}
+  Since both \verb|plus| and \verb|times| are distributive over the result
+  branches of \verb|if-then-else|, there are two possible distribution
+  transformations, leading to the expressions
+\begin{verbatim}
+if-then-else( cond, 
+              plus( x, times( y, a ) ), 
+              plus( x, times( y, b ) ) )
+\end{verbatim}
+and
+\begin{verbatim}
+plus( x ( if-then-else( cond, 
+                        times( y, a ),
+                        times( y, b ) ) ) ).
+\end{verbatim}
+\item \textbf{inverse distribution} - the opposite of distribution. Note that
+  this is nearly a reduction (the exception is expressions such as $f(g(x))$,
+  where $f$ and $g$ are mutually distributive).
+\item \textbf{embedding} - given a function $f$, modify it to either take an
+  additional argument of some type, or such that one of its arguments $x$ is
+  treated as a list of a single element (i.e. every reference to $x$ inside $f$
+  is replaced with a reference to $x$'s first element). All calls to $f$ must
+  be modified accordingly.
+\end{itemize}
+
+As a technical note, action-perception expressions, which may cause
+side-effects, complicate neutral transformations somewhat. Specifically,
+abstractions and compressive abstractions must take their arguments lazily
+(i.e. behave like Lisp macros rather than Lisp functions), in order for
+neutrality to be obtained. Furthermore, distribution and inverse distribution
+may only be applied when $f$ has no side-effects that will vary (e.g. be
+duplicated or halved) in the new expression, or affect the nested computation
+(e.g. change the result of a conditional).
+
+\subsection{Non-Neutral Transformations}
+
+Non-neutral transformations are the general class defined by removal,
+replacement, and insertion of subexpressions, that respect normal form
+structure (i.e. the target of the transformation must leave the overall
+expression in normal form). Clearly these transformations are sufficient to
+convert any normal form expression into any other - what is needed is a way to
+quantify the size of a transformation so we can define e.g. the neighbors of an
+expression as those obtainable via ``small'' transformations.
+
+Lets first consider Boolean expressions. 
+
+Every non-neutral transformation
+has a corresponding extensional similarity prior. 
+
+\emph{size}. The set of non-neutral transformations
+possible on an expression $E$ is the union over all subexpre
+
+what about long distancance changes? Is this considered as a single
+transformation as well as considered as separate transformations?
+
+should we just say size is num bits needed to specify the change??
+
+For Boolean normal form, they are:
+\begin{itemize}
+\item Replacement of an \verb|and_form| or \verb|or_form| with another form of
+  the same 
+
+Removal of a subexpression, together with sibling-promotion the literal
+  had only one sibling (e.g. \verb|and ( a, b )| becomes \verb|b| when the
+  subexpression \verb|a| is removed). The size is the number of nodes removed.
+\item Replacement of one literal with another. The size is one.
+\item Replacement of a literal \verb|x| with an \verb|and_form|
+  (\verb|or_form|) that has \verb|x| as a child, where \verb|x| is in an
+  \verb|or_form| (\verb|and_form|). The size is the number of nodes inserted.
+\item Insertion of an \verb|and_form| as a child of an \verb|or_form|, or vice
+  versa. The size is the number of nodes in the new form.
+\end{itemize}
+
+For number normal form, they are:
+\begin{itemize}
+\item Removal of 
+\item Mutation of a numeric constant by adding or subtracting $c_1$ or $c_2$
+  (how $c_1$ and $c_2$ are determined is addressed in~\cite{MosesWiki}). The
+  size is one.
+\item Replacement of a 
+
+\end{itemize}
+
+and number normal forms, 
+
+(split l nil (lambda (x xs) ))
+
+
+blablabla..
+
+cover the case of a sequence of actions:
+
+should subtrees fragments e.g. pleasure be context-aware?
+
+what matches, and to what degree?
+
++(x 10)
++(x 10.1)
++(*(1.1 x) 10)
+*(x 10)
++(x 10 y)
+
+similarly with andseq
+can we use the linkage model to bias which subtrees are likely to be patterns?
+Those that match good schemata! search these first (favor them?)
+
+must be operato
+
+\subsection{Transformation Heuristics}
+
+In order for transformations to scale, they must be applied 
+
+\section{A Metric Space for Programs}
+
+schemata and transformations are not identical - the utility of a
+transformation, compound or otherwise is the weighted sum of the expected
+utility deltas associated with all of the schemata that are to be introduced,
+minus the sum of all schemata that are to be disrupted.
+
+
+The space of programs that will be considered is those that are fully
+reduced. The distance between two programs is the shortest 
+
+reflect the need to pass through ``infeasible'' (not fully reduced) points in
+order to reach optima
+
+recursion?
+
+\section{Generalized Schemata for Programs}
+
+assigning probabilities to transformations as well as schemata:
+
+increase-value of constant c vs. c>42
+add abstraction X vs. contains exact abstraction let [foo] bla
+
+PLEASURE~\cite{PLEASURE} as a subroutine for updating the utilities associated
+with transformations (replacements?)
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+
+let S be a set of schemata of interest.
+let utility(s) for s in S be the delta-utility associated with schema s
+let x be the current solution
+let expressed(x) \subseteq S be the set of schemata in S that expressed in x
+let transformations(x) be the extended neighborhood of x
+select argmax y in (transformations(x) - visited) according to
+   sum over s in expressed(y)-expressed(x) of utility(s)
+ - sum over s in expressed(x)-expressed(y) of utility(s) 
+score y against x
+update S and utility
+
+given an expr in normal form, enumerate_similar(expr, functions, terminals)
+enumerates normal-form trees from closest to furthest

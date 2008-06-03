@@ -1,11 +1,18 @@
 # Definitions of standard library functions that are not implemented in C++
 
+# lists
 (map $l $f = if $l==[] [] ($f (hd $l)):(map (tl $l) $f))
 (foreach $l $f = if $l==[] [] (do ($f (hd $l)) (foreach (tl $l) $f)))
 (split $l $f = if ($l==[]) [] ($f (hd $l) (tl $l)))
-
 (filter $l $pred = 
  split $l \$x $xs -> (if ($pred $x) [$x] [])~(filter $xs $pred))
-
 (sort $l = let [rec $list $pred = sort (filter $list $pred)]
  (split $l \$x $xs -> (rec $xs \$y -> $y<=$x)~[$x]~(rec $xs \$y -> $x<$y)))
+(slice $l $n = 
+ if $n==0 [[],$l] (let [tmp = slice (tl $l) $n-1]
+                       [(hd $l):(hd tmp),(hd (tl tmp))]))
+(generate $f $n = if $n==0 [] ($f []):(generate $f $n-1))
+(count $l $value = accumulate (\$n $x -> $n+(if $x==$value 1 0)) $l 0)
+
+# math
+(pi = 3.14159265358979)
