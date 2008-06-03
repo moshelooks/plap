@@ -42,7 +42,7 @@ static const arity_t variadic_arity=boost::integer_traits<arity_t>::const_max;
 
 struct func;
 namespace lang_private {
-std::vector<func*>& ids(); //global repo mapping functions to ids
+std::vector<func*>& ids(); //global repo mapping ids to functions
 } //namespace lang_private
 
 struct func : boost::noncopyable {
@@ -57,7 +57,7 @@ struct func : boost::noncopyable {
   virtual const vtree* body() const { return NULL; }
   virtual arity_t offset() const { return 0; }
   virtual arity_t arity() const=0;
-  //default func applucation copies self and evaluates children
+  //default func application copies self and evaluates children
   virtual void operator()(context&,const_subvtree,subvtree) const;
  protected:
   id_t _id;

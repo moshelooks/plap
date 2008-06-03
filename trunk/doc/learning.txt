@@ -1,20 +1,19 @@
 # symbolic regression - x+x^2+x^3+x^4 from 20 random values in [-1.0,1.0)
-f^1
-let 
-  [generate $x = (f $x -> accumulate [1..5] \$y -> (power $x $y))]
-  repeat 20 (generate (rand -1.0 1.0))
+(f^1)
+(let [generate $x = (f $x -> accumulate [1..5] \$y -> (power $x $y))]
+ (repeat 20 (generate (rand -1.0 1.0))))
 
-generalize f
+(generalize f)
 
 # boolean list even-parity
-evpar^1
-evpar [] -> true
-evpar [true] -> false
-evpar [false] -> true
-evpar [true true false] -> true
-evpar [false true false] -> false
+(evpar^1)
+(evpar [] -> true)
+(evpar [true] -> false)
+(evpar [false] -> true)
+(evpar [true true false] -> true)
+(evpar [false true false] -> false)
 
-generalize evpar
+(generalize evpar)
 
 # artificial ant - the import creates the primitive type antworld and the
 # functions: 
@@ -23,23 +22,30 @@ generalize evpar
 # * ant_move       : antworld -> []
 # * ant_food_ahead : antworld -> []
 # * ant_score      : matrix[bool] number (antworld -> []) -> int
-import ants
+(import ants)
 
-symbol ant_pos
-<- equivalent ant_right (rotation ant_pos pi/2.0)
-<- equivalent ant_left (rotation ant_pos -pi/2.0)
-<- context antworld (equivalent ex_post_equivalent equivalent)
+(abstraction rotation $id $rot)
+(equivalent (ant_right $w) (ant_rotate $w pi/2.0))
+(equivalent (ant_right $w) (ant_rotate $w -pi/2.0))
 
-santafe_trail = load_bool_matix "santafe_trail.txt"
-santafe_timeout = 600
+(ex_post_equivalent
+ (do (rotation $id $x) (rotation $id $y))
+ (rotation $id $x+$y))
+(equivalent (rotation $id 0) [])
+
+(context ants (equivalent ex_post_equivalent equivalent))
+
+(santafe_trail = load_bool_matix "santafe_trail.txt")
+(santafe_timeout = 600)
 
 maximize \$program -> ant_score santafe_trail santafe_timeout $program
 
 # sort
 sort [] -> []
-sort [5,2,1] -> [1,2,5]
-sort ["orange","apple","pear"] -> ["apple","orange","pear"]
-sort [7,1,6,5,4] -> [1,4,5,6,7]
+sort "abc" -> "abc"
+sort "cba" -> "abc"
+sort "bcata" -> "aabct"
+sort "qwerty" -> "eqrtwy"
 
 generalize sort
 

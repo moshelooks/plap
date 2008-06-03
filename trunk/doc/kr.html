@@ -1,6 +1,51 @@
 <center><h1>A System for Learning and Reasoning about Programs:
 Declarative Knowledge</h1></center>
 
+
+semantics-altering transformations
+  replacement (incl req - fitness neutrality - as a special case)
+semantically neutral transformations
+  abstraction
+    (H E1 .. En) -> (let [f $v1 ... $vn = H $v1 ... $vn] (f E1 ... En)
+  case distribution
+    f(cond(res1 .. resN)) <--> cond(f(res1) ... f(resN))
+  embedding
+    (let [f $v1 ... $vn = rhs] (exp))
+    generalizes type of f (e.g. adds an argument or changes an argument type to
+    lists), then changes rhs and exp accordingly
+
+how would recursion arise??
+
+mutually exclusive transformations - group as a knob
+
+will we blow memory reqs?
+
+lazy_plus(lazy_plus(_1, 3), lazy_plus(_2, _1))
+bind(plus<int>(),bind(plus<int>,_1,3),bind(plus<int>(),_2,_1))
+
+*********
+
+let X be the initial solution
+while termination criterion not met:
+  if all neighbors of X have be visited or stuck_flip:
+    kick
+  else if metropolis_flip:
+    let X' be a random neighbor X
+    if X' is an improvement or metroplis_noise_flip:
+      let X be X'
+  else
+    let X' be a random neighbor of X with highest expected utility
+    if X' is an improvement or best_first_noise_flip:
+      let X be X'
+
+A number of generalizations of such schemata have been made, most notably to
+schemata defined over trees and variable-length strings, by Poli and
+Langdon~\cite{FOGP}, along with some extremely complex math (schema theorems).
+
+
+****************
+
+
 <blockquote>Fuzzy Sets are - quite obviously, to anyone trained in Bayesian
 inference - crude approximations to Bayesian prior probabilities. They were
 created only because their practitioners persisted in thinking of probability
@@ -46,9 +91,22 @@ give examples of temporal and perceptual knowledge
 tall jim := true
 vs
 
-"90% of all men are tall" vs. "all men are tall to exactly degree .9" vs. "the
-average degree of tallness over all men is 0.9"
+"90% of all men are tall" vs. "all men are tall to exactly degree .9" vs.
+"the average degree of tallness over all men is 0.9"
 
+
+tall^1
+predicate tall
+
+forall $x ((man $x) -> ($tall $x)) (tv: 0.9)
+forall $x ((man $x) -> ($tall $x (tv: 0.9)))
+
+"A classical poser for the reader who wants to solve these difficulties to 
+ponder is, 'George IV wondered whether the author of the Waverly novels 
+was Walter Scott' and 'Walter Scott is the author of the Waverly novels', 
+from which we do not wish to deduce, 'George IV wondered whether Walter 
+Scott was Walter Scott'. This example and others are discussed in the first 
+chapter of Church’s Introduction to Mathematical Logic (1956)." - McCarthy 69
 
 belive self x iff x
 

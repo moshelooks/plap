@@ -116,3 +116,11 @@
 #print "Infancy is: "
 #print (fold [0..2] "" \$x $y-> (to_str $x)~" "~$y)
 #println ""
+
+##
+# Misc list operations
+##
+(assert (count [1..10] 5)==1)
+(assert (generate (\$x -> 42) 5)==[42,42,42,42,42])
+(assert (count (generate (\$x -> 3) 6)~[1..5] 3)==7)
+
