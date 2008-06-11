@@ -42,7 +42,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			    arity-to-syms)))
 	 (build (arity syms n)
 	   (mapcan (lambda (prod) (build-by-root (car prod) (cdr prod)))
-		   (cross-prod syms (enum-sums (1- n) arity))))
+		   (cross-prod #'cons syms (enum-sums (1- n) arity))))
 	 (build-by-root (root child-sizes)
 	   (mapcar (lambda (child-trees) (apply #'list root child-trees))
 		   (apply #'cartesian-prod (mapcar #'get-trees child-sizes))))

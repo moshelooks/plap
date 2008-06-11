@@ -63,20 +63,23 @@ Author: madscience@google.com (Moshe Looks) |#
 				 ,condition)
 			    ,action
 			    ,expr-name)))
-		 ,(if order
-		      `(funcall #',order #'call ,expr-name)
-		      `(if (consp ,expr-name)
-			   (let ((result (call ,expr-name)))
-			     (if (not (eq result) ,expr-name)
-				 (reduce-with ,(mapcar #'symbol-function 
-						       cleanups)
-					      result)
-				 result))
-			   ,expr-name))))))
+		 (let ((,expr-name (reduce-with ,prerequisites ,expr-name)))
+		   (if (consp ,expr-name)
+		       (let ((result ,(if order
+					  `(funcall #',order #'call ,expr-name)
+					  `(call ,expr-name))))
+			 (if (not (eq result ,expr-name))
+			     (reduce-with ,cleanups result)
+			     result))
+		       ,expr-name))))))
 
      (dag-insert-node fn *reduction-prerequisites*) ; update the prerequisites
+     ;(print "inserted node")(print fn)
      (dolist (prereq ,prerequisites)		    ; dag
-       (dag-insert-edge (symbol-function prereq) fn *reduction-prerequisites*))
+      ; (print "adding edge")
+       ;(print (symbol-function prereq))
+       ;(print fn)
+       (dag-insert-edge prereq fn *reduction-prerequisites*))
      
      (unless (gethash ',type *type-to-reductions*) ; make sure there's a type
        (setf (gethash ',type *type-to-reductions*) ; entry in the table
@@ -113,13 +116,13 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;;; general-purpose reductions are defined here
 
 (define-reduction sort-commutative (expr)
-  :condition (commutative (car expr))
+  :condition (commutativep (car expr))
   :action (let ((sorted (nondestructive-sort (cdr expr) #'total-order)))
 	    (if (eq sorted (cdr expr)) expr (cons (car expr) sorted)))
   :order upwards)
 
 (define-reduction flatten-associative (expr)
-  :condition (associative (car expr))
+  :condition (associativep (car expr))
   :action 
   (labels ((try-flatten (subexprs)
 	     (blockn (mapl (lambda (rest)
@@ -132,9 +135,10 @@ Author: madscience@google.com (Moshe Looks) |#
     (let ((subexprs (try-flatten (cdr expr))))
       (if (eq subexprs (cdr expr)) expr (cons (car expr) subexprs))))
   :order upwards)
-(define-test flatten-associative 
+(define-test flatten-associative
   (assert-equal '(and x y (or q w)) 
 		(flatten-associative '(and x (and y (or q w))))))
 
-
-
+(define-reduction compress-identical-subtrees (expr)
+    :action (equalp-to-eq expr)
+    :order upwards)

@@ -18,49 +18,20 @@ Author: madscience@google.com (Moshe Looks) |#
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
 ;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
-; hash-table utilities
-(defmacro amodhash (key table to)
-  `(setf (gethash ,key ,table) (let ((it (gethash ,key ,table))) ,to)))
-(defun sethash (pair table) (setf (gethash (car pair) table) (cadr pair)))
-(defun init-hash-table (pairs &key (insert #'sethash))
-  (let ((table (make-hash-table)))
-    (dolist (p pairs table) (funcall insert p table))))
-(defun hashmapcan (f h)
-  (let ((res nil))
-    (maphash (lambda (x y) (setf res (nconc (funcall f x y) res))) h) 
-    res))
-(defun touch-hash (key table)
-  (setf (gethash key table) (gethash key table)))
-(defun copy-hash-table (table)
-  (let ((copy (make-hash-table :size (hash-table-size table))))
-    (maphash (lambda (key value) (setf (gethash key copy) value))
-	     table)
-    copy))
+;;; control structures
+(defmacro blockn (&body body) `(block nil (progn ,@body)))
+(defmacro aif (test then &optional else) ; from onlisp, by pg
+  `(let ((it ,test))
+     (if it ,then ,else)))
+(defmacro while (test &body body) ; from onlisp, by pg
+  `(do ()
+       ((not ,test))
+     ,@body))
 
-(defun iota (n) (loop for i from 0 to (- n 1) collect i))
-
-(defun tabulate (fn array &rest indices)
-  (or (apply #'aref array indices) 
-      (setf (apply #'aref array indices) (apply fn indices))))
-
-
-(defun assert-all-equal (to l f)
-  (dolist (x l) (assert-equal to (funcall f x))))
-(defmacro define-all-equal-test (name pairs &optional (f nil))
-  `(define-test ,name 
-     (dolist (p ,pairs) (assert-all-equal (car p) (cadr p) 
-					  (or ,f #',name)))))
-(defun assert-for-all (f &rest l)
-  (dolist (x l) (assert-true (funcall f x))))
-(defun assert-for-none (f &rest l)
-  (apply #'assert-for-all (lambda (x) (not (funcall f x))) l))
-
+;;; list iteration and construction
 (defun same-length (l1 l2)
   (if (null l1) (null l2) 
       (and (not (null l2)) (same-length (cdr l1) (cdr l2)))))
-
-(defmacro blockn (&rest body) `(block nil (progn ,@body)))
-
 (defun reduce-until (v f l)
   (blockn (reduce (lambda (x y) (let ((z (funcall f x y)))
 				  (if (equal v z) (return v) z)))
@@ -69,61 +40,124 @@ Author: madscience@google.com (Moshe Looks) |#
   (blockn (apply #'mapcar (lambda (&rest x) (let ((y (apply f x)))
 					      (if (equal v y) (return v) y)))
 			 ls)))
-
-(defmacro aif (test then &optional else) 
-  `(let ((it ,test))
-     (if it ,then ,else)))
-
 (defun mappend (f l) (apply #'append (mapcar f l)))
+(defun iota (n) (loop for i from 0 to (- n 1) collect i))
 
-(defun expr-size (expr) 
-  (if (consp expr)
-      (reduce #'+ (mapcar #'expr-size (cdr expr)) :initial-value 1) 
-      1))
+;;; generalized argument-binding construct
+(defmacro bind (fn &rest args) ; takes arguments /1 ... /9
+  (let ((zero (char-int #\0)))
+    (labels ((char-to-int (c) (- (char-int c) zero))
+	     (max-arg-idx (l)
+	       (reduce (lambda (n arg)
+			 (cond ((symbolp arg)
+				(if (eql (elt (symbol-name arg) 0) #\/)
+				    (max n (char-to-int 
+					    (elt (symbol-name arg) 1)))
+				    n))
+			       ((consp arg)
+				(if (eq (car arg) 'bind) n
+				    (max n (max-arg-idx (cdr arg)))))
+			       (t n)))
+		       l :initial-value 0)))
+      (let ((bind-max-arg-idx (max-arg-idx args)))
+	`(lambda ,(append
+		   (mapcar (lambda (i) 
+			     (intern (concatenate 'string 
+						  "/" (write-to-string i))))
+			   (loop for i from 1 to bind-max-arg-idx collect i))
+		   '(&rest) (list (gensym)))
+	   (funcall ,fn ,@args))))))
 
-(defun cross-prod (xlist ylist &key (pair #'cons))
-  (mapcan (lambda (x) (mapcar (lambda (y) (funcall pair x y)) ylist)) xlist))
-(defun cartesian-prod (&rest lists)
-  (reduce #'cross-prod lists :initial-value '(nil) :from-end t))
+;;; memoization
+(defun tabulate (fn array &rest indices)
+  (or (apply #'aref array indices) 
+      (setf (apply #'aref array indices) (apply fn indices))))
 
-(defun empty (seq)
+;;; testing
+(defun assert-all-equal (to f &rest l)
+  (dolist (x l) (assert-equal to (funcall f x))))
+(defmacro define-all-equal-test (name pairs &optional (f nil))
+  `(define-test ,name 
+     (dolist (p ,pairs) 
+       (apply #'assert-all-equal (car p) (or ,f #',name) (cadr p)))))
+(defun assert-for-all (f &rest l)
+  (dolist (x l) (assert-true (funcall f x))))
+(defun assert-for-none (f &rest l)
+  (apply #'assert-for-all (lambda (x) (not (funcall f x))) l))
+
+;;; O(1) helpers
+(defun emptyp (seq)
   (or (null seq) (not (some (lambda (x) (declare (ignore x)) t) seq))))
-(define-test empty
-  (assert-for-all #'empty nil (vector) (make-array 0) )
-  (assert-for-none #'empty '(a) (vector 1) (make-array 1)))
+(define-test emptyp
+  (assert-for-all #'emptyp nil (vector) (make-array 0) )
+  (assert-for-none #'emptyp '(a) (vector 1) (make-array 1)))
+(defun mklist (obj)
+  (if (listp obj) obj (list obj)))
+(defmacro matches (x l) `(case ,x (,l t)))
 
-(defun equalp-to-eq (l)
-  (mapl (lambda (l1) (if (consp (car l1))
-			 (mapl (lambda (l2)
-				 (if (equalp (car l1) (car l2))
-				     (setf (car l2) (car l1))))
-			       (cdr l1))))
-	l))
-(define-test equalp-to-eq
-  (let* ((foo '(and (or x y) (or x y) (or x y)))
-	 (goo (copy-tree foo)))
-    (equalp-to-eq foo)
-    (assert-eq (second foo) (third foo) (fourth foo))
-    (assert-equal foo goo)))
+;;; combinatorial algorithms
+(defun cross-prod (fn xlist ylist)
+  (mapcan (lambda (x) (mapcar (lambda (y) (funcall fn x y)) ylist)) xlist))
+(defun cartesian-prod (&rest lists)
+  (reduce (bind #'cross-prod #'cons /1 /2)
+	  lists :initial-value '(nil) :from-end t))
 
-(defun adjacent-pairs (l)
-  (if l (mapcar #'cons l (cdr l))))
+(defun adjacent-pairs (f l)
+  (if l (mapcar f l (cdr l))))
 (define-test adjacent-pairs
-  (assert-equal '((1 . 2) (2 . 3) (3 . 4)) (adjacent-pairs '(1 2 3 4)))
-  (assert-equal nil (adjacent-pairs nil))
-  (assert-equal nil (adjacent-pairs '(32))))
+  (assert-equal '((1 . 2) (2 . 3) (3 . 4)) (adjacent-pairs #'cons '(1 2 3 4)))
+  (assert-equal nil (adjacent-pairs #'cons nil))
+  (assert-equal nil (adjacent-pairs #'cons '(32))))
 
-;;;destructively removes adjacent eql pairs - fixme from O(n^2) to O(n)
-(defun uniq (l &key (test #'eql))
+(defun nonidentical-pairs (fn l)
+  (mapl (lambda (l1)
+	  (mapl (lambda (l2) 
+		  (unless (eq l1 l2) (funcall fn (car l1) (car l2))))
+		l))
+	l))
+(defun upper-triangle-pairs (fn l)
+  (mapl (lambda (sublist) (mapc (bind fn (car sublist) /1) (cdr sublist))) l))
+(define-test upper-triangle-pairs
+  (assert-equal '((1 2) (1 3) (1 4) (2 3) (2 4) (3 4))
+		(collecting (upper-triangle-pairs (lambda (x y) (collect
+								 (list x y)))
+						  '(1 2 3 4)))))
+
+;;;removes adjacent eql pairs - fixme from O(n^2) to O(n)
+(defun remove-adjacent-duplicates (l &key (test #'eql))
+  (remove-duplicates l :test test))
+(defun delete-adjacent-duplicates (l &key (test #'eql))
   (delete-duplicates l :test test))
 
-(defun sorted (l pred) 
+(defun includesp (l1 l2 cmp)
+  (if (and l1 l2)
+      (unless (funcall cmp (car l2) (car l1))
+	(includesp (cdr l1) 
+		   (if (funcall cmp (car l1) (car l2)) l2 (cdr l2))
+		   cmp))
+      (not l2)))
+(define-test includesp
+  (flet ((itest (a b)
+	   (assert-true (includesp a b #'<))
+	   (assert-true (logically-equal (equal a b) (includesp b a #'<)))))
+    (itest (iota 10) (iota 10))
+    (itest (iota 10) (iota 9))
+    (itest '(1 2 5 9 10) '(2 9 10))
+    (itest nil nil)
+    (itest '(3) '(3))
+    (itest '(52) nil)))
+
+(defun strict-includes-p (l1 l2 cmp)
+  (and (eql (length l1) (length l2))
+       (includesp l1 l2 cmp)))
+
+(defun sortedp (l pred) 
   (labels ((rec-sorted (x xs)
 	     (or (null xs) (and (funcall pred x (car xs))
 				(rec-sorted (car xs) (cdr xs))))))
     (or (null l) (rec-sorted (car l) (cdr l)))))
 (defun nondestructive-sort (l pred) ; returns l if it is already sorted
-  (if (sorted l pred) l (sort (copy-list l) pred)))
+  (if (sortedp l pred) l (sort (copy-list l) pred)))
 (define-test nondestructive-sort
   (assert-equal '(1 2 3 4) (nondestructive-sort '(4 3 2 1) #'<))
   (let* ((l '(1 2 3 9 4))
@@ -131,32 +165,6 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-equal '(1 2 3 4 9) l2)
     (assert-eq l2 (nondestructive-sort l2 #'<))))
 
-(defun maphash-keys (fn table)
-  (maphash (bind fn /1) table))
-
-(let ((zero (char-int #\0)))
-  (defun char-to-int (c) (- (char-int c) zero)))
-
-(defmacro bind (fn &rest args) ; takes arguments /1 ... /9
-  (labels ((max-arg-idx (l)
-	     (reduce (lambda (n arg)
-		       (cond ((symbolp arg)
-			      (if (eql (elt (symbol-name arg) 0) #\/)
-				  (max n (char-to-int 
-					  (elt (symbol-name arg) 1)))
-				  n))
-			      ((consp arg)
-			       (if (eq (car arg) 'bind) n
-				   (max n (max-arg-idx (cdr arg)))))
-			      (t n)))
-		     l :initial-value 0)))
-    (let ((bind-max-arg-idx (max-arg-idx args)))
-      `(lambda ,(append
-		 (mapcar (lambda (i) (intern (concatenate 
-					      'string "/" (write-to-string i))))
-			 (cdr (iota (1+ bind-max-arg-idx))))
-		 '(&rest) (list (gensym)))
-	 (funcall ,fn ,@args)))))
 
 (defun copy-range (l r) ; this is modern C++ - maybe there's a more lispy way?
   (cond 
@@ -179,4 +187,41 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-equal '(1 2) (copy-range l (cddr l)))
     (assert-equal '(1 2 3) (copy-range l (cdddr l)))
     (assert-equal '(1 2 3 4 5) (copy-range l nil))))
+
+;;; hashtable utilities
+(defmacro amodhash (key table to)
+  `(setf (gethash ,key ,table) (let ((it (gethash ,key ,table))) ,to)))
+(defun sethash (pair table) (setf (gethash (car pair) table) (cadr pair)))
+(defun init-hash-table (pairs &key (insert #'sethash))
+  (let ((table (make-hash-table)))
+    (dolist (p pairs table) (funcall insert p table))))
+(defun hashmapcan (f h)
+  (let ((res nil))
+    (maphash (lambda (x y) (setf res (nconc (funcall f x y) res))) h) 
+    res))
+(defun touch-hash (key table)
+  (setf (gethash key table) (gethash key table)))
+(defun copy-hash-table (table)
+  (let ((copy (make-hash-table :size (hash-table-size table))))
+    (maphash (lambda (key value) (setf (gethash key copy) value))
+	     table)
+    copy))
+(defun maphash-keys (fn table)
+  (maphash (bind fn /1) table))
+
+;;; mathematical functions
+(macrolet ((declare-argcmp (name cmp)
+	     `(defun ,name (f l ) 
+		(let* ((maxelem (car l))
+		       (maxval (funcall f maxelem)))
+		  (mapc (lambda (x) (let ((v (funcall f x)))
+				      (when (,cmp v maxval)
+					(setf maxelem x)
+					(setf maxval v))))
+			l)
+		  maxelem))))
+  (declare-argcmp argmax >)
+  (declare-argcmp argmin <))
+
+(defun randbool () (eql (random 2) 0))
 

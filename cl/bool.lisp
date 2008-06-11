@@ -35,85 +35,68 @@ Author: madscience@google.com (Moshe Looks) |#
       (values (mapcar (lambda (b) (eval-expr expr :bindings b)) bindings)
 	      bindings))))
 
+;; (defvar *n-random-trees-for-testing* 10000)
+;; (labels ((randtree (depth)
+;; 	   (if (eql (depth 0)
+
+;; (nconc (collecting
+;; 			     (dotimes (n *n-random-trees-for-testing*)
+;; 			       (let ((depth (1+ (random 10))))
+;; 				 (labels 
 (defun test-by-truth-tables (rewrite)
   (let ((vars (mapcar #'car (remove-if (lambda (x) (or (< 0 (cdr x))
 						       (eq (car x) 'true)
 						       (eq (car x) 'false)))
 				       *enum-trees-test-symbols*))))
-    (dolist (expr (enum-trees *enum-trees-test-symbols* 3) t)
+    (dolist (expr (enum-trees *enum-trees-test-symbols* 2) t)
       (unless (assert-equal (truth-table expr vars)
 			    (truth-table (funcall rewrite expr) vars))
 	(print expr)
 	(return nil)))))
 
+(defun dual-bool-op (f) (ecase f (and 'or) (or 'and)))
+(defun literalp (expr) (or (not (consp expr)) (eq (car expr) 'not)))
+
 (define-reduction push-nots (expr)
     :type bool
     :condition (and (eq (car expr) 'not)
 		    (consp (cadr expr))
-		    (case (caadr expr) ((and or not) t)))
+		    (matches (caadr expr) (and or not)))
     :action 
-    (flet ((dual (f) (ecase f (and 'or) (or 'and))))
-      (if (eq (caadr expr) 'not) 
-	  (cadadr expr)
- 	  (cons (dual (caadr expr)) 
- 		(mapcar (bind #'cons 'not (list /1)) (cdadr expr)))))
+    (if (eq (caadr expr) 'not) 
+	(cadadr expr)
+	(cons (dual-bool-op (caadr expr)) 
+	      (mapcar (bind #'cons 'not (list /1)) (cdadr expr))))
     :order downwards)
 (define-test push-nots
   (assert-equal  '(and (not x) (not y)) (push-nots '(not (or x y))))
   (test-by-truth-tables #'push-nots))
 
-;; (define-normal-form bool (expr)
-;;   :condition
-;; ;;   (labels ((applicable (expr)
-;; ;; 	     (and (consp expr)
-;; ;; 		  (or (case (car expr)
-;; ;; 			(and (find 'and (cdr expr)))
-;; ;; 			(or (find 'or (cdr expr)))
-;; ;; 			(not (eq (cadr expr 'not))))
-;; ;; 		      (find-if #'applicable (cdr expr))))))
-;; ;;    (applicable expr))
-;;   t
-;;   :action
-;;   (labels ((to-nf (expr neg) (if (consp expr) 
-;; 				 (recurse-on expr neg)
-;; 				 (negate-if neg expr)))
-;; 	   (negate-if (neg expr) (if neg `(not ,expr) expr))
-;; 	   (dual (f) (case f (and 'or) (or 'and)))
-;; 	   (recurse-on (expr neg)
-;; 	     (case (car expr)
-;; 	       (not (to-nf (cadr expr) (not neg)))
-;; 	       ((and or) (polyacidize (if neg (dual (car expr)) (car expr))
-;; 				      (mapcar (lambda (c) (to-nf c neg))
-;; 					      (cdr expr))))
-;; 	       (t (negate-if neg (normalize expr)))))
-;; 	   (polyacidize (x children) ;children are already in normal form
-;; 	     (cons x (reduce (lambda (rest child)
-;; 			       (if (and (consp child) (eq (car child) x))
-;; 				   (append (cdr child) rest)
-;; 				   (cons child rest)))
-;; 			     children :initial-value nil))))
-;;     (to-nf expr nil)))
-;; (define-test normalize-bool
-;;   (assert-equal  '(and x y (or q w)) (normalize '(and x (and y (or q w)))))
-;;   (assert-equal  '(and (not x) (not y)) (normalize '(not (or x y))))
-;;   (test-by-truth-tables #'normalize))
+(defmacro define-bool-dual-reductions (and-name or-name
+				       (operator identity complement expr)
+				       &body body)
+  (flet ((dosub (x y z)
+	   (subst x operator (subst y identity (subst z complement body)))))
+    `(progn (define-reduction ,and-name (,expr)
+	      :type bool
+	      ,@(dosub ''and ''true ''false))
+	    (define-reduction ,or-name (,expr)
+	      :type bool
+	      ,@(dosub ''or ''false ''true)))))
 
 ;; (and true x y)  -> (and x y)  (or true x y)  -> true
 ;; (and false x y) -> false      (or false x y) -> x
 ;; (and x)         -> x          (or x)         -> x 
-(macrolet ((make-reduction (name symbol abort ignore)
-	     `(define-reduction ,name (expr)
-		:type bool
-		:condition (eq ,symbol (car expr))
-		:action (let ((result (loop for x in (cdr expr)
-					 if (eq x ,abort) return (list ,abort)
-					 unless (eq x ,ignore) collect x)))
-			  (cond ((null result) ,ignore)
-				((null (cdr result)) (car result))
-				(t (cons (car expr) result))))
-		:order upwards)))
-  (make-reduction bool-and-identities 'and 'false 'true)
-  (make-reduction bool-or-identities 'or 'true 'false))
+(define-bool-dual-reductions bool-and-identities bool-or-identities 
+  (operator identity complement expr)
+  :condition (eq operator (car expr))
+  :action (let ((result (loop for x in (cdr expr)
+			   if (eq x complement) return (list complement)
+			   unless (eq x identity) collect x)))
+	    (cond ((null result) identity)
+		  ((null (cdr result)) (car result))
+		  (t (cons (car expr) result))))
+  :order upwards)
 (define-test bool-and-identities
   (assert-equal '(and x y) (bool-and-identities '(and x true y)))
   (assert-equal 'false 
@@ -139,15 +122,83 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-true (negatesp '(not x) 'x) (negatesp 'x '(not x)))
   (assert-false (negatesp 'x 'x) (negatesp '(not x) '(not x))))
 
-;;; for the following, clauses must be sorted
-;;; a clause is a tautology if it contains a variable and its negation
-(defun tautologyp (clause)
-  (find-if (lambda (p) (funcall #'negatesp (car p) (cdr p)))
-	   (adjacent-pairs clause)))
-;; (define-reduction identify-tautologies (expr)
-;;   :type bool
-;;   :condition (eq 'or (car expr))
-;;   :action (if (tautology
+(defun var-and-negation-p (clause) ; clauses must be sorted
+  (blockn (adjacent-pairs (lambda (x y) (if (negatesp x y) (return t)))
+			  clause)
+	  nil))
+
+(define-bool-dual-reductions identify-contradictions identify-tautologies 
+  (operator identity complement expr)
+  :condition (eq operator (car expr))
+  :action (if (var-and-negation-p (cdr expr)) complement expr)
+  :prerequisites '(sort-commutative)
+  :cleanups (list (if (eq operator 'and) 
+		      'bool-or-identities 
+		      'bool-or-identities)
+		  'sort-commutative)
+  :order upwards)
+(define-test identify-contradictions
+  (assert-equal 'false (identify-contradictions '(and x (not x))))
+  (assert-equal '(and x (not y)) (identify-contradictions '(and x (not y))))
+  (test-by-truth-tables #'identify-contradictions))
+(define-test identify-tautologies
+  (assert-equal 'true (identify-tautologies '(or x (not x))))
+  (assert-equal '(or x (not y)) (identify-tautologies '(or x (not y))))
+  (test-by-truth-tables #'identify-tautologies))
+
+(define-reduction remove-bool-duplicates (expr)
+  :type bool
+  :condition (matches (car expr) (and or))
+  :action (aif (blockn (mapl (lambda (x y) (if (eq (car x) (car y))
+					       (return x)))
+			     (cdr expr) (cddr expr))
+		       nil)
+	       (nconc (copy-range expr it)
+		      (remove-adjacent-duplicates (cdr it)))
+	       expr)
+  :order upwards)
+(define-test remove-bool-duplicates
+  (assert-equal '(and x z) (remove-bool-duplicates '(and x x z z)))
+  (let ((expr '(and x y z)))
+    (assert-eq expr (remove-bool-duplicates expr))))
+
+(defun mkclause (x)
+  (if (and (consp x) (not (eq 'not (car x)))) (cdr x) (list x)))
+(defun unmkclause (x)
+  (if (or (eq 'not (car x)) (cddr x)) x (cadr x)))
+
+(define-reduction remove-superset-clauses (expr)
+  :type bool
+  :condition (matches (car expr) (and or))
+  :action
+  (let ((for-removal (collecting (nonidentical-pairs 
+				  (lambda (c1 c2)
+				    (if (includesp c1 c2 #'total-order)
+					(collect c1)))
+				  (mapcar #'mkclause (cdr expr))))))
+    (if for-removal 
+	(remove-if (lambda (x) 
+		     (and (consp x)
+			  (find (mkclause x) for-removal :test #'equal)))
+		   expr)
+	expr))
+  :prerequisites '(flatten-associative
+		   remove-bool-duplicates
+		   identify-contradictions identify-tautologies
+		   bool-and-identities bool-or-identities 
+		   compress-identical-subtrees sort-commutative)
+  :order upwards)
+(define-test remove-superset-clauses
+  (assert-all-equal '(and x z) (compose #'remove-superset-clauses
+					#'sort-commutative)
+		    '(and (or x y) x z)
+		    '(and (or x y) x z (or x y) (or x y z)))
+  (assert-all-equal '(or x z)  (compose #'remove-superset-clauses
+					#'sort-commutative)
+		    '(or (and x y) x z)
+		    '(or (and x y z) x z (and x y) (and x y z)))
+  (test-by-truth-tables #'remove-superset-clauses))
+
 
 (defun implications (clause1 clause2)
   (let ((result nil))
@@ -155,24 +206,101 @@ Author: madscience@google.com (Moshe Looks) |#
       (dolist (y clause2)
 	(if (negatesp x y)
 	    (let ((implication 
-		   (uniq (merge 'list (remove x clause1) (remove y clause2) 
-				#'total-order))))
-	      (unless (tautologyp implication) (push implication result))))))))
+		   (delete-adjacent-duplicates
+		    (merge 'list (remove x clause1) (remove y clause2) 
+			   #'total-order))))
+	      (unless (var-and-negation-p implication) 
+		(push implication result))))))))
 (define-test implications
   (assert-equal '((x y)) 
 		(implications '(x y (not z)) '(x y z))
 		(implications '(x (not z)) '(y z)))
-  (assert-equal nil 
+  (assert-equal nil
 		(implications '(x y (not z)) '(x y (not z)))
 		(implications '(x (not y) (not z)) '(y z))))
 
+(define-reduction reduce-or-implications (expr)
+  :type bool
+  :condition (eq 'or (car expr))
+  :action
+  (let* ((clauses (mapcar #'mkclause (cdr expr)))
+	 (for-replacement (make-hash-table))
+	 (for-removal
+	  (collecting (upper-triangle-pairs
+		       (lambda (c1 c2) 
+			 (mapc (lambda (impl)
+				 (mapc (lambda (c3)
+					 (if (and (not (eq c3 c1)) 
+						  (not (eq c3 c2))
+						  (includesp c3 impl 
+							     #'total-order))
+					     (collect c3)))
+				       clauses)
+				 (flet
+				     ((strict-check (x)
+					(if (strict-includes-p x impl 
+							      #'total-order)
+					    (push impl (gethash 
+							x for-replacement)))))
+				   (strict-check c1)
+				   (strict-check c2)))
+			       (implications c1 c2)))
+		       clauses))))
+    (let ((removed (if for-removal 
+		       (cons (car expr) 
+			     (remove-if (lambda (e) 
+					  (find (mkclause e) for-removal
+						:test #'equal))
+					(cdr expr)))
+		       expr)))
+      (if (eql 0 (hash-table-count for-replacement)) removed
+	  (mapcar (lambda (e)
+		    (aif (gethash (mkclause e) for-replacement)
+			 (unmkclause (argmin #'expr-size it))
+			 e))
+		  removed))))
+  :prerequisites '(remove-superset-clauses)
+  :order upwards)
+(define-test reduce-or-implications
+  (test-by-truth-tables #'reduce-or-implications))
 
-;; (define-reduction reduce-ors (expr)
+;; ;;; if the handle set centered at expr is inconsistent, remove the subtree
+;; ;;; rooted at expr
+;; (define-reduction remove-inconsistent-handles (expr :parents parents)
 ;;   :type bool
-;;   :condition (eq 'or (car expr))
-;; ;  :prerequisites '(level bool-and-identities bool-or-identities equalp-to-eq
-;;   ;remove-tautologies)
-;;   :action
-;;   (progn (equalp-to-eq (apply #'append (cdr expr)))
-	 
+;;   :order downwards
+;; )
 
+;; ;;; holman calls this promote-common-constraints
+;; (define-reduction inverse-distribution (expr :parent parent)
+;;   :condition (distributive-over expr parent)
+
+;; ;;; holman's cut-unnecessary-or and cut-unnecessary-and
+;; (define-reduction eliminate-identities (expr)
+;;   :condition (and (identityp (car expr)) (not (cddr expr)))
+;; )
+
+;; ;;; constraints in expr's handle are subtracted from expr
+;; (define-reduction subtract-redundant-constraints (expr :parents parents)
+;;   :type bool
+;; )
+
+;; ;;; and clauses containing unit-command literals have their subtrees removed
+;; (define-reduction constraint-subsumption (expr :parents parents)
+;;   :type bool
+;;   :condition (eq 'and (car expr))
+;; )
+
+;; ;;; the negations of unit-command literals are subtracted from and clauses
+;; (define-reduction contraint-complement-subtraction (expr :parents parents)
+;;   :type bool
+;;   :condition (eq 'and (car expr))
+;; )
+
+;;; need to handle dangling ors and ands from holman's transformations
+;;; these can be propagated upwards ... this should be a cleanup function
+;;; - make cleanup any function, btw, not a reduction
+
+;; idea - what about considering for insertion minimal trees that only use n
+;; arguments? e.g. all boolean exprs with the vars, etc. these could be cached
+;; in minimal form...

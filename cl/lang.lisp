@@ -61,10 +61,76 @@ and (act-result name), where name may be any symbol. |#
    '(a (not a) b (not b) c)
    (sort '((not a) (not b) c b a) #'total-order)))
 
-(defun commutative (x)
-  (case x ((and or) t)))
-(defun associative (x)
-  (case x ((and or) t)))
+(defun commutativep (x)
+  (matches x (and or)))
+(defun associativep (x)
+  (matches x (and or)))
+(defun identityp (x)
+  (matches x (and or)))
+
+(defun expr-size (expr) 
+  (if (consp expr)
+      (reduce #'+ (mapcar #'expr-size (cdr expr)) :initial-value 1) 
+      1))
+
+(defun expr-depths (expr)
+  (if (consp expr)
+      (mapcar #'1+ (mapcan #'expr-depths (cdr expr)))
+      (list 0)))
+(define-test expr-depths
+  (assert-equal '(1 2 2 1) (expr-depths '(and x (or y z) q)))
+  (assert-equal '(0) (expr-depths 'x)))
+
+(defun equalp-to-eq (expr)
+  (mapl (lambda (expr1) (if (consp (car expr1))
+			 (mapl (lambda (expr2)
+				 (if (equalp (car expr1) (car expr2))
+				     (setf (car expr2) (car expr1))))
+			       (cdr expr1))))
+	expr))
+(define-test equalp-to-eq
+  (let* ((foo '(and (or x y) (or x y) (or x y)))
+	 (goo (copy-tree foo)))
+    (equalp-to-eq foo)
+    (assert-eq (second foo) (third foo) (fourth foo))
+    (assert-equal foo goo)))
+
+
+; general utility for decomposing an expr by type and contents
+(defmacro decompose ((expr-name &optional (type (expr-type expr-name)))
+		     &body type-clauses)
+  (labels ((dosub (condition sc) `(,condition ,@sc))
+	   (boolproc (sub)
+	     (dosub (case (car sub)
+		      (literal `(literalp ,expr-name))
+		      (junctor `(matches (car ,expr-name) (and or)))
+		      ((t) t)
+		      (t `(,(car sub) ,expr-name)))
+		    (cdr sub))))
+    `(ecase ,type
+       ,@(mapcar (lambda (clause)
+		   `(,(car clause) 
+		      (cond ,@(ecase (car clause)
+				     (bool (mapcar #'boolproc 
+						   (cdr clause)))))))
+		 type-clauses))))
+(define-test decompose-bool
+  (flet ((dectest (expr)
+	   (decompose (expr 'bool)
+	     (bool
+	      (literal 'literal)
+	      (junctor 'junctor)
+	      (t 'other)))))
+    (assert-equal 'literal (dectest 'x))
+    (assert-equal 'literal (dectest '(not x)))
+    (assert-equal 'junctor (dectest '(and x y)))
+    (assert-equal 'other (dectest '(foo bar baz)))))
+
+;(defun mapcar-expr (fn expr)
+	     
+
+
+;idea - make tuples arrays
 
 ;; (defun type-union (&rest types)
 ;;   (flet ((pairwise-union (x y)
