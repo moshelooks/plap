@@ -46,7 +46,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (let ((exprs (cache-lookup type size)))
 	   (if (< size (full-max-size type))
 	       (aref exprs (random (length exprs)))
-	       (if (empty exprs)
+	       (if (emptyp exprs)
 		   (sample type size)
 		   (pop exprs))))))
       
@@ -58,3 +58,5 @@ Author: madscience@google.com (Moshe Looks) |#
 
 get rid of make-normal form, just use make-reduction and have a normal form tag
 / prereqs
+
+constantly

@@ -17,7 +17,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defpackage :plop
   (:use #:cl
-	#:lisp-unit))
+	#:lisp-unit
+	#:cl-utilities))
 ;  (:export #:reduce))
 
 ;#:type-union #:fun-type #:atom-type #:tree-type #:eval-tree))

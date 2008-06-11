@@ -16,7 +16,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (in-package :cl-user)
 (defpackage :plop-asd
-  (:use :cl :asdf))
+  (:use :cl :asdf :cl-utilities))
 
 (in-package :plop-asd)
 (defsystem :plop
@@ -30,4 +30,5 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "eval")
 	       (:file "rewrite")
 	       (:file "bool")
+	       (:file "search")
 	       (:file "tests")))

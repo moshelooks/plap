@@ -85,3 +85,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun tuple-type-p (type) (and (consp type) (eq (car type) 'tuple)))
 
+;; (defun is-type-p (type) 
+;;   (if (consp type)
+;;       (matches (car type) (list tuple fun))
+;;       (matches type (bool num))
