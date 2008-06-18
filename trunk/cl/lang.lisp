@@ -32,19 +32,25 @@ and (act-result name), where name may be any symbol. |#
 	       (if (numberp r)
 		   'less
 		   (if (eql l r) nil (if (string< l r) 'less 'greater))))))
-    (if (consp l)
-	(if (and (eq (car l) 'not) (consp (cdr l)) (not (consp (cadr l))))
-	    (aif (total-cmp (cadr l) r) it 'greater)
-	    (if (consp r)
-		(aif (total-cmp (car l) (car r))
-		     it 
-		     (total-cmp (cdr l) (cdr r)))
-		'greater))
-	(if (consp r) 
-	    (if (and (eq (car r) 'not) (consp (cdr r)) (not (consp (cadr r))))
-		(aif (elem-cmp l (cadr r)) it 'less)
-		'less)
-	    (elem-cmp l r)))))
+    (let ((lnot (and (consp l) (eq (car l) 'not) (not (consp (cadr l)))))
+	  (rnot (and (consp r) (eq (car r) 'not) (not (consp (cadr r))))))
+      (if (consp l)
+	  (if lnot
+	      (if rnot
+		  (elem-cmp (cadr l) (cadr r))
+		  (aif (total-cmp (cadr l) r) it 'greater))
+	      (if (consp r)
+		  (if rnot
+		      (aif (total-cmp l (cadr r)) it 'less)
+		      (aif (total-cmp (car l) (car r))
+			   it 
+			   (total-cmp (cdr l) (cdr r))))
+		  'greater))
+	  (if (consp r) 
+	      (if rnot
+		  (aif (elem-cmp l (cadr r)) it 'less)
+		  'less)
+	      (elem-cmp l r))))))
 (defun total-order (l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order
@@ -59,7 +65,21 @@ and (act-result name), where name may be any symbol. |#
    (sort '((a (a (b c))) (a (a (b c)) b) (a (a (b c d)))) #'total-order))
   (assert-equal
    '(a (not a) b (not b) c)
-   (sort '((not a) (not b) c b a) #'total-order)))
+   (sort '((not a) (not b) c b a) #'total-order))
+  (let ((exprs (randremove 0.9 (enum-trees *enum-trees-test-symbols* 2))))
+    (block enumerative-test
+      (flet ((opp (x) (case x
+			(less 'greater)
+			(greater 'less)
+		      (nil nil))))
+	(dolist (expr1 exprs)
+	  (dolist (expr2 exprs)
+	    (let ((v (eql (total-cmp expr1 expr2)
+			  (opp (total-cmp expr2 expr1)))))
+	      (unless (assert-equal (total-cmp expr1 expr2)
+				    (opp (total-cmp expr2 expr1)))
+		(print* expr1 expr2)
+		(return-from enumerative-test nil)))))))))
 
 (defun commutativep (x)
   (matches x (and or)))
@@ -67,6 +87,10 @@ and (act-result name), where name may be any symbol. |#
   (matches x (and or)))
 (defun identityp (x)
   (matches x (and or)))
+(defun identity-elem (x)
+  (ecase x
+    (and 'true)
+    (or 'false)))
 
 (defun expr-size (expr) 
   (if (consp expr)
@@ -99,27 +123,32 @@ and (act-result name), where name may be any symbol. |#
 ; general utility for decomposing an expr by type and contents
 (defmacro decompose ((expr-name &optional (type (expr-type expr-name)))
 		     &body type-clauses)
-  (labels ((dosub (condition sc) `(,condition ,@sc))
-	   (boolproc (sub)
-	     (dosub (case (car sub)
-		      (literal `(literalp ,expr-name))
-		      (junctor `(matches (car ,expr-name) (and or)))
-		      ((t) t)
-		      (t `(,(car sub) ,expr-name)))
-		    (cdr sub))))
+  (flet ((by-type (type sub)
+	   (flet ((mkcase (condition) `(,condition ,@(cdr sub))))
+	     (ecase type
+	       (bool 
+		(if (consp sub)
+		    (case (car sub)
+		      (literal (mkcase `(literalp ,expr-name)))
+		      (junctor (mkcase `(junctorp ,expr-name)))
+		      ((t) (mkcase 't))
+		      (t `(t ,sub)))
+		    `(t ,sub)))
+	       (num
+		`(t ,sub))))))
     `(ecase ,type
        ,@(mapcar (lambda (clause)
-		   `(,(car clause) 
-		      (cond ,@(ecase (car clause)
-				     (bool (mapcar #'boolproc 
-						   (cdr clause)))))))
+		   `(,(car clause)
+		      (cond ,@(mapcar (bind #'by-type (car clause) /1)
+				      (cdr clause))
+			    (t (assert nil () "decomposition not found")))))
 		 type-clauses))))
 (define-test decompose-bool
   (flet ((dectest (expr)
 	   (decompose (expr 'bool)
 	     (bool
-	      (literal 'literal)
 	      (junctor 'junctor)
+	      (literal 'literal)
 	      (t 'other)))))
     (assert-equal 'literal (dectest 'x))
     (assert-equal 'literal (dectest '(not x)))
@@ -136,7 +165,7 @@ and (act-result name), where name may be any symbol. |#
 ;;   (flet ((pairwise-union (x y)
 ;; 	   (cond ((equal x y) x)
 ;; 		 ((and (consp t) (consp y)
-;; 		       (eq (car t) (car y)) (same-length x y))
+;; 		       (eq (car t) (car y)) (same-length-p x y))
 ;; 		  (case (car t)
 ;; 		    (list `(list ,(type-union (cadr t) (cadr y))))
 ;; 		    (tuple (cons 'tuple (mapcar #'type-union (cdr t) (cdr y))))

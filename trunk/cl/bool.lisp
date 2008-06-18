@@ -55,7 +55,20 @@ Author: madscience@google.com (Moshe Looks) |#
 	(return nil)))))
 
 (defun dual-bool-op (f) (ecase f (and 'or) (or 'and)))
-(defun literalp (expr) (or (not (consp expr)) (eq (car expr) 'not)))
+(defun junctorp (expr) (and (consp expr) (matches (car expr) (and or))))
+(defun literalp (expr)
+  (or (not (consp expr)) 
+      (and (eq (car expr) 'not) (not (consp (cadr expr))))))
+
+(define-reduction dangling-junctors (expr)
+  :type bool
+  :condition (junctorp expr)
+  :action 
+  (flet ((pred (x) (matches x (and or))))
+    (if (find-if #'pred (cdr expr))
+	(cons (car expr) (remove-if #'pred (cdr expr)))
+	expr))
+  :order upwards)
 
 (define-reduction push-nots (expr)
     :type bool
@@ -114,6 +127,11 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal 'x  (bool-or-identities '(or x)))
   (test-by-truth-tables #'bool-or-identities))
 
+(defun litnegation (x) 
+  (if (and (consp x) (eq (car x) 'not))
+      (cadr x)
+      (list 'not x)))
+(defun litvariable (x) (if (consp x) (cadr x) x))
 (defun negatesp (x y &key (pred #'eq))
   (flet ((check (neg other) 
 	   (and (eq (car neg) 'not) (funcall pred (cadr neg) other))))
@@ -121,6 +139,11 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test negatesp
   (assert-true (negatesp '(not x) 'x) (negatesp 'x '(not x)))
   (assert-false (negatesp 'x 'x) (negatesp '(not x) '(not x))))
+
+; returns literals or literals only-children of junctors
+(defun extract-literal (expr)
+  (or (and (literalp expr) expr)
+      (and (stalkp expr) (literalp (cadr expr)) (cadr expr))))
 
 (defun var-and-negation-p (clause) ; clauses must be sorted
   (blockn (adjacent-pairs (lambda (x y) (if (negatesp x y) (return t)))
@@ -132,18 +155,20 @@ Author: madscience@google.com (Moshe Looks) |#
   :condition (eq operator (car expr))
   :action (if (var-and-negation-p (cdr expr)) complement expr)
   :prerequisites '(sort-commutative)
-  :cleanups (list (if (eq operator 'and) 
+  :cleanups (list (if (eq operator 'and) ;;;wtf fixme??
 		      'bool-or-identities 
-		      'bool-or-identities)
+		      'bool-and-identities)
 		  'sort-commutative)
   :order upwards)
 (define-test identify-contradictions
   (assert-equal 'false (identify-contradictions '(and x (not x))))
   (assert-equal '(and x (not y)) (identify-contradictions '(and x (not y))))
+  (assert-equal 'z (identify-contradictions '(or z (and x (not x)))))
   (test-by-truth-tables #'identify-contradictions))
 (define-test identify-tautologies
   (assert-equal 'true (identify-tautologies '(or x (not x))))
   (assert-equal '(or x (not y)) (identify-tautologies '(or x (not y))))
+  (assert-equal 'z (identify-tautologies '(and z (or x (not x)))))
   (test-by-truth-tables #'identify-tautologies))
 
 (define-reduction remove-bool-duplicates (expr)
@@ -263,6 +288,8 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards)
 (define-test reduce-or-implications
   (test-by-truth-tables #'reduce-or-implications))
+
+
 
 ;; ;;; if the handle set centered at expr is inconsistent, remove the subtree
 ;; ;;; rooted at expr

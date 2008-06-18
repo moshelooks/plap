@@ -47,19 +47,21 @@ following parameterized types:
   number.
 \end{itemize}
 
-The normal form for some type $T$ is a set of elementary functions (with
-codomain $T$), a set of constants (of type $T$), and a tree grammar. The
-grammar must be such that, for all valid sentences, all of the internal nodes
-are elementary functions, and all of the leaves are the symbol \verb|T_var| or
-the symbol \verb|T_constant|.
+The normal form for some type $T$ is a set of elementary functions with
+codomain $T$, a set of constants of type $T$, and a tree grammar. The grammar
+must be such that, for all valid sentences, all of the internal nodes are
+elementary functions, and all of the leaves are the symbols of the form
+\verb|U_var| or \verb|U_constant|, where \verb|U| is some type with a normal
+form (often \verb|U|$=$\verb|T|).
 
 Sentences in a normal form grammar may be transformed into normal form
-expressions. The expressions that may be generated are a function of a set of
-bound variables and a set of (typed) external functions that must be
-provided. The transformation is as follows:
+expressions. The set expressions that may be generated is a function of a set
+of bound variables and a set of external functions that must be provided (both
+bound variables and external functions are typed). The transformation is as
+follows:
 \begin{itemize}
 \item leaves labeled \verb|T_constant| are replaced with constants of type $T$,
-\item leaves labeled \verb|T_var| are replaced to either bound variables
+\item leaves labeled \verb|T_var| are replaced with either bound variables
   matching type $T$, or expressions of the form $f(expr_1, expr_2,
   ... expr_M)$, where $f$ is an external function of type $T_1, T_2, ... T_M
   \rightarrow T$, and each $expr_i$ is a normal form expression of type $T_i$
