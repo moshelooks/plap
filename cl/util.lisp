@@ -20,18 +20,23 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
-(defmacro aif (test then &optional else) ; from onlisp, by pg
+(defmacro aif (test then &optional else) ; described in onlisp, by pg
   `(let ((it ,test))
      (if it ,then ,else)))
-(defmacro while (test &body body) ; from onlisp, by pg
+(defmacro while (test &body body) ; described in onlisp, by pg
   `(do ()
        ((not ,test))
      ,@body))
+(defmacro awhen (test &body body) ; described in onlisp, by pg
+  `(aif ,test
+        (progn ,@body)))
 
-;;; list iteration and construction
-(defun same-length (l1 l2)
+;;; list iteration, comparison, and construction
+(defun same-length-p (l1 l2)
   (if (null l1) (null l2) 
-      (and (not (null l2)) (same-length (cdr l1) (cdr l2)))))
+      (and (not (null l2)) (same-length-p (cdr l1) (cdr l2)))))
+;;; a stalk is a list with a single child (the cadr)
+(defun stalkp (l) (and (consp l) (consp (cdr l)) (not (cddr l))))
 (defun reduce-until (v f l)
   (blockn (reduce (lambda (x y) (let ((z (funcall f x y)))
 				  (if (equal v z) (return v) z)))
@@ -44,7 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun iota (n) (loop for i from 0 to (- n 1) collect i))
 
 ;;; generalized argument-binding construct
-(defmacro bind (fn &rest args) ; takes arguments /1 ... /9
+(defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9
   (let ((zero (char-int #\0)))
     (labels ((char-to-int (c) (- (char-int c) zero))
 	     (max-arg-idx (l)
@@ -59,14 +64,16 @@ Author: madscience@google.com (Moshe Looks) |#
 				    (max n (max-arg-idx (cdr arg)))))
 			       (t n)))
 		       l :initial-value 0)))
-      (let ((bind-max-arg-idx (max-arg-idx args)))
+      (let ((bind-max-arg-idx (max-arg-idx (butlast args))))
 	`(lambda ,(append
 		   (mapcar (lambda (i) 
 			     (intern (concatenate 'string 
 						  "/" (write-to-string i))))
 			   (loop for i from 1 to bind-max-arg-idx collect i))
 		   '(&rest) (list (gensym)))
-	   (funcall ,fn ,@args))))))
+	   (funcall #'apply ,fn ,@args))))))
+(defmacro bind (fn &rest args)
+  `(bindapp ,fn ,@args nil))
 
 ;;; memoization
 (defun tabulate (fn array &rest indices)
@@ -208,6 +215,8 @@ Author: madscience@google.com (Moshe Looks) |#
     copy))
 (defun maphash-keys (fn table)
   (maphash (bind fn /1) table))
+(defun hash-table-empty-p (table) ;;could be faster
+  (eql (hash-table-size table) 0))
 
 ;;; mathematical functions
 (macrolet ((declare-argcmp (name cmp)
@@ -224,4 +233,12 @@ Author: madscience@google.com (Moshe Looks) |#
   (declare-argcmp argmin <))
 
 (defun randbool () (eql (random 2) 0))
+(defun randremove (p l) (remove-if (bind #'> p (random 1.0)) l))
+
+;;; io
+(defun print* (&rest args)
+  (print (car args))
+  (mapc (lambda (x) (prin1 x) (write-char #\space)) (cdr args))
+  nil)
+
 

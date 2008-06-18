@@ -16,59 +16,140 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun canonize (expr &key (type (expr-type expr)) parent)
-  (ecase type
-    (bool	
-     (if (literalp expr)
-	 (if parent (list (dual-bool-op parent) expr) `(or and (and ,expr)))
-	 (let* ((op (car expr))
-		(body (cons op (if (matches op (and or))
-				   (cons (dual-bool-op op)
-					 (mapcar (bind #'canonize /1
-						       :type 'bool :parent op)
-						 (cdr expr)))
-				   (mapcar #'canonize (cdr expr))))))
-	   (if parent body (list (dual-bool-op op) op body)))))))
+  (let ((op (if (consp expr) (car expr))))
+    (flet ((rec-canonize () 
+	     (if op
+		 (cons op (mapcar (bind #'canonize /1 :parent op) (cdr expr)))
+		 expr))
+	   (bool-structure (expr)
+	     (if parent 
+		 `(,(dual-bool-op parent) ,expr)
+		 `(or (and) (and ,expr)))))
+      (decompose (expr type)
+	(bool (literal (bool-structure expr))
+	      (junctor 
+	       (let ((body `(,op (,(dual-bool-op op)) 
+				 ,@(mapcar (bind #'canonize /1 :type 'bool 
+						 :parent op)
+					   (cdr expr)))))
+		 (if parent body (list (dual-bool-op op) (list op) body))))
+	      (t (bool-structure (rec-canonize))))
+	(num expr)))))
 (define-test canonize-bool
-  (assert-equal '(or and (and or (or x1) (or (not x4)))) 
+  (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
 		(canonize '(and x1 (not x4)) :type 'bool))
-  (assert-equal '(and or (or and (and x1) (and (not x4))))
+  (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
 		(canonize '(or x1 (not x4)) :type 'bool))
-  (assert-equal '(or and (and x1)) (canonize 'x1 :type 'bool))
-  (assert-equal  '(and or (or and (and or (or x1) (or x2)) (and x3)))
+  (assert-equal '(or (and) (and x1)) (canonize 'x1 :type 'bool))
+  (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
 		 (canonize '(or (and x1 x2) x3) :type 'bool)))
+(define-test canonize-mixed-bool-num
+  (assert-equal '(or (and) (and (< 2 3))) (canonize '(< 2 3) :type 'bool)))
 
-(defun enum-loci (fn expr &key (type (expr-type expr)) parents)
-  (flet ((mkbinder (type) 
-	   (bind #'enum-loci fn /1 :parents (cons expr parents) :type type)))
-    (ecase type
-      (bool
-       (unless (literalp expr)
-	 (mapc (mkbinder (when (matches (car expr) (and or))
-			   (funcall fn expr parents)
-			   'bool))
-	       (cdr expr)))))))
-(define-test enum-loci-bool
+(defun loci (fn expr &key (type (expr-type expr)) parents)
+  (flet ((boolrec (&optional type)
+	   (mapc (bindapp #'loci fn /1 :parents (cons expr parents)
+			  (if type (list :type type)))
+		 (cdr expr))))
+    (decompose (expr type)
+      (bool (literal)
+	    (junctor (funcall fn expr parents)
+		     (boolrec 'bool))
+	    (t (boolrec))))))
+(define-test loci-bool
   (assert-equal '(((and (or x) (or y)))
 		  ((or x) (and (or x) (or y)))
 		  ((or y) (and (or x) (or y))))
-		(collecting (enum-loci (lambda (expr parents) 
+		(collecting (loci (lambda (expr parents) 
 					 (collect (cons expr parents)))
 				       '(and (or x) (or y))))))
 
-      
-;;; a locus is a cons cell 
+(defun neighbors-at (fn expr bindings &key (type (expr-type expr)))
+  (decompose (expr type)
+    (bool
+     (junctor
+      (let ((tovisit (copy-hash-table (gethash 'bool bindings))))
+	(mapl (lambda (l)
+		(let ((subexpr (car l)))
+		  (awhen (extract-literal subexpr)
+		    (remhash (litvariable it) tovisit)
+		    (unless (extract-literal expr)
+		      (rplaca l (identity-elem (car expr)))
+		      (funcall fn expr)
+		      (rplaca l (litnegation it))
+		      (funcall fn expr)
+		      (rplaca l subexpr)))))
+	      (cdr expr))
+	(rplacd expr (cons nil (cdr expr)))
+	(maphash-keys (lambda (x)
+			(rplaca (cdr expr) x)
+			(funcall fn expr)
+			(rplaca (cdr expr) (litnegation x))
+			(funcall fn expr))
+		      tovisit)
+	(rplacd expr (cddr expr))))))
+  expr)
+(define-test neighbors-at-bool
+  (flet ((test (against expr bindings)
+	   (let* ((expr (canonize expr :type 'bool))
+		  (tmp (copy-tree expr)))
+	     (assert-equal
+	      (setf against (sort against #'total-order))
+	      (sort (collecting (upwards (bind #'neighbors-at
+					       (lambda (expr2) 
+						 (collect (copy-tree expr)))
+					       /1
+					       bindings)
+					 expr))
+		     #'total-order))
+	     (assert-equal tmp expr))))
+    (test '((or (and x) (and x))
+	    (or (and (not x)) (and x))
+	    (or (and) (not x))
+	    (or (and) false))
+	  'x
+	  (init-hash-table `((bool ,(init-hash-table '((x t)))))))
+    (test '((or (and x) (and x))
+	    (or (and (not x)) (and x))
+	    (or (and) (not x))
+	    (or (and) false)
+	    (or (and y) (and x))
+	    (or (and (not y)) (and x))
+	    (or (and) (and y x))
+	    (or (and) (and (not y) x))
+	    (or (not y) (and) (and x))
+	    (or y (and) (and x)))
+	  'x 
+	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
 
-;; (defun enum-possible-neighbors (expr &key parents)
+;how would we do two changes at once??
+
+;;   (let ((bindings1 
+;; 	((bindings2 (init-hash-table `((bool ,(init-hash-table 
+;; 					       '((x t) (y t)))))))))
+
+;;       (test '(x (not x) y (not y) (and x y) (and (not x) y) (and x (not y))
+;; 	      (and (not x) (not y))  (or x y) (or (not x) y) (or x (not y))
+;; 	      (or (not x) (not y)))
+;; 	    '(and x y)))))
+;; '(x (not x) y (not y) 
+;; 			  (and x y) (and (not x) y) 
+;; 			  (and x (not y)) (and (not x) (not y))
+;; 			  (or x y) (or (not x) y) 
+;; 			  (or x (not y)) (or (not x) (not y)))
+
+
 ;;   (unless (consp expr) nil)
 ;;   (if (associativep (car expr)
       
 ;; accepts-locus-p
 
-;; (defun bool-hillclimber (expr acceptsp terminationp)
-;;   (let ((expr (canonize 'bool expr)))
+;; (defun bool-hillclimber (expr vars acceptsp terminationp)
+;;   (let ((expr (canonize 'bool expr))
+;; 	(vars (mapcar (
 ;;     (while (not (terminationp expr))
 ;;       (let ((tmp (copy-tree expr)))
-;; 	(blockn (enum-loci (bind #'try-changes (lambda (expr) 
+;; 	(blockn (loci (bind #'try-changes (lambda (expr) 
 ;; 						 (if (acceptsp tmp expr)
 ;; 						     (return)))
 ;; 				 /1)
