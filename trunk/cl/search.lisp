@@ -65,30 +65,35 @@ Author: madscience@google.com (Moshe Looks) |#
 				       '(and (or x) (or y))))))
 
 (defun neighbors-at (fn expr bindings &key (type (expr-type expr)))
-  (decompose (expr type)
-    (bool
-     (junctor
-      (let ((tovisit (copy-hash-table (gethash 'bool bindings))))
-	(mapl (lambda (l)
-		(let ((subexpr (car l)))
-		  (awhen (extract-literal subexpr)
-		    (remhash (litvariable it) tovisit)
-		    (unless (extract-literal expr)
-		      (rplaca l (identity-elem (car expr)))
-		      (funcall fn expr)
-		      (rplaca l (litnegation it))
-		      (funcall fn expr)
-		      (rplaca l subexpr)))))
-	      (cdr expr))
-	(rplacd expr (cons nil (cdr expr)))
-	(maphash-keys (lambda (x)
-			(rplaca (cdr expr) x)
-			(funcall fn expr)
-			(rplaca (cdr expr) (litnegation x))
-			(funcall fn expr))
-		      tovisit)
-	(rplacd expr (cddr expr))))))
-  expr)
+;;   (decompose (expr type)
+;;     (bool
+;;      (junctor
+;;       (let ((tovisit (copy-hash-table (gethash 'bool bindings))))
+;; 	(mapl (lambda (l)
+;; 		(let ((subexpr (car l)))
+;; 		  (awhen (extract-literal subexpr)
+;; 		    (remhash (litvariable it) tovisit)
+;; 		    (unless (extract-literal expr)
+;; 		      (rplaca l (identity-elem (car expr)))
+;; 		      (funcall fn expr)
+;; 		      (rplaca l (litnegation it))
+;; 		      (funcall fn expr)
+;; 		      (rplaca l subexpr)))))
+;; 	      (cdr expr))
+;; 	(rplacd expr (cons nil (cdr expr)))
+;; 	(maphash-keys (lambda (x)
+;; 			(rplaca (cdr expr) x)
+;; 			(funcall fn expr)
+;; 			(rplaca (cdr expr) (litnegation x))
+;; 			(funcall fn expr))
+;; 		      tovisit)
+;; 	(rplacd expr (cddr expr))))))
+;;   expr)
+  (mapc (bind #'mapc 
+	      (lambda (knob) (knob) (funcall fn expr))
+	      /1)
+(knobs-at expr bindings type)
+
 (define-test neighbors-at-bool
   (flet ((test (against expr bindings)
 	   (let* ((expr (canonize expr :type 'bool))
@@ -121,6 +126,34 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or y (and) (and x)))
 	  'x 
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
+
+;;; mungs expr
+(defun knobs-at (expr bindings &key (type (expr-type expr)))
+  (decompose (expr type)
+    (bool
+     (junctor
+      (collecting
+	(let ((tovisit (copy-hash-table (gethash 'bool bindings))))
+	  (mapl (lambda (l)
+		  (let ((subexpr (car l)))
+		    (awhen (extract-literal subexpr)
+		      (remhash (litvariable it) tovisit)
+		      (unless (extract-literal expr)
+			(collect (lambda ()
+				   (rplaca l (identity-elem (car expr)))))
+			(collect (lambda ()
+				   (rplaca l (litnegation it))))
+			(collect (lambda () (rplaca l subexpr)))))))
+		(cdr expr))
+	  (unless (hash-table-empty-p tovist)
+	    (rplacd expr (cons (identity-elem (car expr) (cdr expr))))
+	    (maphash-keys (lambda (x)
+			    (collect (lambda ()
+				       (rplaca (cdr expr) x)))
+			    (collect (lambda ()
+				       (rplaca (cdr expr) (litnegation x)))))
+			  tovisit))))))))
+
 
 ;how would we do two changes at once??
 
