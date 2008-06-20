@@ -18,6 +18,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defpackage :plop
   (:use #:cl
 	#:lisp-unit
+	#:org.tfeb.hax.memoize
 	#:cl-utilities))
 ;  (:export #:reduce))
 
