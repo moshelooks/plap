@@ -65,7 +65,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun expr-type (tree) ;fixme - doesn't yet handle user-defined funs
   (if (consp tree)
       (case (car tree)
-	(list `(list ,(type-of (cadr tree))))
+	(list (list 'list (type-of (cadr tree))))
 	(tuple (cons 'tuple (mapcar #'expr-type (cdr tree))))
 	(t (let ((type (fun-type (car tree))))
 	     (assert (eq (car type) 'fun))

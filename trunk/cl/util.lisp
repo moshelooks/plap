@@ -30,6 +30,10 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro awhen (test &body body) ; described in onlisp, by pg
   `(aif ,test
         (progn ,@body)))
+(defmacro dorepeat (n &body body)
+  (let ((var (gensym)))
+    `(dotimes (,var ,n)
+       ,@body)))
 
 ;;; list iteration, comparison, and construction
 (defun same-length-p (l1 l2)

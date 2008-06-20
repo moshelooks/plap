@@ -29,7 +29,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (mapcan (lambda (b) (list (make-bindings b 'true)
 					     (make-bindings b 'false)))
 			   (enum-bindings (cdr vars))))
-		 '(nil))))
+		 (list nil))))
     (let ((bindings (enum-bindings (or vars (sort (free-variables expr) 
 						  #'string<)))))
       (values (mapcar (lambda (b) (eval-expr expr :bindings b)) bindings)

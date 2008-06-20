@@ -30,5 +30,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "eval")
 	       (:file "rewrite")
 	       (:file "bool")
+	       (:file "represent")
 	       (:file "search")
 	       (:file "tests")))

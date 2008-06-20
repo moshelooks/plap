@@ -15,55 +15,6 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun canonize (expr &key (type (expr-type expr)) parent)
-  (let ((op (if (consp expr) (car expr))))
-    (flet ((rec-canonize () 
-	     (if op
-		 (cons op (mapcar (bind #'canonize /1 :parent op) (cdr expr)))
-		 expr))
-	   (bool-structure (expr)
-	     (if parent 
-		 `(,(dual-bool-op parent) ,expr)
-		 `(or (and) (and ,expr)))))
-      (decompose (expr type)
-	(bool (literal (bool-structure expr))
-	      (junctor 
-	       (let ((body `(,op (,(dual-bool-op op)) 
-				 ,@(mapcar (bind #'canonize /1 :type 'bool 
-						 :parent op)
-					   (cdr expr)))))
-		 (if parent body (list (dual-bool-op op) (list op) body))))
-	      (t (bool-structure (rec-canonize))))
-	(num expr)))))
-(define-test canonize-bool
-  (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
-		(canonize '(and x1 (not x4)) :type 'bool))
-  (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
-		(canonize '(or x1 (not x4)) :type 'bool))
-  (assert-equal '(or (and) (and x1)) (canonize 'x1 :type 'bool))
-  (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
-		 (canonize '(or (and x1 x2) x3) :type 'bool)))
-(define-test canonize-mixed-bool-num
-  (assert-equal '(or (and) (and (< 2 3))) (canonize '(< 2 3) :type 'bool)))
-
-(defun loci (fn expr &key (type (expr-type expr)) parents)
-  (flet ((boolrec (&optional type)
-	   (mapc (bindapp #'loci fn /1 :parents (cons expr parents)
-			  (if type (list :type type)))
-		 (cdr expr))))
-    (decompose (expr type)
-      (bool (literal)
-	    (junctor (funcall fn expr parents)
-		     (boolrec 'bool))
-	    (t (boolrec))))))
-(define-test loci-bool
-  (assert-equal '(((and (or x) (or y)))
-		  ((or x) (and (or x) (or y)))
-		  ((or y) (and (or x) (or y))))
-		(collecting (loci (lambda (expr parents) 
-					 (collect (cons expr parents)))
-				       '(and (or x) (or y))))))
-
 (defun neighbors-at (fn expr bindings &key (type (expr-type expr)))
 ;;   (decompose (expr type)
 ;;     (bool
@@ -89,10 +40,14 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 		      tovisit)
 ;; 	(rplacd expr (cddr expr))))))
 ;;   expr)
-  (mapc (bind #'mapc 
-	      (lambda (knob) (knob) (funcall fn expr))
-	      /1)
-(knobs-at expr bindings type)
+  (mapc (lambda (knob)
+	  (map nil (lambda (setting) 
+		     (funcall setting)
+		     (funcall fn expr))
+	       (subseq knob 1))
+	  (funcall (elt knob 0)))
+	(knobs-at expr bindings :type type))
+  expr)
 
 (define-test neighbors-at-bool
   (flet ((test (against expr bindings)
@@ -110,14 +65,14 @@ Author: madscience@google.com (Moshe Looks) |#
 	     (assert-equal tmp expr))))
     (test '((or (and x) (and x))
 	    (or (and (not x)) (and x))
-	    (or (and) (not x))
-	    (or (and) false))
+	    (or (and) (and (not x)))
+	    (or (and) (and true)))
 	  'x
 	  (init-hash-table `((bool ,(init-hash-table '((x t)))))))
     (test '((or (and x) (and x))
 	    (or (and (not x)) (and x))
-	    (or (and) (not x))
-	    (or (and) false)
+	    (or (and) (and (not x)))
+	    (or (and) (and true))
 	    (or (and y) (and x))
 	    (or (and (not y)) (and x))
 	    (or (and) (and y x))
@@ -126,33 +81,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or y (and) (and x)))
 	  'x 
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
-
-;;; mungs expr
-(defun knobs-at (expr bindings &key (type (expr-type expr)))
-  (decompose (expr type)
-    (bool
-     (junctor
-      (collecting
-	(let ((tovisit (copy-hash-table (gethash 'bool bindings))))
-	  (mapl (lambda (l)
-		  (let ((subexpr (car l)))
-		    (awhen (extract-literal subexpr)
-		      (remhash (litvariable it) tovisit)
-		      (unless (extract-literal expr)
-			(collect (lambda ()
-				   (rplaca l (identity-elem (car expr)))))
-			(collect (lambda ()
-				   (rplaca l (litnegation it))))
-			(collect (lambda () (rplaca l subexpr)))))))
-		(cdr expr))
-	  (unless (hash-table-empty-p tovist)
-	    (rplacd expr (cons (identity-elem (car expr) (cdr expr))))
-	    (maphash-keys (lambda (x)
-			    (collect (lambda ()
-				       (rplaca (cdr expr) x)))
-			    (collect (lambda ()
-				       (rplaca (cdr expr) (litnegation x)))))
-			  tovisit))))))))
 
 
 ;how would we do two changes at once??
@@ -328,4 +256,5 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 	    normalize-and-reduce 		 
 		       
 ;; 		      (
+
 
