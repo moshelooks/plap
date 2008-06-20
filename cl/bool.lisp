@@ -18,22 +18,36 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun free-variables (expr)
   (if (consp expr)
       (case (car expr)
-	((and or not) (reduce #'nunion (cdr expr) :key #'free-variables)))
+	((and or not) (reduce (bind #'delete-adjacent-duplicates 
+				    (merge 'list /1 /2 #'string<))
+			      (cdr expr)
+			      :key #'free-variables)))
       (list expr)))
 
-(defun truth-table (expr &optional vars)
+(def-memoized-function truth-table (expr 
+				    &optional (vars (free-variables expr)))
   (labels ((enum-bindings (vars)
 	     (if vars 
 		 (flet ((make-bindings (sub-binding v)
 			  (cons (list (car vars) v) sub-binding)))
-		   (mapcan (lambda (b) (list (make-bindings b 'true)
-					     (make-bindings b 'false)))
+		   (mapcan (lambda (b) (list (make-bindings b t)
+					     (make-bindings b nil)))
 			   (enum-bindings (cdr vars))))
 		 (list nil))))
-    (let ((bindings (enum-bindings (or vars (sort (free-variables expr) 
-						  #'string<)))))
-      (values (mapcar (lambda (b) (eval-expr expr :bindings b)) bindings)
-	      bindings))))
+    (mapcar (bind #'eq (eval-expr expr :bindings /1) 'true)
+	    (enum-bindings vars))))
+
+(defun truth-table-hamming-distance (tt1 tt2)
+  (let ((i 0))
+    (map nil (lambda (x y) (unless (eq x y) (incf i)))
+	 tt1 tt2)
+    i))
+(define-test truth-table-hamming-distance
+  (mapc (lambda (tt1 tt2 d)
+	  (assert-equal d (truth-table-hamming-distance tt1 tt2)))
+	'((true true false) (true true) (false true))
+	'((false true true) (true true) (true false))
+	'(2 0 2)))
 
 ;; (defvar *n-random-trees-for-testing* 10000)
 ;; (labels ((randtree (depth)
@@ -64,7 +78,7 @@ Author: madscience@google.com (Moshe Looks) |#
   :type bool
   :condition (junctorp expr)
   :action 
-  (flet ((pred (x) (matches x (and or))))
+  (flet ((pred (x) (and (consp x) (not (cdr x)) (matches (car x) (and or)))))
     (if (find-if #'pred (cdr expr))
 	(cons (car expr) (remove-if #'pred (cdr expr)))
 	expr))

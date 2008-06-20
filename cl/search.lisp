@@ -16,30 +16,6 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun neighbors-at (fn expr bindings &key (type (expr-type expr)))
-;;   (decompose (expr type)
-;;     (bool
-;;      (junctor
-;;       (let ((tovisit (copy-hash-table (gethash 'bool bindings))))
-;; 	(mapl (lambda (l)
-;; 		(let ((subexpr (car l)))
-;; 		  (awhen (extract-literal subexpr)
-;; 		    (remhash (litvariable it) tovisit)
-;; 		    (unless (extract-literal expr)
-;; 		      (rplaca l (identity-elem (car expr)))
-;; 		      (funcall fn expr)
-;; 		      (rplaca l (litnegation it))
-;; 		      (funcall fn expr)
-;; 		      (rplaca l subexpr)))))
-;; 	      (cdr expr))
-;; 	(rplacd expr (cons nil (cdr expr)))
-;; 	(maphash-keys (lambda (x)
-;; 			(rplaca (cdr expr) x)
-;; 			(funcall fn expr)
-;; 			(rplaca (cdr expr) (litnegation x))
-;; 			(funcall fn expr))
-;; 		      tovisit)
-;; 	(rplacd expr (cddr expr))))))
-;;   expr)
   (mapc (lambda (knob)
 	  (map nil (lambda (setting) 
 		     (funcall setting)
@@ -49,18 +25,23 @@ Author: madscience@google.com (Moshe Looks) |#
 	(knobs-at expr bindings :type type))
   expr)
 
+;;;fixme for nested varying types
+(defun enum-neighbors (fn expr bindings &key (type (expr-type expr)))
+  (upwards (bind #'neighbors-at (lambda (x)
+				  (declare (ignore x))
+				  (funcall fn expr))
+		 /1 bindings :type type) expr))
+
 (define-test neighbors-at-bool
   (flet ((test (against expr bindings)
 	   (let* ((expr (canonize expr :type 'bool))
 		  (tmp (copy-tree expr)))
 	     (assert-equal
 	      (setf against (sort against #'total-order))
-	      (sort (collecting (upwards (bind #'neighbors-at
-					       (lambda (expr2) 
-						 (collect (copy-tree expr)))
-					       /1
-					       bindings)
-					 expr))
+	      (sort (collecting (enum-neighbors
+				 (lambda (expr2) (collect (copy-tree expr)))
+				 expr
+				 bindings))
 		     #'total-order))
 	     (assert-equal tmp expr))))
     (test '((or (and x) (and x))
@@ -81,41 +62,51 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or y (and) (and x)))
 	  'x 
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
-
-
-;how would we do two changes at once??
-
-;;   (let ((bindings1 
-;; 	((bindings2 (init-hash-table `((bool ,(init-hash-table 
-;; 					       '((x t) (y t)))))))))
-
-;;       (test '(x (not x) y (not y) (and x y) (and (not x) y) (and x (not y))
-;; 	      (and (not x) (not y))  (or x y) (or (not x) y) (or x (not y))
-;; 	      (or (not x) (not y)))
-;; 	    '(and x y)))))
-;; '(x (not x) y (not y) 
-;; 			  (and x y) (and (not x) y) 
-;; 			  (and x (not y)) (and (not x) (not y))
-;; 			  (or x y) (or (not x) y) 
-;; 			  (or x (not y)) (or (not x) (not y)))
-
-
-;;   (unless (consp expr) nil)
-;;   (if (associativep (car expr)
       
 ;; accepts-locus-p
 
-;; (defun bool-hillclimber (expr vars acceptsp terminationp)
-;;   (let ((expr (canonize 'bool expr))
-;; 	(vars (mapcar (
-;;     (while (not (terminationp expr))
-;;       (let ((tmp (copy-tree expr)))
-;; 	(blockn (loci (bind #'try-changes (lambda (expr) 
-;; 						 (if (acceptsp tmp expr)
-;; 						     (return)))
-;; 				 /1)
-;; 			   expr))))
-;;     expr))
+(defun bool-hillclimb (expr vars acceptsp terminationp)
+  (let ((expr (copy-tree expr))
+	(bindings (init-hash-table `((bool ,(init-hash-set vars))))))
+    (while (not (funcall terminationp expr))
+      (let ((tmp (copy-tree expr)))
+	(blockn (enum-neighbors (lambda (expr) (if (funcall acceptsp tmp expr)
+						   (return)))
+				expr
+				bindings
+				:type 'bool))
+	(when (equalp tmp expr) ;should do a kick
+	  (print* "local minimum at " expr)
+	  (return-from bool-hillclimb expr)))
+      (setf expr (canonize expr :type 'bool)))
+    expr))
+
+(defun make-count-or-score-terminator (count score score-target)
+  (lambda (expr) 
+    (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
+(defun make-greedy-scoring-acceptor (score)
+  (lambda (from to)
+    (print* "fromto" (funcall score from) to (funcall score to))
+    (<= (funcall score from) (funcall score to))))
+
+;;;fixme dangling junctors
+
+; vars should be sorted
+(defun make-truth-table-scorer (target vars)
+  (lambda (expr)
+    (let ((expr (dangling-junctors expr)))
+      (print* expr (truth-table expr vars)) ;;fixme
+      (- (truth-table-hamming-distance target (truth-table expr vars))))))
+
+(defun bool-hillclimb-with-target-expr (target-expr nsteps)
+  (let* ((vars (free-variables target-expr))
+	 (scorer (make-truth-table-scorer (truth-table target-expr vars)
+					  vars)))
+    (bool-hillclimb '(or (and) (and))
+		    vars
+		    (make-greedy-scoring-acceptor scorer)
+		    (make-count-or-score-terminator nsteps scorer 0))))
+				 
 
 ;; (
 ;; 	 (
