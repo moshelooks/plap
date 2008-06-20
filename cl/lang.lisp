@@ -141,7 +141,8 @@ and (act-result name), where name may be any symbol. |#
 		   `(,(car clause)
 		      (cond ,@(mapcar (bind #'by-type (car clause) /1)
 				      (cdr clause))
-			    (t (assert nil () "decomposition not found")))))
+			    (t (assert nil () "decomposition not found for ~S."
+				       ,expr-name)))))
 		 type-clauses))))
 (define-test decompose-bool
   (flet ((dectest (expr)

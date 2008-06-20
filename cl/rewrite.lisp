@@ -137,8 +137,7 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards)
 (define-test flatten-associative
   (assert-equal '(and x y (or q w)) 
-		(flatten-associative '(and x (and y (or q w)))))
-  (assert-equal 3 (+ 2 2)))
+		(flatten-associative '(and x (and y (or q w))))))
 
 (define-reduction compress-identical-subtrees (expr)
     :action (equalp-to-eq expr)
