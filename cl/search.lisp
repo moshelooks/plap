@@ -62,38 +62,63 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or y (and) (and x)))
 	  'x 
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
+
+;;; a weak kick selects n knobs in a representation and randomly twiddles them
+;;; to new settings
+(defun weak-kick (n knobs)
+  (mapc (lambda (knob)
+	  (funcall (elt knob (1+ (random (1- (knob-arity knob)))))))
+	(random-sample n knobs)))
       
-;; accepts-locus-p
+;accepts-locus-p
+(defun validate (expr bindings)
+  (if (literalp expr)
+      (assert (gethash (litvariable expr) (gethash 'bool bindings)) ()
+	      "no binding for variable ~S" (litvariable expr))
+      (progn (assert (junctorp expr) () "~S is not a juctor-expr" expr)
+	     (mapc (bind #'validate /1 bindings) (cdr expr)))))
 
 (defun bool-hillclimb (expr vars acceptsp terminationp)
   (let ((expr (copy-tree expr))
 	(bindings (init-hash-table `((bool ,(init-hash-set vars))))))
     (while (not (funcall terminationp expr))
       (let ((tmp (copy-tree expr)))
-	(blockn (enum-neighbors (lambda (expr) (if (funcall acceptsp tmp expr)
+	(blockn (enum-neighbors (lambda (expr) 
+				  (validate expr bindings)
+				  (if (funcall acceptsp tmp expr)
 						   (return)))
 				expr
 				bindings
 				:type 'bool))
-	(when (equalp tmp expr) ;should do a kick
+	(when (equalp tmp expr)
 	  (print* "local minimum at " expr)
-	  (return-from bool-hillclimb expr)))
+	  (let* ((knobs (knobs-at expr bindings :type 'bool))
+		 (nknobs (length knobs)))
+	    (print* nknobs knobs)
+	    (weak-kick (if (< nknobs 2)
+			   (+ 2 (random (- nknobs 2)))
+			   nknobs)
+		       knobs)
+	    (print* 'kicked-to expr))))
+	  ;(return-from bool-hillclimb expr)))
       (setf expr (canonize expr :type 'bool)))
     expr))
 
 (defun make-count-or-score-terminator (count score score-target)
   (lambda (expr) 
+    (print* 'nevals count)
     (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
 (defun make-greedy-scoring-acceptor (score)
   (lambda (from to)
-    (print* "fromto" (funcall score from) to (funcall score to))
-    (<= (funcall score from) (funcall score to))))
+    (print* 'fromto (funcall score from) to (funcall score to))
+    (< (funcall score from) (funcall score to))))
 
 ;;;fixme dangling junctors
 
 ; vars should be sorted
 (defun make-truth-table-scorer (target vars)
   (lambda (expr)
+    (print* "XX" expr)
     (let ((expr (dangling-junctors expr)))
       (print* expr (truth-table expr vars)) ;;fixme
       (- (truth-table-hamming-distance target (truth-table expr vars))))))

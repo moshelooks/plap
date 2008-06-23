@@ -19,7 +19,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (:use #:cl
 	#:lisp-unit
 	#:org.tfeb.hax.memoize
-	#:cl-utilities))
+	#:cl-utilities
+	#:statistics))
 ;  (:export #:reduce))
 
 ;#:type-union #:fun-type #:atom-type #:tree-type #:eval-tree))
