@@ -20,7 +20,10 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 				  (aif (find expr bindings :key #'car)
 ;; 				       (cadr it)))
 ;; 			     expr))))
-  (aif (eval `(let* ((false nil) (true t) ,@bindings) ,expr))
+  (aif (eval `(let* ((false nil) (true t) ,@bindings)
+;		(macrolet ((and (&rest args) `(and ,args       (and @,args)))
+;			   (or  (&rest args) `(or  (not ,args) (or @,args))))
+		  ,expr));)
        (if (eq it t) 'true it)
 	'false))
 
