@@ -25,6 +25,8 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (+ (fun num (list num)))
 		   (* (fun num (list num)))
 		   (/ (fun num num num))
+
+		   (sin (fun num num))
 		   
 		   (< (fun bool any any))
 		   (= (fun bool any any))))))

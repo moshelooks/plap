@@ -30,7 +30,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (upwards (bind #'neighbors-at (lambda (x)
 				  (declare (ignore x))
 				  (funcall fn expr))
-		 /1 bindings :type type) expr))
+		 /1 bindings :type type)
+	   expr))
 
 (define-test neighbors-at-bool
   (flet ((test (against expr bindings)
@@ -50,6 +51,12 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or (and) (and true)))
 	  'x
 	  (init-hash-table `((bool ,(init-hash-table '((x t)))))))
+    (test '((or (and x) (and (not x)))
+	    (or (and (not x)) (and (not x)))
+	    (or (and) (and x))
+	    (or (and) (and true)))
+	  '(not x)
+	  (init-hash-table `((bool ,(init-hash-table '((x t)))))))
     (test '((or (and x) (and x))
 	    (or (and (not x)) (and x))
 	    (or (and) (and (not x)))
@@ -60,7 +67,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or (and) (and (not y) x))
 	    (or (not y) (and) (and x))
 	    (or y (and) (and x)))
-	  'x 
+	  'x
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
 
 ;;; a weak kick selects n knobs in a representation and randomly twiddles them
@@ -73,8 +80,9 @@ Author: madscience@google.com (Moshe Looks) |#
 ;accepts-locus-p
 (defun validate (expr bindings)
   (if (literalp expr)
-      (assert (gethash (litvariable expr) (gethash 'bool bindings)) ()
-	      "no binding for variable ~S" (litvariable expr))
+      (assert (or (matches expr (true false))
+		  (gethash (litvariable expr) (gethash 'bool bindings)))
+	      () "no binding for variable ~S" (litvariable expr))
       (progn (assert (junctorp expr) () "~S is not a juctor-expr" expr)
 	     (mapc (bind #'validate /1 bindings) (cdr expr)))))
 
@@ -85,7 +93,8 @@ Author: madscience@google.com (Moshe Looks) |#
       (let ((tmp (copy-tree expr)))
 	(blockn (enum-neighbors (lambda (expr) 
 				  (validate expr bindings)
-				  (if (funcall acceptsp tmp expr)
+				  (if (or (funcall acceptsp tmp expr)
+					  (funcall terminationp expr))
 						   (return)))
 				expr
 				bindings
@@ -99,6 +108,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (+ 2 (random (- nknobs 2)))
 			   nknobs)
 		       knobs)
+	    (validate expr bindings)
 	    (print* 'kicked-to expr))))
 	  ;(return-from bool-hillclimb expr)))
       (setf expr (canonize expr :type 'bool)))
@@ -110,7 +120,6 @@ Author: madscience@google.com (Moshe Looks) |#
     (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
 (defun make-greedy-scoring-acceptor (score)
   (lambda (from to)
-    (print* 'fromto (funcall score from) to (funcall score to))
     (< (funcall score from) (funcall score to))))
 
 ;;;fixme dangling junctors
@@ -118,9 +127,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ; vars should be sorted
 (defun make-truth-table-scorer (target vars)
   (lambda (expr)
-    (print* "XX" expr)
     (let ((expr (dangling-junctors expr)))
-      (print* expr (truth-table expr vars)) ;;fixme
       (- (truth-table-hamming-distance target (truth-table expr vars))))))
 
 (defun bool-hillclimb-with-target-expr (target-expr nsteps)

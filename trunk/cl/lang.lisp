@@ -28,9 +28,9 @@ and (act-result name), where name may be any symbol. |#
 	   (if (numberp l)
 	       (if (numberp r)
 		   (if (= l r) nil (if (< l r) 'less 'greater))
-		   'greater)
+		   'less)
 	       (if (numberp r)
-		   'less
+		   'greater
 		   (if (eql l r) nil (if (string< l r) 'less 'greater))))))
     (let ((lnot (and (consp l) (eq (car l) 'not) (not (consp (cadr l)))))
 	  (rnot (and (consp r) (eq (car r) 'not) (not (consp (cadr r))))))
@@ -58,7 +58,7 @@ and (act-result name), where name may be any symbol. |#
   (assert-equal '((a 1) (a 1 1) (a 2)) 
 		(sort '((a 2) (a 1) (a 1 1)) #'total-order))
   (assert-equal 
-   '(a b c nil 1 2 (a 1) (a 2) (b b) (b b b))
+   '(1 2 a b c nil (a 1) (a 2) (b b) (b b b))
    (sort '(2 b 1 a c (a 2) (a 1) (b b) (b b b) nil) #'total-order))
   (assert-equal
    '((a (a (b c))) (a (a (b c)) b) (a (a (b c d))))
@@ -82,15 +82,17 @@ and (act-result name), where name may be any symbol. |#
 		(return-from enumerative-test nil)))))))))
 
 (defun commutativep (x)
-  (matches x (and or)))
+  (matches x (and or * +)))
 (defun associativep (x)
-  (matches x (and or)))
+  (matches x (and or * +)))
 (defun identityp (x)
-  (matches x (and or)))
+  (matches x (and or * +)))
 (defun identity-elem (x)
   (ecase x
     (and 'true)
-    (or 'false)))
+    (or 'false)
+    (* 1)
+    (+ 0)))
 
 (defun expr-size (expr) 
   (if (consp expr)
@@ -120,6 +122,25 @@ and (act-result name), where name may be any symbol. |#
     (assert-equal foo goo)))
 
 
+(macrolet ((mkdecomposer (name &body conditions)
+	     `(defmacro ,name (expr-name &body clauses)
+		`(cond
+		   ,@(mapcar (lambda (clause)
+			       (destructuring-bind (pred &body body) clause
+				 (let ((condition (case pred
+						    ((t) 't)
+						    ,@conditions)))
+				   `(,condition ,@body))))
+			     clauses)))))
+  (mkdecomposer decompose-num
+    (constant `(numberp ,expr-name))
+    (t `(and (consp ,expr-name) (eq (car ,expr-name) ,pred))))
+  (mkdecomposer decompose-bool
+    
+
+
+		       
+  
 ; general utility for decomposing an expr by type and contents
 (defmacro decompose ((expr-name &optional (type (expr-type expr-name)))
 		     &body type-clauses)
@@ -155,6 +176,40 @@ and (act-result name), where name may be any symbol. |#
     (assert-equal 'literal (dectest '(not x)))
     (assert-equal 'junctor (dectest '(and x y)))
     (assert-equal 'other (dectest '(foo bar baz)))))
+
+(defun pair-coefficients (terms)
+  (mapcar (lambda (term)
+	    (if (and (consp term) (eq (car term) '*) (numberp (cadr term)))
+		(cons (cadr term) (if (cdddr term)
+				      (cons '* (cddr term))
+				      (caddr term)))
+		(cons 1 term)))
+	  terms))
+(defmacro linear-decompose (expr (offset-name weights-name terms-name)
+			    &body body)
+  `(flet ((build (offset term-pairs)
+	    (let ((,offset-name offset)
+		  (,weights-name (mapcar #'car term-pairs))
+		  (,terms-name (mapcar #'cdr term-pairs)))
+	      ,@body)))
+     (cond ((numberp ,expr) (build ,expr nil))
+	   ((not (consp ,expr)) 4222)
+	   ((eq (car ,expr) '+)
+	    (if (numberp (cadr ,expr))
+		(build (cadr ,expr) (pair-coefficients (cddr ,expr)))
+		(build 0 (pair-coefficients (cdr ,expr)))))
+	   (t (build 0 (pair-coefficients (list ,expr)))))))
+(define-test linear-decompose
+  (flet ((ldass (expr off wei ter)
+	   (linear-decompose expr (offset weights terms)
+	     (assert-equal off offset)
+	     (assert-equal wei weights)
+	     (assert-equal ter terms))))
+    (ldass '(+ 1 (* 2 x) (* 3 y z)) 1 '(2 3) '(x (* y z)))
+    (ldass 42 42 nil nil)
+    (ldass '(+ 1 x) 1 '(1) '(x))
+    (ldass '(+ x (* y z)) 0 '(1 1) '(x (* y z)))
+    (ldass '(sin x) 0 '(1) '((sin x)))))
 
 ;(defun mapcar-expr (fn expr)
 	     
