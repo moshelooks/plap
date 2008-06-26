@@ -137,7 +137,10 @@ and (act-result name), where name may be any symbol. |#
 			       clauses))))))
     (mkdecomposer decompose-num 'num
 		  (constant `(numberp ,expr))
-		  (t `(and (consp ,expr) (eq (car ,expr) ',pred))))
+		  (t `(and (consp ,expr)
+			   ,(if (consp pred) 
+				`(matches (car ,expr) ,pred)
+				`(eq (car ,expr) ',pred)))))
     (mkdecomposer decompose-bool 'bool
 		  (literal `(literalp ,expr))
 		  (junctor `(junctorp ,expr))))
@@ -159,8 +162,10 @@ and (act-result name), where name may be any symbol. |#
   (assert-equal 
    '(cond ((numberp expr) foo) 
      ((and (consp expr) (eq (car expr) '/)) goo)
+     ((and (consp expr) (matches (car expr) (* +))) loo)
      (t moo))
-   (macroexpand-1 '(decompose-num expr (constant foo) (/ goo) (t moo)))))
+   (macroexpand-1 '(decompose-num 
+		    expr (constant foo) (/ goo) ((* +) loo) (t moo)))))
 (define-test decompose-bool
   (flet ((dectest (expr)
 	   (decompose (expr 'bool)

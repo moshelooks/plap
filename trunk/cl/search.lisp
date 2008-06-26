@@ -69,6 +69,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or y (and) (and x)))
 	  'x
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
+(define-test neighbors-at-num
+  (
 
 ;;; a weak kick selects n knobs in a representation and randomly twiddles them
 ;;; to new settings
@@ -113,6 +115,34 @@ Author: madscience@google.com (Moshe Looks) |#
 	  ;(return-from bool-hillclimb expr)))
       (setf expr (canonize expr :type 'bool)))
     expr))
+
+;; (defun num-hillclimb (expr vars acceptsp terminationp)
+;;   (let ((expr (copy-tree expr))
+;; 	(bindings (init-hash-table `((bool ,(init-hash-set vars))))))
+;;     (while (not (funcall terminationp expr))
+;;       (let ((tmp (copy-tree expr)))
+;; 	(blockn (enum-neighbors (lambda (expr) 
+;; 				  (validate expr bindings)
+;; 				  (if (or (funcall acceptsp tmp expr)
+;; 					  (funcall terminationp expr))
+;; 						   (return)))
+;; 				expr
+;; 				bindings
+;; 				:type 'bool))
+;; 	(when (equalp tmp expr)
+;; 	  (print* "local minimum at " expr)
+;; 	  (let* ((knobs (knobs-at expr bindings :type 'bool))
+;; 		 (nknobs (length knobs)))
+;; 	    (print* nknobs knobs)
+;; 	    (weak-kick (if (< nknobs 2)
+;; 			   (+ 2 (random (- nknobs 2)))
+;; 			   nknobs)
+;; 		       knobs)
+;; 	    (validate expr bindings)
+;; 	    (print* 'kicked-to expr))))
+;; 	  ;(return-from bool-hillclimb expr)))
+;;       (setf expr (canonize expr :type 'bool)))
+;;     expr))
 
 (defun make-count-or-score-terminator (count score score-target)
   (lambda (expr) 

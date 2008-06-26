@@ -14,6 +14,10 @@ limitations under the License.
 
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
-(AND (OR Y (NOT X)) X (OR (NOT Y) Z (NOT Z)))
 
-and(or(#2 not(#1)) #1 or(not(#2) #3 not(#3))) 
+(defun little-epsilon (x) 
+  (let ((y (abs x))
+	(v 0.01))
+    (if (< y (/ v 2)) (/ y 2) v)))
+(defun big-epsilon (x)
+  (if (eql x 0) 1 (/ (+ 1 (abs x)) 2)))
