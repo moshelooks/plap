@@ -42,17 +42,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (decompose-num expr
 	     (/ (rec-canonize expr))
 	     (t (list '/ (linear-structure (rec-canonize expr)) (list '+ 1)))))
-	    
-;;     (+ (list '+ offset (mapcar (bind #'list '* /1 /2) weights terms)))
-;; 		 (t `((
-;; 		   (list (list '+ expr)
-
-;; 		   (t (list (linear-decompose expr (offset weights terms)
-;; 			      (cons '+ 
-;; 				    (cons offset (mapcar (bind #'list '* /1 /2)
-;; 							 weights terms))))))
-;; 			    (list '+ 1))))))
-;		   (t (list (list '+ expr) (list '+ 1))))))
 	 (num-structure (expr &optional (offset 0) (weight 1))
 	   (list '+ offset (list '* weight (div-structure expr)))))
       (decompose (expr type)
@@ -75,33 +64,6 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (mapcar (lambda (weight term)
 				    (list '* weight (div-structure term)))
 				  weights terms)))))))))))
-	
-				  
-	  
-		 
-;; 	 (/ (div-structure (canonize (cadr expr) :type 'num :parent op)
-;; 			   (canonize (caddr expr) :type 'num :parent op)))
-;; 	 (linear (offset terms) 
-		 
-;; 	 (* (div-structure (flet ((structure (c terms)
-;; 				    (nconc (list '* c)
-;; 					   (mapcar
-;; 					    (bind #'canonize /1 :type 'num
-;; 						  :parent op)
-;; 					    terms))
-;; if (numberp (cadr expr))
-;; 			     (
-;; 	 (+ (let ((div-expr (find-if (lambda (x) 
-;; 				       (and (consp x) (eq (car x) '/)))
-;; 				     (cdr expr))))
-;; 	      (i
-			     
-;;  (list '* expr
-;; 	 (num
-;; 	 (t (num-structure (rec-canonize))))))))
-	 
-
-;; expr)))))
 
 (define-test canonize-bool
   (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
