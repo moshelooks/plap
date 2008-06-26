@@ -79,6 +79,19 @@ Author: madscience@google.com (Moshe Looks) |#
 		(canonize '(< 2 3) :type 'bool)))
 (define-test canonize-num
   (assert-equal '(+ 0 
+		  (* 0 (expt2 (+ 0)))
+		  (* 0 (log2 (+ 1)))
+		  (* 0 (sin (+ 0)))
+		  (* 0 (/ (+ 0 	
+			     (* 0 (expt2 (+ 0)))
+			     (* 0 (log2 (+ 1)))
+			     (* 0 (sin (+ 0))))
+ 			  (+ 1 	
+			     (* 0 (expt2 (+ 0)))
+			     (* 0 (log2 (+ 1)))
+			     (* 0 (sin (+ 0)))))))
+		(canonize 0))
+  (assert-equal '(+ 0 
 		  (* 0 (/ (+ 0) (+ 1)))
 		  (* 1 (/ (+ 0 (* 1 x)) (+ 1))))
 		(canonize 'x :type 'num))
@@ -183,10 +196,10 @@ Author: madscience@google.com (Moshe Looks) |#
     (test-knob list knob res)))
 
 (defun knobs-at (expr bindings &key (type (expr-type expr)))
-  (decompose (expr type)
-    (bool
-     (junctor
-      (collecting ; all the knobs
+  (collecting
+    (decompose (expr type)
+      (bool
+       (junctor
 	(let ((tovisit (copy-hash-table (gethash 'bool bindings))))
 	  (aif (extract-literal expr)
 	       (remhash (litvariable it) tovisit)
@@ -198,11 +211,18 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (collect (make-replacer-knob 
 				     (cdr at) ; a single knob for:
 				     (identity-elem (car at)) ; 1 rm
-				     (litnegation it)))))) ; 2 negate
+				     (litnegation it))))))    ; 2 negate
 		     (cdr expr)))
 	  (maphash-keys (lambda (x)
-			  (collect (make-inserter-knob expr
-						       x
-						       (litnegation x))))
-			  tovisit))))
-     (t nil))))
+			  (collect (make-inserter-knob 
+				    expr x (litnegation x))))
+			tovisit))))
+      (num
+       ((* +) (let ((x (cadr expr)))
+		(when (numberp x)
+		  (let ((e1 (little-epsilon x)) 
+			(e2 (big-epsilon x)))
+		    (collect (make-replacer-knob (cdr expr) (+ x e1) (- x e1)
+						 (- x e2) (+ x e2)))))
+		(collect (make-inserter-knob (cdr expr)
+		  
