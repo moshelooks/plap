@@ -56,15 +56,15 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; (type-of-first (lambda (&rest l) (tree-type (car l))))		   
   (defun fun-type (f) 
     (multiple-value-bind (v exists) (gethash f fun2type)
-      (assert exists () (concatenate 'string "couldn't find a type for " 
-				     (string f)))
+      (unless exists 
+	(warn (concatenate 'string "couldn't find a type for " (string f))))
       v)))
 (defun atom-type (x)
   (cond ((or (eq x 'true) (eq x 'false)) 'bool)
 	((numberp x) 'num)
 	((null x) nil)
 	(t (fun-type x))))
-(defun expr-type (tree) ;fixme - doesn't yet handle user-defined funs
+(defun expr-type (tree &optional bindings)
   (if (consp tree)
       (case (car tree)
 	(list (list 'list (type-of (cadr tree))))
@@ -72,7 +72,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	(t (let ((type (fun-type (car tree))))
 	     (assert (eq (car type) 'fun))
 	     (cadr type))))
-      (atom-type tree)))
+      (if tree
+	  (aif (and bindings (gethash tree bindings)) it (atom-type tree)))))
 (define-all-equal-test expr-type
     `((bool (true false (and true false) (not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) (+ 1 2 3) (* (+ 1 0) 3)))

@@ -121,50 +121,46 @@ and (act-result name), where name may be any symbol. |#
     (assert-eq (second foo) (third foo) (fourth foo))
     (assert-equal foo goo)))
 
-
-(macrolet ((mkdecomposer (name &body conditions)
-	     `(defmacro ,name (expr-name &body clauses)
-		`(cond
-		   ,@(mapcar (lambda (clause)
-			       (destructuring-bind (pred &body body) clause
-				 (let ((condition (case pred
-						    ((t) 't)
-						    ,@conditions)))
-				   `(,condition ,@body))))
-			     clauses)))))
-  (mkdecomposer decompose-num
-    (constant `(numberp ,expr-name))
-    (t `(and (consp ,expr-name) (eq (car ,expr-name) ,pred))))
-  (mkdecomposer decompose-bool
-    
-
-
-		       
-  
-; general utility for decomposing an expr by type and contents
-(defmacro decompose ((expr-name &optional (type (expr-type expr-name)))
-		     &body type-clauses)
-  (flet ((by-type (type sub)
-	   (flet ((mkcase (condition) `(,condition ,@(cdr sub))))
-	     (ecase type
-	       (bool 
-		(if (consp sub)
-		    (case (car sub)
-		      (literal (mkcase `(literalp ,expr-name)))
-		      (junctor (mkcase `(junctorp ,expr-name)))
-		      ((t) (mkcase 't))
-		      (t `(t ,sub)))
-		    `(t ,sub)))
-	       (num
-		`(t ,sub))))))
+;;; decompositions of expressions by contents and type
+(let ((decomposer-types-to-names (make-hash-table)))
+  (macrolet
+      ((mkdecomposer (name type &body conditions)
+	 `(progn
+	    (setf (gethash ,type decomposer-types-to-names) ',name)
+	    (defmacro ,name (expr &body clauses)
+	      `(cond ,@(mapcar (lambda (clause)
+				 (destructuring-bind (pred &body body) clause
+				   (let ((condition (case pred
+						      ((t) 't)
+						      ,@conditions)))
+				     `(,condition ,@body))))
+			       clauses))))))
+    (mkdecomposer decompose-num 'num
+		  (constant `(numberp ,expr))
+		  (t `(and (consp ,expr) (eq (car ,expr) ',pred))))
+    (mkdecomposer decompose-bool 'bool
+		  (literal `(literalp ,expr))
+		  (junctor `(junctorp ,expr))))
+  (defmacro decompose ((expr type) &body type-clauses)
     `(ecase ,type
-       ,@(mapcar (lambda (clause)
-		   `(,(car clause)
-		      (cond ,@(mapcar (bind #'by-type (car clause) /1)
-				      (cdr clause))
-			    (t (assert nil () "decomposition not found for ~S."
-				       ,expr-name)))))
+       ,@(mapcar (lambda (type-clause)
+		   (destructuring-bind (type &body subdecomp) type-clause
+		     `(,type (,(gethash type decomposer-types-to-names)
+			       ,expr ,@subdecomp))))
 		 type-clauses))))
+(define-test decompose-expansion
+  (assert-equal
+   '(ecase 'num
+     (num (decompose-num myexpr (constant foo) (/ goo) (t moo)))
+     (bool (decompose-bool myexpr (literal foo) (constant goo) (t moo))))
+   (macroexpand-1 '(decompose (myexpr 'num)
+		    (num (constant foo) (/ goo) (t moo))
+		    (bool (literal foo) (constant goo) (t moo)))))
+  (assert-equal 
+   '(cond ((numberp expr) foo) 
+     ((and (consp expr) (eq (car expr) '/)) goo)
+     (t moo))
+   (macroexpand-1 '(decompose-num expr (constant foo) (/ goo) (t moo)))))
 (define-test decompose-bool
   (flet ((dectest (expr)
 	   (decompose (expr 'bool)
@@ -193,7 +189,7 @@ and (act-result name), where name may be any symbol. |#
 		  (,terms-name (mapcar #'cdr term-pairs)))
 	      ,@body)))
      (cond ((numberp ,expr) (build ,expr nil))
-	   ((not (consp ,expr)) 4222)
+	   ((not (consp ,expr)) (build 0 (list (cons 1 ,expr))))
 	   ((eq (car ,expr) '+)
 	    (if (numberp (cadr ,expr))
 		(build (cadr ,expr) (pair-coefficients (cddr ,expr)))
@@ -209,6 +205,7 @@ and (act-result name), where name may be any symbol. |#
     (ldass 42 42 nil nil)
     (ldass '(+ 1 x) 1 '(1) '(x))
     (ldass '(+ x (* y z)) 0 '(1 1) '(x (* y z)))
+    (ldass 'x 0 '(1) '(x))
     (ldass '(sin x) 0 '(1) '((sin x)))))
 
 ;(defun mapcar-expr (fn expr)
