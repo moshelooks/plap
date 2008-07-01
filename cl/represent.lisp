@@ -16,19 +16,124 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun canonize (expr &key (type (expr-type expr)) parent)
-  (let ((op (if (consp expr) (car expr))))
+  (let ((op (if (consp expr) (car expr)))
+	(op-offsets '(0 1 0))
+	(ops '(exp log sin)))
     (labels
-	((rec-canonize (expr) 
-	   (let ((op (if (consp expr) (car expr))))
-	     (if op
-		 (cons op (mapcar (bind #'canonize /1 :parent op
-					:type (or (expr-type /1) type)) ;fixme
-				  (cdr expr)))
-		 expr)))
+	((canonize-children (expr)
+	   (if (consp expr)
+	       (cons (car expr) (mapcar (bind #'canonize /1 :parent op ;fixme
+					      :type (or (expr-type /1) type))
+					  (cdr expr)))
+	       expr))
 	 (bool-structure (expr)
 	   (if parent 
 	       (list (dual-bool-op parent) expr)
 	       (list 'or (list 'and) (list 'and expr))))
+
+	 (sum-of-products (o ws ts)
+	   (nconc (list '+ o)
+		  ;;;
+		  (product-of-sums 0 nil nil)
+		  (mapcar (lambda (weight term)
+			    (multiple-value-bind (o ws ts)
+				(split-product-of-sums term)
+			      (assert (eql o 1))
+			      (product-of-sums weight ws ts)))
+			  ws ts)))
+	 (product-of-sums (o ws ts)
+	   (nconc (list '* o)
+		  ;;;
+		  (sum-of-products 0 nil nil)
+		  (mapcar (lambda (weight term)
+			    (nconc (list '+ weight)
+				   (decompose-num term
+				     (+ (cdr term))
+				     (t term))))
+					
+			  ws ts)
+		  
+			   (mapcar (bind #'list '+ 1 (weighted-op /1 /2))
+				   op-offsets ops))
+		    (mapcar #'product-of-sums ws ts))))
+
+	 (weighted-op (offset op)
+	   (list '* 0 (list op (nconc (list '+ offset)
+				      (mapcar
+				       (bind #'list '* 0 (list /1 ('+ /2)))
+				       ops op-offsets)))))
+	 (full-sum-of-products (expr)
+	   (multiple-value-bind (o ws ts) (split-sum-of-products expr)
+	     (nconc (list '+ o) (mapcar #'weighted-op ops op-offsets)
+		    (nconc (list '* 0) 
+			   (mapcar (bind #'list '+ 1 (weighted-op /1 /2))
+				   op-offsets ops))
+		    (mapcar #'product-of-sums ws ts))))
+	 (product-of-sums (weight term)
+	   (list '* weight
+			      (let (
+#'linear-weighted-op ops offsets)
+			  
+(lambda (op offset)
+			      
+
+
+(bind make-term /1 
+
+	 (sum-of-products (expr)
+	   (multiple-value-bind (o ws ts) (split-sum-of-products expr)
+	     (nconc (list '+ offset (list '* 0)
+		    (mapcar (lambda (weight term)
+			      (assert (eq (car term) '*))
+			      (assert (eq (cadr term 1)))
+			      (assert (equal (caddr term '(+ 0))))
+			      (list '* weight (cdddr term)))
+			    ws (mapcar #'product-of-sums ts))
+	   (product-of-sums (expr)
+	     (multiple-value-bind (o ws ts) (split-product-of-sums expr)
+	       (nconc (list '* o (list '+ 1))
+		      (mapcar (lambda (weight term)
+				(li
+	     (ncons
+	       
+      (case type
+	(bool
+	 (decompose-bool expr
+	   (literal (bool-structure expr))
+	   (junctor (let ((body (nconc (list op (list (dual-bool-op op)))
+				       (canonize-children expr))))
+		      (if parent 
+			  body 
+			  (list (dual-bool-op op) (list op) body))))
+	   (t (structure (canonize-children expr)))))
+	(num 
+	 (sum-of-products expr))
+	     ((sum-of-products (expr)
+		(multiple-value-bind (offset weights terms)
+		    (get-sum-of-products expr)
+		  (make-sum-of-products offset 
+					(cons 0 weights) 
+					(cons nil (mapcar #'product-of-sums terms)
+	     (nconc (list offset (list '*))
+		    (mapcar (lambda weight term
+
+structure (expr)))
+	   (sum-of-products expr)
+
+	   (apply
+	    #'full-p-of-s
+	    (decompose-num expr
+	      (constant `(,expr nil nil))
+	      (* `(0 (1) (,(apply #'full-s-of-p 
+				  (multiple-value-bind (offset weights terms)
+				      (get-s-of-p expr)
+			     offset weights (mapcar #'rec-canonize))))))
+	     (t (multiple-value-bind (offset weights terms) 
+		    (linear-decompose expr)
+		  `(,offset ,weights ,(mapcar #'rec-canonize terms))))))))
+
+
+
 	 (linear-structure (expr)
 	   (linear-decompose expr (offset weights terms)
 	     (nconc (list '+ offset)
@@ -44,16 +149,10 @@ Author: madscience@google.com (Moshe Looks) |#
 	     (t (list '/ (linear-structure (rec-canonize expr)) (list '+ 1)))))
 	 (num-structure (expr &optional (offset 0) (weight 1))
 	   (list '+ offset (list '* weight (div-structure expr)))))
-      (decompose (expr type)
-	(bool
-	 (literal (bool-structure expr))
-	 (junctor 
-	  (let 
-	      ((body (apply #'list op (list (dual-bool-op op))
-			    (mapcar (bind #'canonize /1 :type 'bool :parent op)
-				    (cdr expr)))))
-	    (if parent body (list (dual-bool-op op) (list op) body))))
-	 (t (bool-structure (rec-canonize expr))))
+      (case type
+	(bool (bool-case expr
+			 
+
 	(num
 	 (constant (num-structure expr))
 	 (t (case  parent
@@ -77,45 +176,262 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal '(or (and) (and (< (+ 0 (* 1 (/ (+ 2) (+ 1))))
 				   (+ 0 (* 1 (/ (+ 3) (+ 1)))))))
 		(canonize '(< 2 3) :type 'bool)))
-(define-test canonize-num
-  (assert-equal '(+ 0 
-		  (* 0 (expt2 (+ 0)))
-		  (* 0 (log2 (+ 1)))
-		  (* 0 (sin (+ 0)))
-		  (* 0 (/ (+ 0 	
-			     (* 0 (expt2 (+ 0)))
-			     (* 0 (log2 (+ 1)))
-			     (* 0 (sin (+ 0))))
- 			  (+ 1 	
-			     (* 0 (expt2 (+ 0)))
-			     (* 0 (log2 (+ 1)))
-			     (* 0 (sin (+ 0)))))))
-		(canonize 0))
-  (assert-equal '(+ 0 
-		  (* 0 (/ (+ 0) (+ 1)))
-		  (* 1 (/ (+ 0 (* 1 x)) (+ 1))))
-		(canonize 'x :type 'num))
-  (assert-equal '(+ 0 
-		  (* 0 (/ (+ 0) (+ 1)))
-		  (* 1 (/ (+ 0 (* 1 (sin (+ 0 
-					    (* 0 (/ (+ 0) (+ 1)))
-					    (* 1 (/ (+ 0 (* 1 x)) (+ 1)))))))
-			(+ 1))))
-		(canonize '(sin x)))
-  (assert-equal '(+ 0
-		  (* 0 (/ (+ 0) (+ 1)))
-		  (* 1 (/ (+ 0 (* 1 x)) (+ 0 (* 1 y)))))
-		(canonize '(/ x y)))
-  (assert-equal '(+ 0
-		  (* 0 (/ (+ 0) (+ 1)))
-		  (* 1 (/ (+ 0 (* 1 (+ 0 (* 1 x)) (+ 0 (* 1 y))))
-			(+ 1))))
-		(canonize '(* x y)))
-  (assert-equal '(+ 0 
-		  (* 0 (/ (+ 0) (+ 1)))
-		  (* 1 (/ (+ 0 (* 1 x)) (+ 1)))
-		  (* 1 (/ (+ 0 (* 1 y)) (+ 1))))
-		(canonize '(+ x y))))
+
+(product-of-sums-decompose expr (offset weights terms)
+  (product-of-sums-structure 
+
+(* 1 (+ 0)
+
+(* 3 x y)
+
+(+ (*) (* (+ 3) (+ x) (+ y))
+
+(product-of-sums (* x y (sin z))) -> 
+  (* (+ 1) (+ 1 x) (+ y) (+ 1 (sin (sum-of-prods z))
+
+(sums-of-products (+ x y (sin z))) -> 
+  (+ (* 0) (* 1 x) (* 1 y) (+ 1 (sin (sum-of-prods z))
+
+********
+examples
+
+x^2*y^2
+log(x)*log(y)
+(x+y)*x
+(x+y)*(x+y)
+x*log(x*x)
+
+(+ (* (+) (+)) (* (+) (+)))
+
+(+ x y 
+   (* (exp (+ x y 
+	      (* (exp (+ x y))
+		 (log (+ x y))
+		 (log (+ x y))
+		 (sin (+ x y)))
+	      (* (exp (+ x y))
+		 (log (+ x y))
+		 (log (+ x y))
+		 (sin (+ x y)))))
+      (log (+ x y 
+	      (* (log (+ x y))
+		 (sin (+ x y)))
+	      (* (log (+ x y))
+		 (sin (+ x y)))))
+
+(* x y))) 
+      (log (+ x y (* x y))) 
+      (sin (+ x y (* x y))))
+   (exp (+ x y
+	   (* x y
+	      (exp (+ x y (* x y))) 
+	      (log (+ x y (* x y))) 
+	      (sin (+ x y (* x y))))))
+   (log (+ x y
+	   (* x y
+	      (exp (+ x y (* x y))) 
+	      (log (+ x y (* x y))) 
+	      (sin (+ x y (* x y))))))
+   (sin (+ x y
+	   (* x y
+	      (exp (+ x y (* x y))) 
+	      (log (+ x y (* x y))) 
+	      (sin (+ x y (* x y)))))))
+
+*****
+(+ 0
+   (* 0 (exp (+ 0 
+		(* 0 (exp (+ 0)))
+		(* 0 (log (+ 1)))
+		(* 0 (sin (+ 0))))))
+   (* 0 (log (+ 1
+		(* 0 (exp (+ 0)))
+		(* 0 (log (+ 1)))
+		(* 0 (sin (+ 0))))))
+   (* 0 (sin (+ 0
+		(* 0 (exp (+ 0)))
+		(* 0 (log (+ 1)))
+		(* 0 (sin (+ 0))))))
+   (* 0
+      (+ 1 (* 0 (exp (+ 0 
+			(* 0 (exp (+ 0)))
+			(* 0 (log (+ 1)))
+			(* 0 (sin (+ 0)))))))
+      (+ 1 (* 0 (log (+ 1
+			(* 0 (exp (+ 0)))
+			(* 0 (log (+ 1)))
+			(* 0 (sin (+ 0)))))))
+      (+ 1 (* 0 (sin (+ 0
+			(* 0 (exp (+ 0)))
+			(* 0 (log (+ 1)))
+			(* 0 (sin (+ 0)))))))))
+
+*****
+
+(+ x
+   y
+   (log (+ x y (* x y)))
+   (exp (+ x y (* x y)))
+   (sin (+ x y (* x y)))
+
+
+
+(+ 0
+   (* 0 x)
+   (* 0 (exp (+ 0 
+		(* 0 x)
+		(* 0 (exp (+ 0 (* 0 x))))
+		(* 0 (log (+ 1 (* 0 x))))
+		(* 0 (sin (+ 0 (* 0 x)))))))
+   (* 0 (log (+ 1
+		(* 0 x)
+		(* 0 (exp (+ 0 (* 0 x))))
+		(* 0 (log (+ 1 (* 0 x))))
+		(* 0 (sin (+ 0 (* 0 x)))))))
+   (* 0 (sin (+ 0
+		(* 0 x)
+		(* 0 (exp (+ 0 (* 0 x))))
+		(* 0 (log (+ 1 (* 0 x))))
+		(* 0 (sin (+ 0 (* 0 x)))))))
+   (* 0
+      (+ 1 (* 0 x))
+      (+ 1 (* 0 (exp (+ 0 
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))
+      (+ 1 (* 0 (log (+ 1
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))
+      (+ 1 (* 0 (sin (+ 0
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x)))))))))
+   (* 1
+      (+ 0 (* 1 x))
+      (+ 1 (* 0 (exp (+ 0 
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))
+      (+ 1 (* 0 (log (+ 1
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))
+      (+ 1 (* 0 (sin (+ 0
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x)))))))))
+   (* 1
+      (+ 1 (* 0 x))
+      (+ 1 (* 0 (exp (+ 0 
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))
+      (+ 1 (* 0 (log (+ 1
+			(* 0 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))
+      (+ 0 (* 1 (sin (+ 0
+			(* 1 x)
+			(* 0 (exp (+ 0 (* 0 x))))
+			(* 0 (log (+ 1 (* 0 x))))
+			(* 0 (sin (+ 0 (* 0 x))))))))))
+
+
+      (+ 1 (* 0 (exp (+ 0))))
+      (+ 1 (* 0 (log (+ 1))))
+      (+ 1 (* 0 (sin (+ 0)))))
+   (* 0
+      (+ 1 (* 0 (exp (+ 0))))
+      (+ 1 (* 0 (log (+ 1))))
+      (+ 1 (* 0 (sin (+ 0))))))
+
+n variables gives
+
+(((n+2)*3+n+2)*3+n+1)*2+4 knobs =
+32+18+26n+4 knobs =
+54+26n knobs.
+
+
+
+
+
+;; (0              (+ (*) (*))
+;; (x              (+ (*) (* x))
+;; ((sin x)        (+ (*) (* (sin (+ (*) (* x))))))
+;; ((* x y)        (+ (*) (* (+) (+ x) (+ y)))
+;; ((+ x y)        (* (+) (+ (*) (* x) (* y)))
+;; ((sin (log x))  (+ (*) (* (sin (+ (*) (* (log (+ (*) (* x)))))))))
+;; ((* (+ x y) z)  (+ (*) (* (+) (+ (* x) (* y)) (+ z))))
+
+
+;; (define-test canonize-num
+;;   (assert-equal '(+ 0 
+;; 		  (* 0 (exp (+ 0)))
+;; 		  (* 0 (log (+ 1)))
+;; 		  (* 0 (sin (+ 0))))
+;; 		(canonize 0))
+;;   (assert-equal '(+ 0 
+;; 		  (* 0 (exp (+ 0)))
+;; 		  (* 0 (log (+ 1)))
+;; 		  (* 0 (sin (+ 0)))
+;; 		  (* 
+;; 		   (+ 0 (* 1 x))
+;; 		   (+ 1 (* 0 (exp (+ 0))))
+;; 		   (+ 1 (* 0 (log (+ 1))))
+;; 		   (+ 1 (* 0 (sin (+ 0))))))
+;; 		(canonize 'x :type 'num))
+;;   (assert-equal '(+ 0 
+;; 		  (* 0 (exp (+ 0)))
+;; 		  (* 0 (log (+ 1)))
+;; 		  (* 
+;; 		   (+ 1 (* 0 (exp (+ 0))))
+;; 		   (+ 1 (* 0 (log (+ 1))))
+;; 		   (+ 0 (* 1 (sin (+ 0))))))
+;; 		(canonize '(sin x)))
+;;   (assert-equal '(+ 0 
+;; 		  (* 0 (exp (+ 0)))
+;; 		  (* 0 (log (+ 1)))
+;; 		  (* 0 (sin (+ 0)))
+;; 		  (* 
+;; 		   (+ 0 
+;; 		    (* 1 x)
+;; 		    (* 0 (exp (+ 0)))
+;; 		    (* 0 (log (+ 1))))
+;; 		   (+ 1 (* 0 (sin (+ 0))))
+;; 		    )
+;; 		   (+ 0 (* 1 y))
+;; 		   (+ 1 (* 0 (exp (+ 0))))
+;; 		   (+ 1 (* 0 (log (+ 1))))
+;; 		   (+ 1 (* 0 (sin (+ 0))))))
+;; 		(canonize '(* x y)))
+;;   (assert-equal '(+ 0 
+;; 		  (* 0 (exp (+ 0)))
+;; 		  (* 0 (log (+ 1)))
+;; 		  (* 0 (sin (+ 0)))
+;; 		  (* 
+;; 		   (+ 0 (* 1 x))
+;; 		   (+ 1 (* 0 (exp (+ 0))))
+;; 		   (+ 1 (* 0 (log (+ 1))))
+;; 		   (+ 1 (* 0 (sin (+ 0))))))
+
+;; (+ 0 
+;; 		  (* 0 (/ (+ 0) (+ 1)))
+;; 		  (* 1 (/ (+ 0 (* 1 x)) (+ 1)))
+;; 		  (* 1 (/ (+ 0 (* 1 y)) (+ 1))))
+;; 		(canonize '(+ x y))))
+
+;; 		   (+ 1 (* 0 (exp (+ 0))))
+;; 		   (+ 1 (* 0 (log (+ 1))))
+;; 		   (+ 1 (* 0 (sin (+ 0))))))
 
 (defun loci (fn expr &key (type (expr-type expr)) parents)
   (flet ((boolrec (&optional type)
@@ -216,13 +532,13 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (maphash-keys (lambda (x)
 			  (collect (make-inserter-knob 
 				    expr x (litnegation x))))
-			tovisit))))
-      (num
-       ((* +) (let ((x (cadr expr)))
-		(when (numberp x)
-		  (let ((e1 (little-epsilon x)) 
-			(e2 (big-epsilon x)))
-		    (collect (make-replacer-knob (cdr expr) (+ x e1) (- x e1)
-						 (- x e2) (+ x e2)))))
-		(collect (make-inserter-knob (cdr expr)
+			tovisit)))))))
+;;       (num
+;;        ((* +) (let ((x (cadr expr)))
+;; 		(when (numberp x)
+;; 		  (let ((e1 (little-epsilon x)) 
+;; 			(e2 (big-epsilon x)))
+;; 		    (collect (make-replacer-knob (cdr expr) (+ x e1) (- x e1)
+;; 						 (- x e2) (+ x e2)))))
+;; 		(collect (make-inserter-knob (cdr expr)
 		  

@@ -21,11 +21,9 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 				       (cadr it)))
 ;; 			     expr))))
   (aif (eval `(let* ((false nil) (true t) ,@bindings)
-		(flet ((expt2 (x) (expt 2 x))
-		       (log2 (x) (log x 2)))
 ;		(macrolet ((and (&rest args) `(and ,args       (and @,args)))
 ;			   (or  (&rest args) `(or  (not ,args) (or @,args))))
-		  ,expr)))
+		,expr))
        (if (eq it t) 'true it)
        'false))
 

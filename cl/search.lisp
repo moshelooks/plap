@@ -69,8 +69,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (or y (and) (and x)))
 	  'x
 	  (init-hash-table `((bool ,(init-hash-table '((x t) (y t)))))))))
-(define-test neighbors-at-num
-  (
+;(define-test neighbors-at-num
+;  (
 
 ;;; a weak kick selects n knobs in a representation and randomly twiddles them
 ;;; to new settings
