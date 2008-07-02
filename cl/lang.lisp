@@ -121,44 +121,27 @@ and (act-result name), where name may be any symbol. |#
     (assert-eq (second foo) (third foo) (fourth foo))
     (assert-equal foo goo)))
 
-;;; decompositions of expressions by contents and type
-(let ((decomposer-types-to-names (make-hash-table)))
-  (macrolet
-      ((mkdecomposer (name type &body conditions)
-	 `(progn
-	    (setf (gethash ,type decomposer-types-to-names) ',name)
-	    (defmacro ,name (expr &body clauses)
-	      `(cond ,@(mapcar (lambda (clause)
-				 (destructuring-bind (pred &body body) clause
-				   (let ((condition (case pred
-						      ((t) 't)
-						      ,@conditions)))
-				     `(,condition ,@body))))
-			       clauses))))))
-    (mkdecomposer decompose-num 'num
-		  (constant `(numberp ,expr))
-		  (t `(and (consp ,expr)
-			   ,(if (consp pred) 
-				`(matches (car ,expr) ,pred)
-				`(eq (car ,expr) ',pred)))))
-    (mkdecomposer decompose-bool 'bool
-		  (literal `(literalp ,expr))
-		  (junctor `(junctorp ,expr))))
-  (defmacro decompose ((expr type) &body type-clauses)
-    `(ecase ,type
-       ,@(mapcar (lambda (type-clause)
-		   (destructuring-bind (type &body subdecomp) type-clause
-		     `(,type (,(gethash type decomposer-types-to-names)
-			       ,expr ,@subdecomp))))
-		 type-clauses))))
-(define-test decompose-expansion
-  (assert-equal
-   '(ecase 'num
-     (num (decompose-num myexpr (constant foo) (/ goo) (t moo)))
-     (bool (decompose-bool myexpr (literal foo) (constant goo) (t moo))))
-   (macroexpand-1 '(decompose (myexpr 'num)
-		    (num (constant foo) (/ goo) (t moo))
-		    (bool (literal foo) (constant goo) (t moo)))))
+;;; decompositions of expressions by contents
+(macrolet
+    ((mkdecomposer (name type &body conditions)
+       `(defmacro ,name (expr &body clauses)
+	  `(cond ,@(mapcar (lambda (clause)
+			     (destructuring-bind (pred &body body) clause
+			       (let ((condition (case pred
+						  ((t) 't)
+						  ,@conditions)))
+				 `(,condition ,@body))))
+			   clauses)))))
+  (mkdecomposer decompose-num 'num
+		(constant `(numberp ,expr))
+		(t `(and (consp ,expr)
+			 ,(if (consp pred) 
+			      `(matches (car ,expr) ,pred)
+			      `(eq (car ,expr) ',pred)))))
+  (mkdecomposer decompose-bool 'bool
+		(literal `(literalp ,expr))
+		(junctor `(junctorp ,expr))))
+(define-test decompose-num
   (assert-equal 
    '(cond ((numberp expr) foo) 
      ((and (consp expr) (eq (car expr) '/)) goo)
@@ -168,11 +151,10 @@ and (act-result name), where name may be any symbol. |#
 		    expr (constant foo) (/ goo) ((* +) loo) (t moo)))))
 (define-test decompose-bool
   (flet ((dectest (expr)
-	   (decompose (expr 'bool)
-	     (bool
-	      (junctor 'junctor)
-	      (literal 'literal)
-	      (t 'other)))))
+	   (decompose-bool expr
+	     (junctor 'junctor)
+	     (literal 'literal)
+	     (t 'other))))
     (assert-equal 'literal (dectest 'x))
     (assert-equal 'literal (dectest '(not x)))
     (assert-equal 'junctor (dectest '(and x y)))
@@ -202,27 +184,43 @@ and (act-result name), where name may be any symbol. |#
 				  (mksplit op-identity (cdr expr))))
 	  (t (mksplit op-identity `(,expr))))))
 
-(defun get-sum-of-products (expr) (dual-decompose ,expr '+ 0 '* 1))
-(defun make-sum-of-products (offset weights terms)
-     ,@body))
-(define-test linear-decompose
-  (flet ((ldass (expr off wei ter)
-	   (multiple-value-bind (offset weights terms) (linear-decompose expr)
-	     (assert-equal off offset)
-	     (assert-equal wei weights)
-	     (assert-equal ter terms))))
-    (ldass '(+ 1 (* 2 x) (* 3 y z)) 1 '(2 3) '(x (* y z)))
-    (ldass 42 42 nil nil)
-    (ldass '(+ 1 x) 1 '(1) '(x))
-    (ldass '(+ x (* y z)) 0 '(1 1) '(x (* y z)))
-    (ldass 'x 0 '(1) '(x))
-    (ldass '(sin x) 0 '(1) '((sin x)))))
+(defun split-sum-of-products (expr) (dual-decompose expr '+ 0 '* 1))
+(defun split-product-of-sums (expr) (dual-decompose expr '* 1 '+ 0))
 
-(defmacro product-of-sums-decompose (expr (offset-name weights-name terms-name)
-				     &body body)
-  `(multiple-value-bind (,offset-name ,weights-name ,terms-name)
-       (dual-decompose ,expr '* 1 '+ 0)
-     ,@body))
+(define-test dual-decompose
+  (flet ((ldass (expr o1 ws1 ts1 o2 ws2 ts2)
+	   (multiple-value-bind (o ws ts) (split-sum-of-products expr)
+	     (assert-equal o1 o)
+	     (assert-equal ws1 ws)
+	     (assert-equal ts1 ts))
+	   (multiple-value-bind (o ws ts) (split-product-of-sums expr)
+	     (assert-equal o2 o)
+	     (assert-equal ws2 ws)
+	     (assert-equal ts2 ts))))
+    (ldass '(+ 1 (* 2 x) (* 3 y z))
+	   1 '(2 3) '(x (* y z))
+	   1 '(1) '((+ (* 2 x) (* 3 y z))))
+    (ldass 42 
+	   42 nil nil
+	   42 nil nil)
+    (ldass '(+ 1 x)
+	   1 '(1) '(x)
+	   1 '(1) '(x))
+    (ldass '(+ x (* y z))
+	   0 '(1 1) '(x (* y z))
+	   1 '(0) '((+ x (* y z))))
+    (ldass 'x 
+	   0 '(1) '(x)
+	   1 '(0) '(x))
+    (ldass '(sin x)
+	   0 '(1) '((sin x))
+	   1 '(0) '((sin x)))
+    (ldass '(* 2 (+ x y) (+ 3 x) (+ x y z))
+	   0 '(2) '((* (+ x y) (+ 3 x) (+ x y z)))
+	   2 '(0 3 0) '((+ x y) x (+ x y z)))
+    (ldass 0
+	   0 nil nil
+	   0 nil nil)))
 
 ;(defun mapcar-expr (fn expr)
 	     
