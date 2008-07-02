@@ -19,7 +19,6 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((op (if (consp expr) (car expr)))
 	(ops '(exp log sin))
 	(op-offsets '(0 1 0)))
-
     (labels
 	((canonize-children (expr)
 	   (if (consp expr)
@@ -37,41 +36,63 @@ Author: madscience@google.com (Moshe Looks) |#
 				   (mapcar 
 				    (bind #'list '* 0 (list /1 (list '+ /2)))
 				    ops op-offsets)))))
-	 (sum-of-products (o ws ts &key toplevel)
-	   (nconc (list '+ o)
-		  (mapcar #'sub-product ops op-offsets)
-		  (if (or toplevel (longerp ws 1))
-		      (list (product-of-sums 0 nil nil)))
-		  (mapcar (lambda (weight term)
-			    (multiple-value-bind (o ws ts)
-				(split-product-of-sums term)
-			      (assert (or (eql o 1) (and (eql o 0) (not ws)))
-				      () "offset=~S, term=~S" o term)
-			      (product-of-sums weight ws ts)))
-			  ws ts)))
-	 (product-of-sums (o ws ts)
-	   (let ((ops (remove-if (bind #'find /1 ts :key (lambda (x)
-							   (and (consp x) 
-								(car x))))
-				 ops)))
-	     (nconc (list '* o)
-		    (mapcar (bind #'list '+ 1 (sub-product /1 /2))
-			    ops op-offsets)
-		    (if (longerp ws 1) (list (sum-of-products 0 nil nil)))
-		    (mapcar (lambda (weight term)
-			      (multiple-value-bind (o ws ts)
-				(split-sum-of-products term)
-			      (assert (or (eql o 0) (and (eql o 1) (not ws)))
-				      () "offset=~S, term=~S" o term)
-			      (sum-of-products weight ws ts)))
+	 (rec-split (weight term splitter builder)
+	   (multiple-value-bind (o ws ts) (funcall splitter term)
+	     (declare (ignore o))
+	     (funcall builder weight ws ts)))
+	 (dual-assemble (op ops-terms splitter builder o ws ts &optional top)
+	   (nconc (list op o) ops-terms
+		  (cond 
+		    ((or top (longerp ws 1))
+		     (nconc (list (funcall builder 0 nil nil))
+			    (mapcar (bind #'rec-split /1 /2 splitter builder)
+				    ws ts)))
+		    (ws (list 
+			 (list (dual-num-op op) (car ws)
+			       (canonize-children (car ts))))))))
+	 (sum-of-products (o ws ts &optional top)
+	   (dual-assemble 
+	    '+ (mapcar #'sub-product ops op-offsets)
+	    #'split-product-of-sums #'product-of-sums o ws ts top))
+	  (product-of-sums (o ws ts)
+	    (dual-assemble 
+	     '* (collecting
+		  (mapc (lambda (op offset)
+			  (unless (find op ts :key (lambda (x)
+						     (and (consp x) (car x))))
+			    (collect (list '+ 1 (sub-product op offset)))))
+			ops op-offsets))
+	     #'split-sum-of-products #'sum-of-products o ws ts)))
 
-;			      (nconc (list '+ weight)
-;				     (decompose-num term
-;				       (+ (cdr term))
-;				       (t (list term)))))
-			    ws ts)))))
-
-			    ;(mapcar #'canonize-children ts))))))
+;; 	 (sum-of-products (o ws ts &key toplevel)
+;; 	   (nconc (list '+ o)
+;; 		  (mapcar #'sub-product ops op-offsets)
+;; 		  (cond 
+;; 		    ((or toplevel (longerp ws 1))
+;; 		     (nconc (list (product-of-sums 0 nil nil))
+;; 			    (mapcar (bind #'rec-split /1 /2
+;; 					  #'split-product-of-sums
+;; 					  #'product-of-sums)
+;; 				    ws ts)))
+;; 		    (ws (list 
+;; 			 (list '* (car ws) (canonize-children (car ts))))))))
+;; 	 (product-of-sums (o ws ts)
+;; 	   (nconc (list '* o)
+;; 		  (collecting
+;; 		    (mapc (lambda (op offset)
+;; 			    (unless (find op ts :key 
+;; 					  (lambda (x) (and (consp x) (car x))))
+;; 			      (collect (list '+ 1 (sub-product op offset)))))
+;; 			  ops op-offsets))
+;; 		  (cond 
+;; 		    ((longerp ws 1)
+;; 		     (nconc (list (sum-of-products 0 nil nil))
+;; 			    (mapcar (bind #'rec-split /1 /2
+;; 					  #'split-sum-of-products
+;; 					  #'sum-of-products)
+;; 				    ws ts)))
+;; 		    (ws (list
+;; 			 (list '+ (car ws) (canonize-children (car ts)))))))))
       (ecase type
 	(bool
 	 (decompose-bool expr
@@ -84,7 +105,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (t (bool-structure (canonize-children expr)))))
 	(num 
 	 (multiple-value-bind (o ws ts) (split-sum-of-products expr)
-	   (sum-of-products o ws ts :toplevel t)))))))
+	   (sum-of-products o ws ts t)))))))
 (define-test canonize
   ;; boolean cases
   (assert-equal '(or (and) (and x))
