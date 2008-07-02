@@ -21,3 +21,5 @@ Author: madscience@google.com (Moshe Looks) |#
     (if (< y (/ v 2)) (/ y 2) v)))
 (defun big-epsilon (x)
   (if (eql x 0) 1 (/ (+ 1 (abs x)) 2)))
+
+(defun dual-num-op (f) (ecase f (* '+) (+ '*)))
