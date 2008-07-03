@@ -24,7 +24,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (if (consp expr)
 	       (cons (car expr) (mapcar (bind #'canonize /1 :parent op ;fixme
 					      :type (or (expr-type /1) type))
-					  (cdr expr)))
+					(cdr expr)))
 	       expr))
 	 (bool-structure (expr)
 	   (if parent 
@@ -36,16 +36,16 @@ Author: madscience@google.com (Moshe Looks) |#
 				   (mapcar 
 				    (bind #'list '* 0 (list /1 (list '+ /2)))
 				    ops op-offsets)))))
-	 (rec-split (weight term splitter builder)
-	   (multiple-value-bind (o ws ts) (funcall splitter term)
-	     (declare (ignore o))
-	     (funcall builder weight ws ts)))
 	 (dual-assemble (op ops-terms splitter builder o ws ts &optional top)
 	   (nconc (list op o) ops-terms
 		  (cond 
 		    ((or top (longerp ws 1))
-		     (nconc (list (funcall builder 0 nil nil))
-			    (mapcar (bind #'rec-split /1 /2 splitter builder)
+		     (nconc (list (funcall builder (identity-elem op) nil nil))
+			    (mapcar (lambda (weight term)
+				      (multiple-value-bind (o ws ts)
+					  (funcall splitter term)
+					(declare (ignore o))
+					(funcall builder weight ws ts)))
 				    ws ts)))
 		    (ws (list 
 			 (list (dual-num-op op) (car ws)
@@ -54,45 +54,15 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (dual-assemble 
 	    '+ (mapcar #'sub-product ops op-offsets)
 	    #'split-product-of-sums #'product-of-sums o ws ts top))
-	  (product-of-sums (o ws ts)
-	    (dual-assemble 
-	     '* (collecting
-		  (mapc (lambda (op offset)
-			  (unless (find op ts :key (lambda (x)
-						     (and (consp x) (car x))))
-			    (collect (list '+ 1 (sub-product op offset)))))
-			ops op-offsets))
-	     #'split-sum-of-products #'sum-of-products o ws ts)))
-
-;; 	 (sum-of-products (o ws ts &key toplevel)
-;; 	   (nconc (list '+ o)
-;; 		  (mapcar #'sub-product ops op-offsets)
-;; 		  (cond 
-;; 		    ((or toplevel (longerp ws 1))
-;; 		     (nconc (list (product-of-sums 0 nil nil))
-;; 			    (mapcar (bind #'rec-split /1 /2
-;; 					  #'split-product-of-sums
-;; 					  #'product-of-sums)
-;; 				    ws ts)))
-;; 		    (ws (list 
-;; 			 (list '* (car ws) (canonize-children (car ts))))))))
-;; 	 (product-of-sums (o ws ts)
-;; 	   (nconc (list '* o)
-;; 		  (collecting
-;; 		    (mapc (lambda (op offset)
-;; 			    (unless (find op ts :key 
-;; 					  (lambda (x) (and (consp x) (car x))))
-;; 			      (collect (list '+ 1 (sub-product op offset)))))
-;; 			  ops op-offsets))
-;; 		  (cond 
-;; 		    ((longerp ws 1)
-;; 		     (nconc (list (sum-of-products 0 nil nil))
-;; 			    (mapcar (bind #'rec-split /1 /2
-;; 					  #'split-sum-of-products
-;; 					  #'sum-of-products)
-;; 				    ws ts)))
-;; 		    (ws (list
-;; 			 (list '+ (car ws) (canonize-children (car ts)))))))))
+	 (product-of-sums (o ws ts &optional top)
+	   (dual-assemble 
+	    '* (collecting
+		 (mapc (lambda (op offset)
+			 (unless (find op ts :key (lambda (x)
+						    (and (consp x) (car x))))
+			   (collect (list '+ 1 (sub-product op offset)))))
+		       ops op-offsets))
+	    #'split-sum-of-products #'sum-of-products o ws ts top)))
       (ecase type
 	(bool
 	 (decompose-bool expr
@@ -104,8 +74,13 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (list (dual-bool-op op) (list op) body))))
 	   (t (bool-structure (canonize-children expr)))))
 	(num 
-	 (multiple-value-bind (o ws ts) (split-sum-of-products expr)
-	   (sum-of-products o ws ts t)))))))
+	 (destructuring-bind (splitter builder)
+	     (if (and (consp expr) (eq (car expr) '+) 
+		      (longerp expr (if (numberp (cadr expr)) 3 2)))
+		 `(,#'split-product-of-sums ,#'product-of-sums)
+		 `(,#'split-sum-of-products ,#'sum-of-products))
+	   (multiple-value-bind (o ws ts) (funcall splitter expr)
+	     (funcall builder o ws ts t))))))))
 (define-test canonize
   ;; boolean cases
   (assert-equal '(or (and) (and x))
@@ -153,29 +128,24 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-equal `(+ 0 ,@add-blocks ,mult-block
 		      (* 1 
 			 ,@(cddr mult-block) 
-			 (+ 0 ,@add-blocks)
+			 (+ 1 ,@add-blocks)
 			 (+ 0 ,@add-blocks (* 1 x))
 			 (+ 0 ,@add-blocks (* 1 y))))
-		  (canonize '(* x y)))))
-;;   (assert-equal `(+ 0 
-;; 		  (* 0 (exp (+ 0)))
-;; 		  (* 0 (log (+ 1)))
-;; 		  (* 0 (sin (+ 0)))
-;; 		  (* 
-;; 		   (+ 0 (* 1 x))
-;; 		   (+ 1 (* 0 (exp (+ 0))))
-;; 		   (+ 1 (* 0 (log (+ 1))))
-;; 		   (+ 1 (* 0 (sin (+ 0))))))
+		  (canonize '(* x y)))
+     (assert-equal `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
+		       (+ 0 ,@add-blocks ,mult-block
+			  (* 1 ,@(cddr mult-block) (+ 0 x))
+			  (* 1 ,@(cddr mult-block) (+ 0 y))))
+		       (canonize '(+ x y)))
+     (assert-equal `(+ 1 ,@add-blocks ,mult-block
+		       (* 1 ,@(cddr mult-block) (+ 0 x)))
+		   (canonize '(+ 1 x)))
+     (assert-equal `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
+		       (+ 1 ,@add-blocks ,mult-block
+			  (* 1 ,@(cddr mult-block) (+ 0 x))
+			  (* 1 ,@(cddr mult-block) (+ 0 y))))
+		   (canonize '(+ 1 x y)))))
 
-;; (+ 0 
-;; 		  (* 0 (/ (+ 0) (+ 1)))
-;; 		  (* 1 (/ (+ 0 (* 1 x)) (+ 1)))
-;; 		  (* 1 (/ (+ 0 (* 1 y)) (+ 1))))
-;; 		(canonize '(+ x y))))
-
-;; 		   (+ 1 (* 0 (exp (+ 0))))
-;; 		   (+ 1 (* 0 (log (+ 1))))
-;; 		   (+ 1 (* 0 (sin (+ 0))))))
 
 (defun loci (fn expr &key (type (expr-type expr)) parents)
   (flet ((boolrec (&optional type)

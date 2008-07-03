@@ -84,7 +84,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro bind (fn &rest args)
   `(bindapp ,fn ,@args nil))
 
-;;; memoization
+;;; memoizatio
 (defun tabulate (fn array &rest indices)
   (or (apply #'aref array indices) 
       (setf (apply #'aref array indices) (apply fn indices))))
