@@ -110,8 +110,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun getreductions (type)
   (aif (gethash type *type-to-reductions*) it 
        (gethash (next-most-general type) *type-to-reductions*)))
-(defun full-reduce (expr)
-  (reduce-with (getreductions (expr-type expr)) expr))
+(defun full-reduce (expr &key (type (expr-type expr)))
+  (reduce-with (getreductions type) expr))
 
 ;;;; general-purpose reductions are defined here
 
@@ -142,3 +142,4 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-reduction compress-identical-subtrees (expr)
     :action (equalp-to-eq expr)
     :order upwards)
+

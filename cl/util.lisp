@@ -84,28 +84,28 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro bind (fn &rest args)
   `(bindapp ,fn ,@args nil))
 
-;;; memoizatio
+;;; memoization
 (defun tabulate (fn array &rest indices)
   (or (apply #'aref array indices) 
       (setf (apply #'aref array indices) (apply fn indices))))
 
 ;;; testing
-(defun assert-all-equal (to f &rest l)
-  (dolist (x l) (assert-equal to (funcall f x))))
+(defmacro assert-all-equal (to f &rest l)
+  `(dolist (x ,l) (assert-equal ,to (funcall ,f x))))
 (defmacro define-all-equal-test (name pairs &optional (f nil))
   `(define-test ,name 
      (dolist (p ,pairs) 
        (apply #'assert-all-equal (car p) (or ,f #',name) (cadr p)))))
-(defun assert-for-all (f &rest l)
-  (dolist (x l) (assert-true (funcall f x))))
-(defun assert-for-none (f &rest l)
-  (apply #'assert-for-all (lambda (x) (not (funcall f x))) l))
+(defmacro assert-for-all (f &rest l)
+  `(dolist (x ,l) (assert-true (funcall ,f x))))
+(defmacro assert-for-none (f &rest l)
+  `(assert-for-all (lambda (x) (not (funcall ,f x))) ,@l))
 
 ;;; O(1) helpers
 (defun emptyp (seq)
   (or (null seq) (not (some (lambda (x) (declare (ignore x)) t) seq))))
 (define-test emptyp
-  (assert-for-all #'emptyp nil (vector) (make-array 0) )
+  (assert-for-all #'emptyp nil (vector) (make-array 0))
   (assert-for-none #'emptyp '(a) (vector 1) (make-array 1)))
 (defun mklist (obj)
   (if (listp obj) obj (list obj)))
@@ -213,7 +213,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (dolist (p pairs table) (funcall insert p table))))
 (defun init-hash-set (items  &key (insert #'sethash))
   (let ((table (make-hash-table)))
-    (dolist (x items table) (funcall insert (list x t) table))))
+    (dolist (x items table) (funcall insert (list x nil) table))))
 (defun hashmapcan (f h)
   (let ((res nil))
     (maphash (lambda (x y) (setf res (nconc (funcall f x y) res))) h) 
@@ -252,5 +252,3 @@ Author: madscience@google.com (Moshe Looks) |#
   (print (car args))
   (mapc (lambda (x) (prin1 x) (write-char #\space)) (cdr args))
   nil)
-
-

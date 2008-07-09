@@ -16,10 +16,22 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun little-epsilon (x) 
-  (let ((y (abs x))
-	(v 0.01))
-    (if (< y (/ v 2)) (/ y 2) v)))
+  (let* ((x (if (numberp x) x 0))
+	 (y (abs x))
+	 (v 0.01))
+    (if (and (not (equal y 0)) (< y (/ v 2))) (/ y 2) v)))
 (defun big-epsilon (x)
-  (if (eql x 0) 1 (/ (+ 1 (abs x)) 2)))
+  (let* ((x (if (numberp x) x 0)))
+    (if (eql x 0) 1 (/ (+ 1 (abs x)) 2))))
 
 (defun dual-num-op (f) (ecase f (* '+) (+ '*)))
+
+;;; replace with identity-element removal
+(define-reduction haxx-num-1 (expr)
+  :type num
+  :condition (and (eq (car expr) '*) (eql (cadr expr) 1))
+  :action (if (longerp expr 3) (cons '* (cddr expr)) (caddr expr)))
+(define-reduction haxx-num-2 (expr)
+  :type num
+  :condition (and (eq (car expr) '+) (eql (cadr expr) 0))
+  :action (if (longerp expr 3) (cons '+ (cddr expr)) (caddr expr)))

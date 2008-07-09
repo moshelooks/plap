@@ -57,16 +57,16 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 			     (dotimes (n *n-random-trees-for-testing*)
 ;; 			       (let ((depth (1+ (random 10))))
 ;; 				 (labels 
-(defun test-by-truth-tables (rewrite)
-  (let ((vars (mapcar #'car (remove-if (lambda (x) (or (< 0 (cdr x))
-						       (eq (car x) 'true)
-						       (eq (car x) 'false)))
-				       *enum-trees-test-symbols*))))
-    (dolist (expr (enum-trees *enum-trees-test-symbols* 2) t)
-      (unless (assert-equal (truth-table expr vars)
-			    (truth-table (funcall rewrite expr) vars))
-	(print expr)
-	(return nil)))))
+(defmacro test-by-truth-tables (rewrite)
+  `(let ((vars (mapcar #'car (remove-if (lambda (x) (or (< 0 (cdr x))
+							(eq (car x) 'true)
+							(eq (car x) 'false)))
+					*enum-trees-test-symbols*))))
+     (dolist (expr (enum-trees *enum-trees-test-symbols* 2) t)
+       (unless (assert-equal (truth-table expr vars)
+			     (truth-table (funcall ,rewrite expr) vars))
+	 (print expr)
+	 (return nil)))))
 
 (defun dual-bool-op (f) (ecase f (and 'or) (or 'and)))
 (defun junctorp (expr) (and (consp expr) (matches (car expr) (and or))))
@@ -228,6 +228,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		   compress-identical-subtrees sort-commutative)
   :order upwards)
 (define-test remove-superset-clauses
+;  (flet ((fora
   (assert-all-equal '(and x z) (compose #'remove-superset-clauses
 					#'sort-commutative)
 		    '(and (or x y) x z)
