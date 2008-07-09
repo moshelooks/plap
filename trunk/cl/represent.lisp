@@ -191,11 +191,11 @@ Author: madscience@google.com (Moshe Looks) |#
 		   settings)))))
 (defun knob-arity (knob) (array-total-size knob))
 
-(defun test-knob (list knob results)
-  (dorepeat 100 (let ((n (random 4)))
-		  (funcall (elt knob n))
-		  (assert-equal (elt results n) list)))
-  (funcall (elt knob 0)))
+(defmacro test-knob (list knob results)
+  `(progn (dorepeat 100 (let ((n (random 4)))
+			  (funcall (elt ,knob n))
+			  (assert-equal (elt ,results n) ,list)))
+	  (funcall (elt ,knob 0))))
 (define-test make-replacer-knob
   (let* ((list (list 1 2 3 4))
 	 (knob (make-replacer-knob (cdr list) 'x 'y 'z))
@@ -228,12 +228,12 @@ Author: madscience@google.com (Moshe Looks) |#
     (test-knob list knob res)))
 
 (defun knobs-at (expr bindings &key (type (expr-type expr)))
-  (collecting
-    (ecase type
-      (bool
-       (decompose-bool expr
-	 (junctor
-	  (let ((tovisit (copy-hash-table (gethash 'bool bindings))))
+  (let ((tovisit (copy-hash-table (gethash type bindings))))
+    (collecting
+      (ecase type
+	(bool
+	 (decompose-bool expr
+	   (junctor
 	    (aif (extract-literal expr)
 		 (remhash (litvariable it) tovisit)
 		 (mapl (lambda (l)
@@ -249,13 +249,42 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (maphash-keys (lambda (x)
 			    (collect (make-inserter-knob 
 				      expr x (litnegation x))))
-			  tovisit))))))))
-;;       (num
-;;        ((* +) (let ((x (cadr expr)))
-;; 		(when (numberp x)
-;; 		  (let ((e1 (little-epsilon x)) 
-;; 			(e2 (big-epsilon x)))
-;; 		    (collect (make-replacer-knob (cdr expr) (+ x e1) (- x e1)
-;; 						 (- x e2) (+ x e2)))))
-;; 		(collect (make-inserter-knob (cdr expr)
-		  
+			  tovisit))))
+	(num
+	 (decompose-num expr
+	   ((* +)
+	    (let ((body
+		   (let ((x (cadr expr)))
+		     (if (numberp x)
+			 (let ((e1 (little-epsilon x)) (e2 (big-epsilon x)))
+			   (collect (make-replacer-knob (cdr expr)
+							(+ x e1)
+							(- x e1)
+							(- x e2)
+							(+ x e2)))
+			   (cdr expr))
+			 expr)))
+		  (mult (eq (car expr) '*)))
+	      (multiple-value-bind (o ws ts)
+		  (funcall (if mult
+			       #'split-product-of-sums
+			       #'split-sum-of-products)
+			   expr)
+		(declare (ignore o ws))
+		(mapc (bind #'remhash /1 tovisit)
+		      (mapcar #'haxx-num-2
+			      (mapcar #'haxx-num-1 ts))))
+	      (maphash-keys (lambda (x)
+			      (let ((e1 (little-epsilon x))
+				    (e2 (big-epsilon x)))
+				(collect 
+				 (apply #'make-inserter-knob body
+					(let ((terms`((* ,e1 ,x)
+						      (* ,(- e1) ,x)
+						      (* ,(- e2) ,x)
+						      (* ,(+ e2) ,x))))
+					  (if mult 
+					      (mapcar (bind #'list '+ 1 /1) 
+						      terms)
+					      terms))))))
+			    tovisit)))))))))

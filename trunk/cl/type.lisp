@@ -26,7 +26,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (* (fun num (list num)))
 		   (/ (fun num num num))
 
+		   (exp (fun num num))
+		   (log (fun num num))
 		   (sin (fun num num))
+
 		   
 		   (< (fun bool any any))
 		   (= (fun bool any any))))))
@@ -70,7 +73,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	(list (list 'list (type-of (cadr tree))))
 	(tuple (cons 'tuple (mapcar #'expr-type (cdr tree))))
 	(t (let ((type (fun-type (car tree))))
-	     (assert (eq (car type) 'fun))
+	     (assert (eq (car type) 'fun) () "unrecognized type ~S" type)
 	     (cadr type))))
       (if tree
 	  (aif (and bindings (gethash tree bindings)) it (atom-type tree)))))
@@ -87,6 +90,12 @@ Author: madscience@google.com (Moshe Looks) |#
   (if (eq t2 'any) t (eq t1 t2))) ;fixme
 
 (defun tuple-type-p (type) (and (consp type) (eq (car type) 'tuple)))
+
+;;; a typemap is a hashtable of types mapping to hashset of var names
+(defun make-type-map () (make-hash-table))
+(defun init-type-map (contents) 
+  (init-hash-table (mapcar (bind #'list (car /1) (init-hash-set (cadr /1)))
+			   contents)))
 
 ;; (defun is-type-p (type) 
 ;;   (if (consp type)

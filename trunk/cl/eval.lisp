@@ -21,9 +21,12 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 				       (cadr it)))
 ;; 			     expr))))
   (aif (eval `(let* ((false nil) (true t) ,@bindings)
+		(flet ((log (x) (if (< (abs x) 0.01) 
+				    most-positive-single-float
+				    (log x))))
 ;		(macrolet ((and (&rest args) `(and ,args       (and @,args)))
 ;			   (or  (&rest args) `(or  (not ,args) (or @,args))))
-		,expr))
+		  ,expr)))
        (if (eq it t) 'true it)
        'false))
 
