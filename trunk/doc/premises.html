@@ -1,10 +1,15 @@
+<html> <head>
+<title>Probabilistic Learning of Programs</title>
+</head>
+
+<body>
 <center><h1>Probabilistic Learning of Programs: Premises</h1></center>
 
 <h4><u>Premise #0: Human Intelligence</u></h4>
 
 A principled approach to designing an intelligent system to learn and reason
 about programs requires some understanding of intelligence. One way to go about
-this is to consider that humans are intelligent, and are capable to learning
+this is to consider that humans are intelligent, and are capable of learning
 and reasoning about programs, at least to some extent. It is possible to derive
 a "cognitive core" of essential capabilities by considering the defining
 features of human intelligence on Marr's level computational theory. To the
@@ -12,7 +17,7 @@ extent that we actually <i>understand</i> cognition this core will less and
 less resemble a descriptive account of human thought (while still accounting
 for human thought as a special case). The Turing Test definition of
 intelligence accordingly corresponds to the degenerate case of no actual
-understanding (premise #2 elaborate why this is the case).
+understanding (premise #2 elaborates on why this is the case).
 
 <h5>Rationale</h5>
 
@@ -62,7 +67,7 @@ in terms of general resource consumption (program length, speed, runtime memory
 usage, etc.), rather than program length alone. This loses some useful
 theoretical properties, but gains a very important one (the complexity measure
 is now computable), and in practice has few downsides. Two examples of this
-approach are Levin-s Kt and Schmidhuber's <a
+approach are Levin's complexity Kt and Schmidhuber's <a
 href="http://www.idsia.ch/~juergen/speedprior.html">Speed Prior</a>.
 
 <h5>Rationale</h5>
@@ -78,11 +83,7 @@ resources at first seems to make this even worse. One way to make program
 induction tractable is with useful prior knowledge, of the particular problem
 or problem class at hand, the general domain, or both. More generally,
 "inductive bias" may refers to any knowledge/assumptions we can use to direct
-search, whether coded or taught. The third premise is that we humans are clever
-enough to encode and teach sufficient inductive bias to make program induction
-tractable. Specifically, tractable <i>enough</i> to use it to solve a range of
-hard problems across diverse domains, assuming present-day hardware
-capabilities and software toolchains.<br><br>
+search, whether coded or taught.<br><br>
 
 Which biases are pertinent here? The aim is not to encode "commonsense
 knowledge", but rather sufficient bias to make <i>the learning of</i> common
@@ -128,8 +129,8 @@ happen, e.g.:
   <li>Fred picked up the glass of water so he could drink it</li>
   <li>Fred doesn't know that I know where the box is</li>
   <li>The rooster crowed because the sun rose</li>
-  <li>That rock is not an agent - has no beliefs or desires, and cannot cause
-  things to happen</li>
+  <li>That rock is not an agent - it has no beliefs or desires, and cannot
+  cause things to happen.</li>
 </ul>
 
 <i>Reflexivity, Perception, and Action</i><br><br>
@@ -143,21 +144,23 @@ near C to some degree (but quantifying the degree of nearness requires specific
 domain knowledge that the system may or may not possess).<br><br>
 
 This sort of reflexivity is also paramount in relating action to perception. A
-very important bias is to associate perception with related actions - observing
-something to one's left and moving to the left, for instance. This may be quite
-easy to learn, but to admit the possibility puts constraints on the design of
-the system's context.
+very important bias is to associate perceptions with related actions -
+observing something to one's left and moving to the left, for instance. This
+may be quite easy to learn, but to admit the possibility puts constraints on
+the system's design.
 
 <h4><u>Premise #4: Sufficient Inductive Bias</u></h4>
 
 While the third premise posits the necessity of extensive inductive bias in
 order to make general-purpose program induction tractable, the fourth and final
-premise posits sufficiency; specifically that an adequate core for an AGI
-system may be designed without addressing natural language processing,
-real-world perception and action, or real-time interaction. Certainly these
-capabilities are immensely useful, and will be needed eventually - the fourth
-premise rather states that they may be added on top of an initial system that
-does not contain them, without a need for significant redesign.
+premise posits sufficiency; specifically that an adequate core for an <a
+ href="http://nars.wang.googlepages.com/wang.AGI-Intro.htm">artifical general
+intelligence</a> (AGI) may be designed without addressing natural language
+processing, real-world perception and action, or real-time
+interaction. Certainly these capabilities are immensely useful, and will be
+needed eventually - the fourth premise states, rather, that they may be added
+on top of an initial system that does not contain them, without a need for
+significant redesign.
 
 <h5>Rationale</h5>
 
@@ -170,8 +173,8 @@ understanding of space, time, causality, and theory-of-mind should have great
 inductive biases for learning language, a system with an ungrounded
 understanding language will have comparatively little usable bias for learning
 about space, time, causality, theory-of-mind, etc. The hard part of
-language-learning is not the acquiring the sort declarative knowledge found in
-databases such as <a href="http://wordnet.princeton.edu/">WordNet</a>, but
+language-learning is not the acquiring the sort of declarative knowledge found
+in databases such as <a href="http://wordnet.princeton.edu/">WordNet</a>, but
 rather associating words and phrases with <i>programs</i> which serve to
 construct and manipulate the mental spaces associated with language
 comprehension (a dynamic, contextual process).<br><br>
@@ -210,5 +213,11 @@ attention. When operating outside of a read-eval-print loop, with multiple
 competing goals and shifting contexts, augmentations will be needed to
 prioritize computations and actions, and to achieve adequate credit allocation
 when causes and effects occur far apart in time. Fortunately, the core
-mechanisms described herein will be applicable to solve most of the hard
-computational problems that will arise in this regard.
+mechanisms used for the general probabilistic learning of programs will be
+suitable for solving most of the hard computational problems that will arise
+here.
+
+<hr>
+<address></address>
+<!-- hhmts start --> Last modified: Wed Jul  9 18:04:33 PDT 2008 <!-- hhmts end -->
+</body> </html>
