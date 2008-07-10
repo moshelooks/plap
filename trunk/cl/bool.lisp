@@ -126,10 +126,10 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards)
 (define-test bool-and-identities
   (assert-equal '(and x y) (bool-and-identities '(and x true y)))
-  (assert-equal 'false 
-		(bool-and-identities '(and false x y))
- 		(bool-and-identities '(and x false y))
- 		(bool-and-identities '(and x y false)))
+  (assert-for-all (compose (bind #'eq 'false /1) #'bool-and-identities)
+		  '((and false x y)
+		    (and x false y)
+		    (and x y false)))
   (assert-equal 'x  (bool-and-identities '(and x)))
   (test-by-truth-tables #'bool-and-identities))
 (define-test bool-or-identities
@@ -228,17 +228,15 @@ Author: madscience@google.com (Moshe Looks) |#
 		   compress-identical-subtrees sort-commutative)
   :order upwards)
 (define-test remove-superset-clauses
-;  (flet ((fora
-  (assert-all-equal '(and x z) (compose #'remove-superset-clauses
-					#'sort-commutative)
-		    '(and (or x y) x z)
-		    '(and (or x y) x z (or x y) (or x y z)))
-  (assert-all-equal '(or x z)  (compose #'remove-superset-clauses
-					#'sort-commutative)
-		    '(or (and x y) x z)
-		    '(or (and x y z) x z (and x y) (and x y z)))
-  (test-by-truth-tables #'remove-superset-clauses))
-
+  (flet ((assert-reduces-to (target exprs)
+	   (dolist (expr exprs)
+	     (assert-equal target (remove-superset-clauses
+				   (sort-commutative expr))))))
+    (assert-reduces-to '(and x z) '((and (or x y) x z)
+				    (and (or x y) x z (or x y) (or x y z))))
+    (assert-reduces-to '(or x z) '((or (and x y) x z)
+				   (or (and x y z) x z (and x y) (and x y z))))
+    (test-by-truth-tables #'remove-superset-clauses)))
 
 (defun implications (clause1 clause2)
   (let ((result nil))

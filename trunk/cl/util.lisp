@@ -35,7 +35,7 @@ Author: madscience@google.com (Moshe Looks) |#
     `(dotimes (,var ,n)
        ,@body)))
 
-;;; list iteration, comparison, and construction
+;;; list iteration, comparison, manipulation, and construction
 (defun same-length-p (l1 l2)
   (if (null l1) (null l2) 
       (and (not (null l2)) (same-length-p (cdr l1) (cdr l2)))))
@@ -56,6 +56,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			 ls)))
 (defun mappend (f l) (apply #'append (mapcar f l)))
 (defun iota (n) (loop for i from 0 to (- n 1) collect i))
+(defun sort-copy (l cmp) (sort (copy-seq l) cmp))
 
 ;;; generalized argument-binding construct
 (defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9
@@ -73,13 +74,15 @@ Author: madscience@google.com (Moshe Looks) |#
 				    (max n (max-arg-idx (cdr arg)))))
 			       (t n)))
 		       l :initial-value 0)))
-      (let ((bind-max-arg-idx (max-arg-idx (butlast args))))
+      (let ((bind-max-arg-idx (max-arg-idx (butlast args)))
+	    (rest-arg (gensym)))
 	`(lambda ,(append
 		   (mapcar (lambda (i) 
 			     (intern (concatenate 'string 
 						  "/" (write-to-string i))))
 			   (loop for i from 1 to bind-max-arg-idx collect i))
-		   '(&rest) (list (gensym)))
+		   `(&rest ,rest-arg)) 
+	   (declare (ignore ,rest-arg))
 	   (funcall #'apply ,fn ,@args))))))
 (defmacro bind (fn &rest args)
   `(bindapp ,fn ,@args nil))
@@ -90,23 +93,24 @@ Author: madscience@google.com (Moshe Looks) |#
       (setf (apply #'aref array indices) (apply fn indices))))
 
 ;;; testing
-(defmacro assert-all-equal (to f &rest l)
-  `(dolist (x ,l) (assert-equal ,to (funcall ,f x))))
-(defmacro define-all-equal-test (name pairs &optional (f nil))
+(defmacro define-all-equal-test (name pairs)
   `(define-test ,name 
-     (dolist (p ,pairs) 
-       (apply #'assert-all-equal (car p) (or ,f #',name) (cadr p)))))
-(defmacro assert-for-all (f &rest l)
-  `(dolist (x ,l) (assert-true (funcall ,f x))))
-(defmacro assert-for-none (f &rest l)
-  `(assert-for-all (lambda (x) (not (funcall ,f x))) ,@l))
+     (dolist (p ,pairs)
+       (dolist (x (cadr p))
+	 (assert-equal (car p) (funcall #',name x))))))
+(defmacro assert-for-all (f l)
+  `(mapcar (lambda (x)
+	     (assert-true (funcall ,f x)))
+	   ,l))
 
 ;;; O(1) helpers
 (defun emptyp (seq)
   (or (null seq) (not (some (lambda (x) (declare (ignore x)) t) seq))))
 (define-test emptyp
-  (assert-for-all #'emptyp nil (vector) (make-array 0))
-  (assert-for-none #'emptyp '(a) (vector 1) (make-array 1)))
+  (dolist (x (mapcar #'emptyp (list nil (vector) (make-array 0))))
+    (assert-false x))
+  (dolist (x (mapcar #'emptyp (list '(a) (vector 1) (make-array 1))))
+    (assert-true x)))
 (defun mklist (obj)
   (if (listp obj) obj (list obj)))
 (defmacro matches (x l) `(case ,x (,l t)))
