@@ -54,18 +54,18 @@ and (act-result name), where name may be any symbol. |#
 (defun total-order (l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order
-  (assert-equal '(1 2 3) (sort '(3 1 2) #'total-order))
+  (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
   (assert-equal '((a 1) (a 1 1) (a 2)) 
-		(sort '((a 2) (a 1) (a 1 1)) #'total-order))
+		(sort-copy '((a 2) (a 1) (a 1 1)) #'total-order))
   (assert-equal 
    '(1 2 a b c nil (a 1) (a 2) (b b) (b b b))
-   (sort '(2 b 1 a c (a 2) (a 1) (b b) (b b b) nil) #'total-order))
+   (sort-copy '(2 b 1 a c (a 2) (a 1) (b b) (b b b) nil) #'total-order))
   (assert-equal
    '((a (a (b c))) (a (a (b c)) b) (a (a (b c d))))
-   (sort '((a (a (b c))) (a (a (b c)) b) (a (a (b c d)))) #'total-order))
+   (sort-copy '((a (a (b c))) (a (a (b c)) b) (a (a (b c d)))) #'total-order))
   (assert-equal
    '(a (not a) b (not b) c)
-   (sort '((not a) (not b) c b a) #'total-order))
+   (sort-copy '((not a) (not b) c b a) #'total-order))
   (let ((exprs (randremove 0.9 (enum-trees *enum-trees-test-symbols* 2))))
     (block enumerative-test
       (flet ((opp (x) (case x
@@ -74,12 +74,10 @@ and (act-result name), where name may be any symbol. |#
 		      (nil nil))))
 	(dolist (expr1 exprs)
 	  (dolist (expr2 exprs)
-	    (let ((v (eql (total-cmp expr1 expr2)
-			  (opp (total-cmp expr2 expr1)))))
-	      (unless (assert-equal (total-cmp expr1 expr2)
-				    (opp (total-cmp expr2 expr1)))
-		(print* expr1 expr2)
-		(return-from enumerative-test nil)))))))))
+	    (unless (assert-equal (total-cmp expr1 expr2)
+				  (opp (total-cmp expr2 expr1)))
+	      (print* expr1 expr2)
+	      (return-from enumerative-test nil))))))))
 
 (defun commutativep (x)
   (matches x (and or * +)))
@@ -123,7 +121,7 @@ and (act-result name), where name may be any symbol. |#
 
 ;;; decompositions of expressions by contents
 (macrolet
-    ((mkdecomposer (name type &body conditions)
+    ((mkdecomposer (name &body conditions)
        `(defmacro ,name (expr &body clauses)
 	  `(cond ,@(mapcar (lambda (clause)
 			     (destructuring-bind (pred &body body) clause
@@ -132,13 +130,13 @@ and (act-result name), where name may be any symbol. |#
 						  ,@conditions)))
 				 `(,condition ,@body))))
 			   clauses)))))
-  (mkdecomposer decompose-num 'num
+  (mkdecomposer decompose-num
 		(constant `(numberp ,expr))
 		(t `(and (consp ,expr)
 			 ,(if (consp pred) 
 			      `(matches (car ,expr) ,pred)
 			      `(eq (car ,expr) ',pred)))))
-  (mkdecomposer decompose-bool 'bool
+  (mkdecomposer decompose-bool
 		(literal `(literalp ,expr))
 		(junctor `(junctorp ,expr))))
 (define-test decompose-num
