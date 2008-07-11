@@ -15,8 +15,9 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(declaim (optimize (speed 0) (safety 3) (debug 3)))
-;(declaim (optimize (speed 3) (safety 0) (debug 0)))
+;(declaim (optimize (speed 0) (safety 3) (debug 3)))
+(declaim (optimize (speed 3) (safety 0) (debug 0)))
+(declaim (optimize speed))
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
@@ -108,9 +109,9 @@ Author: madscience@google.com (Moshe Looks) |#
   (or (null seq) (not (some (lambda (x) (declare (ignore x)) t) seq))))
 (define-test emptyp
   (dolist (x (mapcar #'emptyp (list nil (vector) (make-array 0))))
-    (assert-false x))
+    (assert-true x))
   (dolist (x (mapcar #'emptyp (list '(a) (vector 1) (make-array 1))))
-    (assert-true x)))
+    (assert-false x)))
 (defun mklist (obj)
   (if (listp obj) obj (list obj)))
 (defmacro matches (x l) `(case ,x (,l t)))
