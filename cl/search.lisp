@@ -125,7 +125,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	(let* ((knobs (knobs-at expr bindings :type type))
 	       (nknobs (length knobs)))
 	  (print* nknobs knobs)
-	  (weak-kick (if (< nknobs 2)
+	  (weak-kick (if (< 2 nknobs)
 			 (+ 2 (random (- nknobs 2)))
 			 nknobs)
 		     knobs)
