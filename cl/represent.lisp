@@ -80,7 +80,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		 `(,#'split-product-of-sums ,#'product-of-sums)
 		 `(,#'split-sum-of-products ,#'sum-of-products))
 	   (multiple-value-bind (o ws ts) (funcall splitter expr)
-	     (funcall builder o ws ts t))))))))
+	     (funcall builder o ws ts t))))
+	(
+
+))))
 (define-test canonize
   ;; boolean cases
   (assert-equal '(or (and) (and x))

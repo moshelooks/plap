@@ -15,9 +15,8 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-;(declaim (optimize (speed 0) (safety 3) (debug 3)))
-(declaim (optimize (speed 3) (safety 0) (debug 0)))
-(declaim (optimize speed))
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
+;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
@@ -35,6 +34,21 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((var (gensym)))
     `(dotimes (,var ,n)
        ,@body)))
+
+;;; trees
+(defun map-internal-nodes (fn tree)
+  (funcall fn (car tree))
+  (mapc (bind #'map-internal-nodes fn /1) (cdr tree)))
+(defun map-subtrees (fn tree)
+  (labels ((rec (tree)
+	     (funcall fn tree)
+	     (when (consp tree)
+	       (mapc #'rec (cdr tree)))))
+    (if tree (rec tree))))
+(define-test map-subtrees
+  (assert-equal '((1 (2 3) 4) (2 3) 3 4) 
+		(collecting (map-subtrees (lambda (sub) (collect sub))
+					  '(1 (2 3) 4)))))
 
 ;;; list iteration, comparison, manipulation, and construction
 (defun same-length-p (l1 l2)

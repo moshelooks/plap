@@ -59,7 +59,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  () "Condition and action required for reduction")
   `(let ((fn (defun ,name (,expr-name) ; create the reduction function
 	       (flet ((call (,expr-name)
-			(if (and (type<= (expr-type ,expr-name) ',type)
+			(if (and (isa (expr-type ,expr-name) ',type)
 				 ,condition)
 			    ,action
 			    ,expr-name)))
@@ -92,7 +92,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (find-and-copy-hash ',type))))
 	   
      (maphash (lambda (t2 rules)       ; insert the rule in all matching type
-		(if (type<= t2 ',type) ; entries, respecting prereq ordering
+		(if (isa t2 ',type) ; entries, respecting prereq ordering
 		    (setf rules 
 			  (dag-order-insert fn rules 
 					    *reduction-prerequisites*))))

@@ -169,7 +169,7 @@ Author: madscience@google.com (Moshe Looks) |#
   :condition (eq operator (car expr))
   :action (if (var-and-negation-p (cdr expr)) complement expr)
   :prerequisites '(sort-commutative)
-  :cleanups (list (if (eq operator 'and) ;;;wtf fixme??
+  :cleanups (list (if (eq operator 'and)
 		      'bool-or-identities 
 		      'bool-and-identities)
 		  'sort-commutative)
