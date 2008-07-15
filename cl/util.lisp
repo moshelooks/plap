@@ -35,21 +35,6 @@ Author: madscience@google.com (Moshe Looks) |#
     `(dotimes (,var ,n)
        ,@body)))
 
-;;; trees
-(defun map-internal-nodes (fn tree)
-  (funcall fn (car tree))
-  (mapc (bind #'map-internal-nodes fn /1) (cdr tree)))
-(defun map-subtrees (fn tree)
-  (labels ((rec (tree)
-	     (funcall fn tree)
-	     (when (consp tree)
-	       (mapc #'rec (cdr tree)))))
-    (if tree (rec tree))))
-(define-test map-subtrees
-  (assert-equal '((1 (2 3) 4) (2 3) 3 4) 
-		(collecting (map-subtrees (lambda (sub) (collect sub))
-					  '(1 (2 3) 4)))))
-
 ;;; list iteration, comparison, manipulation, and construction
 (defun same-length-p (l1 l2)
   (if (null l1) (null l2) 
@@ -265,6 +250,21 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun randbool () (eql (random 2) 0))
 (defun randremove (p l) (remove-if (bind #'> p (random 1.0)) l))
+
+;;; trees
+(defun map-internal-nodes (fn tree)
+  (funcall fn (car tree))
+  (mapc (bind #'map-internal-nodes fn /1) (cdr tree)))
+(defun map-subtrees (fn tree)
+  (labels ((rec (tree)
+	     (funcall fn tree)
+	     (when (consp tree)
+	       (mapc #'rec (cdr tree)))))
+    (if tree (rec tree))))
+(define-test map-subtrees
+  (assert-equal '((1 (2 3) 4) (2 3) 3 4) 
+		(collecting (map-subtrees (lambda (sub) (collect sub))
+					  '(1 (2 3) 4)))))
 
 ;;; io
 (defun print* (&rest args)
