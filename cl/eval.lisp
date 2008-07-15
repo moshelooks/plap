@@ -15,10 +15,15 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun eval-expr (expr &key bindings type)
+(defun eval-expr (expr &key bindings type &aux type-bindings)
+  (when bindings
+    (setf type-bindings (make-hash-table))
+    (maphash (lambda (name value)
+	       (setf (gethash name type-bindings) (value-type value)))
+	     bindings))
   (labels ((generic-eval (expr)
 	     (if (consp expr)
-		 (ecase (expr-type expr)
+		 (ecase (expr-type expr type-bindings)
 		   (bool (bool-call (car expr) (cdr expr)))
 		   (num (num-call (car expr) (cdr expr))))
 		 (lookup expr)))
@@ -27,7 +32,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		 (case arg
 		   (true t)
 		   (false nil)
-		   (t (cadr (find arg bindings :key #'car))))
+		   (t (gethash arg bindings)))
 		 arg))
 	   (funeval (op args)
 	     (apply (symbol-function op)
@@ -60,7 +65,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (sin (sin (eval-num (car args))))
 	       (t (funeval op args)))))
     (aif (if (consp expr)
-	     (ecase (or type (expr-type expr))
+	     (ecase (or type (expr-type expr type-bindings))
 	       (bool (bool-call (car expr) (cdr expr)))
 	       (num (num-call (car expr) (cdr expr))))
 	     (lookup expr))
