@@ -81,7 +81,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		 `(,#'split-sum-of-products ,#'sum-of-products))
 	   (multiple-value-bind (o ws ts) (funcall splitter expr)
 	     (funcall builder o ws ts t))))
-	(
+;	(list...
 
 ))))
 (define-test canonize

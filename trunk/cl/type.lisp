@@ -22,7 +22,7 @@ types are as follows:
  * num
  * (list type)
  * (tuple type1 type2 type3 .... typeN) with N>1
- * (fn (arg-type1 arg-type2 ... arg-typeN) value-type) with N>=0
+ * (function (arg-type1 arg-type2 ... arg-typeN) value-type) with N>=0
  * t
 Note that the type nil corresponds to the empty set (no values), whereas t 
 corresponds to the universal set (all values). The type of nil is (list nil).
@@ -42,13 +42,50 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	       (list (isa (cadr x) (cadr y)))
 	       (tuple (and (eql (length x) (length y))
 			   (every #'isa (cdr x) (cdr y))))
-	       (fn (and (isa (caddr x) (caddr y))
-			(eql (length (cadr x)) (length (cadr y)))
-			(every #'isa (cadr y) (cadr x)))))))
+	       (function (and (isa (caddr x) (caddr y))
+			      (eql (length (cadr x)) (length (cadr y)))
+			      (every #'isa (cadr y) (cadr x)))))))
       (or (eq x y) (eq y t) (eq x nil))))
 ;	  (and (eq 'nil x) (eq 'list (car y)))
 ;	  (or (eq x y) (eq y t)))))
-(define-test isa
+
+(defun union-type (x y)
+  (cond
+    ((eq x y) x)
+    ((and (consp x) (consp y) (eq (car x) (car y)))
+     (ecase (car x)
+       (list `(list ,(union-type (cadr x) (cadr y))))
+       (tuple (if (same-length-p x y)
+		  `(tuple ,@(mapcar #'union-type (cdr x) (cdr y)))
+		  t))
+       (function `(function ,(mapcar (lambda (x y)
+				       (or (intersection-type x y)
+					   (return-from union-type t)))
+				     (cadr x) (cadr y))
+			    ,(union-type (caddr x) (caddr y))))))
+    ((eq x nil) y)
+    ((eq y nil) x)
+    (t t)))
+;;test when unification fails inside a function of functions or tuple of
+;;; functions, etc
+
+(defun intersection-type (x y)
+  (cond
+    ((eq x y) x)
+    ((and (consp x) (consp y) (eq (car x) (car y)))
+     (ecase (car x)
+       (list `(list ,(intersection-type (cadr x) (cadr y))))
+       (tuple (if (same-length-p x y)
+		  `(tuple ,@(mapcar (lambda (x y)
+				      (or (intersection-type x y)
+					  (return-from intersection-type)))
+				    (cdr x) (cdr y)))))
+       (function `(function ,(mapcar #'union-type (cadr x) (cadr y))
+			    ,(intersection-type (caddr x) (caddr y))))))
+    ((eq x t) y)
+    ((eq y t) x)))
+
+(define-test type-comparison
   (let ((types '(t
 		 (num)
 		 (bool)
@@ -57,18 +94,21 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 		  ((list (list t))
 		   ((list (list num)))
 		   ((list (list (tuple bool bool))))))
+		 ((tuple t t t)
+		  ((tuple num t bool)))
 		 ((tuple t t)
 		  ((tuple bool t)
 		   ((tuple bool (list t)))
 		   ((tuple bool bool)))
 		  ((tuple t num)))
-		 ((fn (num t) t)
-		  ((fn (num t) bool)))
-		 ((fn (bool bool) t)
-		  ((fn (bool t) t)
-		   ((fn (t t) t)
-		    ((fn (t t) num))
-		    ((fn (t t) (list t)))))))))
+		 ((function (num t) t)
+		  ((function (num t) bool)))
+		 ((function (bool bool) t)
+		  ((function (bool t) t)
+		   ((function (t t) t)
+		    ((function (t t) num))
+		    ((function (t t) (list t)))))))))
+    ;; test isa
     (map-internal-nodes (lambda (type)
 			  (assert-true (isa type t) type)
 			  (assert-equal (eq type t) (isa t type) type)
@@ -90,31 +130,36 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 					 (assert-false
 					  (isa (car subtree) (car subtree2))
 					  (car subtree) (car subtree2)))
-				     other)))
+				       other)))
 		     (cdr tree)))
 	     (cdr tree)))
-     types))
-  (assert-true (isa '(list nil) '(list bool)))
-  (assert-false (isa '(list bool) '(list nil)))
-  (assert-false (isa '(list (list nil)) '(list bool)))
-  (assert-true (isa '(list (list nil)) '(list (list bool))))
-  (assert-false (isa '(list bool) '(list (list nil)))))
-
-(defun union-type (x y)
-  (cond
-    ((equal x y) x)
-    ((and (consp x) (consp y) (eq (car x) (car y)))
-     (case (car x)
-       (list `(list ,(union-type (cadr x) (cadr y))))
-       (tuple (if (same-length-p x y)
-		  `(tuple ,@(mapcar #'union-type (cdr x) (cdr y)))
-		  'any))
-       (function (blockn `(function ,(mapcar (lambda (x y)
-					       (or (type-intersection x y)
-						   (return 'any)))
-					     (cadr x) (cadr y))
-				    ,(union-type (caddr x) (caddr y)))))))
-    (t 'any)))
+     types)
+    (assert-true (isa '(list nil) '(list bool)))
+    (assert-false (isa '(list bool) '(list nil)))
+    (assert-false (isa '(list (list nil)) '(list bool)))
+    (assert-true (isa '(list (list nil)) '(list (list bool))))
+    (assert-false (isa '(list bool) '(list (list nil))))
+    ;; test union-type and intersection-type
+    (map-subtrees 
+     (lambda (tree)
+       (map-subtrees
+	(lambda (subtree)
+	  (assert-equal (car tree) (union-type (car tree) (car subtree))
+			(car subtree))
+	  (assert-equal (car tree) (union-type (car subtree) (car tree))
+			(car subtree))
+	  (assert-equal (car subtree)
+			(intersection-type (car tree) (car subtree))
+			(car tree))
+	  (assert-equal (car subtree)
+			(intersection-type (car subtree) (car tree))
+			(car tree)))
+	tree))
+     types)
+  ;; test intersection-type
+  (assert-equal bool (intersection-type bool t))))
+  
+    
 
 ;;     (reduce-until 'any #'pairwise-union types)))
 ;; (define-all-equal-test type-union
@@ -134,22 +179,27 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 ;; 				 (tree-type `(list ,(cddr l)))
 ;; 				 (tree-type l))))
 ;; (type-of-first (lambda (&rest l) (tree-type (car l))))		   
-  (defun fun-type (f) 
-    (multiple-value-bind (v exists) (gethash f fun2type)
-      (unless exists 
-	(warn (concatenate 'string "couldn't find a type for " (string f))))
-      v)))
+(defun fun-type (f) 
+  (multiple-value-bind (v exists) (values nil nil);(gethash f fun2type)
+    (unless exists 
+      (warn (concatenate 'string "couldn't find a type for " (string f))))
+    v))
 (defun atom-type (x)
   (cond ((or (eq x 'true) (eq x 'false)) 'bool)
 	((numberp x) 'num)
 	((null x) nil)
 	(t (fun-type x))))
-(let ((type-finders 
-       (init-hash-table
+
+					      
+(defun expr-type (expr &optional bindings)
+  (let ((type-finders 
+	 (init-hash-table
 	`((car ,(lambda (args) (cadr (expr-type (car args)))))
 	  (cdr ,(lambda (args) (cadr (expr-type (car args)))))
-	  (list ,(lambda (args) (if args
-				    (list 'list
+	  (list ,(lambda (args) `(list ,(reduce #'union-type args))))
+	  
+				      (if args
+
 					  (let ((type nil))
 					    (dolist (arg args type)
 					      (aif (expr-type arg)
@@ -158,21 +208,16 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 							   (setf type 'any))
 						       (setf type it)))))))))
 	  (append ,(lambda (args) (dolist (arg args)
-				    (aif (expr-type (arg))
-
-					      
-					      
-(defun expr-type (expr &optional bindings)
-  (if (consp expr)
-      (case (car expr)
-	((and or not) 'bool)
-	((+ - * / exp log sin) 'num)
-	(tuple (cons 'tuple (mapcar #'expr-type (cdr expr))))
-	(t (aif (gethash (type-finders (car expr)))
-		(funcall it (cdr expr))
-		`(list ,(expr-type (car expr))))))
-      (if expr
-	  (aif (and bindings (gethash expr bindings)) it (atom-type expr)))))
+				    (aif (expr-type (arg))))))))))
+    (cond
+      ((consp expr) (case (car expr)
+		      ((and or not) 'bool)
+		      ((+ - * / exp log sin) 'num)
+		      (t (aif (gethash (type-finders (car expr)))
+			      (funcall it (cdr expr))
+			      `(list ,(expr-type (car expr))))))
+       ((arrayp expr) `(tuple ,@(mapcar #'expr-type (cdr expr))))
+       (t (aif (and bindings (gethash expr bindings)) it (atom-type expr)))))
 (define-all-equal-test expr-type
     `((bool (true false (and true false) (not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) (+ 1 2 3) (* (+ 1 0) 3)))
