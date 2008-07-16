@@ -37,23 +37,23 @@ Author: madscience@google.com (Moshe Looks) |#
 	    result))
       expr))
 
-;;; returns nil for (next-most-general any)
-;;; note that (next-most-general nil) is any
+;;; returns nil for (next-most-general t)
+;;; note that (next-most-general nil) is t
 (defun next-most-general (type) 
   (assert (not (tuple-type-p type)) () "tuples not yet supported here")
   (if (consp type)
-      (aif (next-most-general (cadr type)) (list (car type) it) 'any)
-      (case type (any nil) (t 'any))))
+      (aif (next-most-general (cadr type)) (list (car type) it) t)
+      (case type (t nil) (t t))))
 (define-test next-most-general
-  (assert-equal 'any (next-most-general 'bool))
-  (assert-equal '(list any) (next-most-general '(list bool)))
-  (assert-equal 'any (next-most-general '(list any)))
-  (assert-equal nil (next-most-general 'any)))
+  (assert-equal t (next-most-general 'bool))
+  (assert-equal '(list t) (next-most-general '(list bool)))
+  (assert-equal t (next-most-general '(list t)))
+  (assert-equal nil (next-most-general t)))
 
 (defvar *type-to-reductions* (make-hash-table))
 (defvar *reduction-prerequisites* (make-dag))
 (defmacro define-reduction (name (expr-name) &key
-			    (type 'any) prerequisites
+			    (type t) prerequisites
 			    (condition t) action order cleanups)
   (assert (and condition action)
 	  () "Condition and action required for reduction")
@@ -122,7 +122,7 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards)
 
 (define-reduction flatten-associative (expr)
-  :condition (progn (print 'gu) (associativep (car expr)))
+  :condition (associativep (car expr))
   :action 
   (labels ((try-flatten (subexprs)
 	     (blockn (mapl (lambda (rest)
@@ -132,7 +132,6 @@ Author: madscience@google.com (Moshe Looks) |#
 						(copy-list (cdar rest))
 						(try-flatten (cdr rest))))))
 			   subexprs))))
-    (print 'mu)
     (let ((subexprs (try-flatten (cdr expr))))
       (if (eq subexprs (cdr expr)) expr (cons (car expr) subexprs))))
   :order upwards)
