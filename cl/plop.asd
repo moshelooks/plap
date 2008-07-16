@@ -26,6 +26,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "dag")
 	       (:file "lang")
 	       (:file "enum")
+	       (:file "bindings")
 	       (:file "type")
 	       (:file "eval")
 	       (:file "rewrite")

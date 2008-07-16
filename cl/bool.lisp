@@ -26,10 +26,10 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (def-memoized-function truth-table (expr 
 				    &optional (vars (free-variables expr)))
-  (labels ((enum-bindings (vars)
+  (labels ((enum-bindings (vars) ; vars is an alist
 	     (if vars 
 		 (flet ((make-bindings (sub-binding v)
-			  (cons (list (car vars) v) sub-binding)))
+			  (acons (car vars) v sub-binding)))
 		   (mapcan (lambda (b) (list (make-bindings b t)
 					     (make-bindings b nil)))
 			   (enum-bindings (cdr vars))))
@@ -64,8 +64,9 @@ Author: madscience@google.com (Moshe Looks) |#
 					*enum-trees-test-symbols*))))
      (dolist (expr (enum-trees *enum-trees-test-symbols* 2) t)
        (unless (assert-equal (truth-table expr vars)
-			     (truth-table (funcall ,rewrite expr) vars))
-	 (print expr)
+			     (truth-table (funcall ,rewrite expr) vars)
+			     expr
+			     (funcall ,rewrite expr))
 	 (return nil)))))
 
 (defun dual-bool-op (f) (ecase f (and 'or) (or 'and)))
