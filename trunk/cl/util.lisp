@@ -97,7 +97,7 @@ Author: madscience@google.com (Moshe Looks) |#
   `(define-test ,name 
      (dolist (p ,pairs)
        (dolist (x (cadr p))
-	 (assert-equal (car p) (funcall #',name x))))))
+	 (assert-equal (car p) (funcall #',name x) (cadr p))))))
 (defmacro assert-for-all (f l)
   `(mapcar (lambda (x)
 	     (assert-true (funcall ,f x)))

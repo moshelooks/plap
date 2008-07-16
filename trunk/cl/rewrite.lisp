@@ -122,7 +122,7 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards)
 
 (define-reduction flatten-associative (expr)
-  :condition (associativep (car expr))
+  :condition (progn (print 'gu) (associativep (car expr)))
   :action 
   (labels ((try-flatten (subexprs)
 	     (blockn (mapl (lambda (rest)
@@ -132,6 +132,7 @@ Author: madscience@google.com (Moshe Looks) |#
 						(copy-list (cdar rest))
 						(try-flatten (cdr rest))))))
 			   subexprs))))
+    (print 'mu)
     (let ((subexprs (try-flatten (cdr expr))))
       (if (eq subexprs (cdr expr)) expr (cons (car expr) subexprs))))
   :order upwards)
