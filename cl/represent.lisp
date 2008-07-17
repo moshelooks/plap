@@ -42,8 +42,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		    ((or top (longerp ws 1))
 		     (nconc (list (funcall builder (identity-elem op) nil nil))
 			    (mapcar (lambda (weight term)
-				      (multiple-value-bind (o ws ts)
-					  (funcall splitter term)
+				      (mvbind (o ws ts) (funcall splitter term)
 					(declare (ignore o))
 					(funcall builder weight ws ts)))
 				    ws ts)))
@@ -63,7 +62,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (collect (list '+ 1 (sub-product op offset)))))
 		       ops op-offsets))
 	    #'split-sum-of-products #'sum-of-products o ws ts top)))
-      (ecase type
+      (ecase (if (consp type) (car type) type)
 	(bool
 	 (decompose-bool expr
 	   (literal (bool-structure expr))
@@ -74,16 +73,29 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (list (dual-bool-op op) (list op) body))))
 	   (t (bool-structure (canonize-children expr)))))
 	(num 
-	 (destructuring-bind (splitter builder)
+	 (dbind (splitter builder)
 	     (if (and (consp expr) (eq (car expr) '+) 
 		      (longerp expr (if (numberp (cadr expr)) 3 2)))
 		 `(,#'split-product-of-sums ,#'product-of-sums)
 		 `(,#'split-sum-of-products ,#'sum-of-products))
-	   (multiple-value-bind (o ws ts) (funcall splitter expr)
+	   (mvbind (o ws ts) (funcall splitter expr)
 	     (funcall builder o ws ts t))))
-;	(list...
-
-))))
+	(function
+	 (dbind (arg-types return-type) (cdr type)
+	   (decompose-function expr
+	     (lambda
+	       (dbind (arg-names body) (cdr expr)
+		 (if (and (or (not (consp body)) (not (eq (car body) 'split)))
+			  (find-if #'list-type-p arg-types))
+		     (list 'lambda arg-names 
+			   (list 'split nil nil 
+				 (list 'lambda nil 
+				       (canonize body 
+						 :type return-type))))))))))
+;	(list
+;	 (decompose-list expr
+;	   (append
+;	    ))))
 (define-test canonize
   ;; boolean cases
   (assert-equal '(or (and) (and x))
@@ -147,8 +159,11 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (+ 1 ,@add-blocks ,mult-block
 			  (* 1 ,@(cddr mult-block) (+ 0 x))
 			  (* 1 ,@(cddr mult-block) (+ 0 y))))
-		   (canonize '(+ 1 x y)))))
-
+		   (canonize '(+ 1 x y))))
+  ;; function type cases
+  (assert-equal '(lambda (list x) (split () () (lambda () (or (and) (and x)))))
+		(canonize '(lambda (list x) x) 
+			  :type '(function ((list bool) bool) bool))))
 
 (defun loci (fn expr &key (type (expr-type expr)) parents)
   (flet ((boolrec (&optional type)
@@ -268,11 +283,10 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (cdr expr))
 			 expr)))
 		  (mult (eq (car expr) '*)))
-	      (multiple-value-bind (o ws ts)
-		  (funcall (if mult
-			       #'split-product-of-sums
-			       #'split-sum-of-products)
-			   expr)
+	      (mvbind (o ws ts) (funcall (if mult
+					     #'split-product-of-sums
+					     #'split-sum-of-products)
+					 expr)
 		(declare (ignore o ws))
 		(mapc (bind #'remhash /1 tovisit)
 		      (mapcar #'haxx-num-2

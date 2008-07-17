@@ -20,20 +20,34 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
-(defmacro aif (test then &optional else) ; described in onlisp, by pg
+(defmacro aif (test then &optional else) ; onlisp
   `(let ((it ,test))
      (if it ,then ,else)))
-(defmacro while (test &body body) ; described in onlisp, by pg
+(defmacro while (test &body body)	; onlisp
   `(do ()
        ((not ,test))
      ,@body))
-(defmacro awhen (test &body body) ; described in onlisp, by pg
+(defmacro awhen (test &body body)	; onlisp
   `(aif ,test
         (progn ,@body)))
 (defmacro dorepeat (n &body body)
   (let ((var (gensym)))
     `(dotimes (,var ,n)
        ,@body)))
+(defun group (source n)			; onlisp
+  (if (zerop n) (error "zero length")) 
+  (labels ((rec (source acc) 
+	     (let ((rest (nthcdr n source))) 
+	       (if (consp rest) 
+		   (rec rest (cons (subseq source 0 n) acc)) 
+		   (nreverse (cons source acc)))))) 
+    (if source (rec source nil) nil)))
+
+;;; abbreviations
+(defmacro mvbind (vars values &body body)
+  `(multiple-value-bind ,vars ,values ,@body))
+(defmacro dbind (llist expr &body body)
+  `(destructuring-bind ,llist ,expr ,@body))
 
 ;;; list iteration, comparison, manipulation, and construction
 (defun same-length-p (l1 l2)
@@ -57,6 +71,30 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun mappend (f l) (apply #'append (mapcar f l)))
 (defun iota (n) (loop for i from 0 to (- n 1) collect i))
 (defun sort-copy (l cmp) (sort (copy-seq l) cmp))
+
+(defmacro bind-collectors (collectors collectors-body &body body)
+  `(mvbind ,collectors (with-collectors ,collectors ,collectors-body)
+     ,@body))
+
+(defun split-lists (lists defaults fn &aux (listmap (make-hash-table)))
+  (bind-collectors (cars cdrs)
+      (mapc (lambda (list default)
+	      (aif (and list (mvbind (v exists) (gethash list listmap)
+			       (if exists v list)))
+		   (progn (cars (car it))
+			  (cdrs (setf (gethash list listmap) (cdr it))))
+		   (return-from split-lists default)))
+	    lists defaults)
+    (apply fn (nconc cars cdrs))))
+(define-test split-lists
+  (let ((x '(1 2 3))
+	(y '(a b c))
+	(z '(q)))
+    (assert-equal '(1 a 2 3 b (2 3) (b c) (3) nil (c))
+		  (split-lists (list x y x x y) '(nil nil nil nil nil)
+			       (lambda (&rest args) args)))
+    (assert-equal 42 (split-lists (list x y z z x) '(nil nil nil 42 nil)
+				  (lambda (&rest args) args)))))
 
 ;;; generalized argument-binding construct
 (defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9
