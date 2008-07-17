@@ -164,16 +164,17 @@ Author: madscience@google.com (Moshe Looks) |#
   (blockn (adjacent-pairs (lambda (x y) (if (negatesp x y) (return t)))
 			  clause)
 	  nil))
+(defun bool-identities (op)
+  (ecase op
+    (and 'bool-and-identities)
+    (or 'bool-or-identities)))
 
 (define-bool-dual-reductions identify-contradictions identify-tautologies 
   (operator identity complement expr)
   :condition (eq operator (car expr))
   :action (if (var-and-negation-p (cdr expr)) complement expr)
   :prerequisites '(sort-commutative)
-  :cleanups (list (if (eq operator 'and)
-		      'bool-or-identities 
-		      'bool-and-identities)
-		  'sort-commutative)
+  :cleanups (list (bool-identities (dual-bool-op operator)) 'sort-commutative)
   :order upwards)
 (define-test identify-contradictions
   (assert-equal 'false (identify-contradictions '(and x (not x))))

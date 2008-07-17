@@ -43,7 +43,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert (not (tuple-type-p type)) () "tuples not yet supported here")
   (if (consp type)
       (aif (next-most-general (cadr type)) (list (car type) it) t)
-      (case type (t nil) (t t))))
+      (if (eq type t) nil t)))
 (define-test next-most-general
   (assert-equal t (next-most-general 'bool))
   (assert-equal '(list t) (next-most-general '(list bool)))

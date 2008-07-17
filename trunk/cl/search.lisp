@@ -301,7 +301,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; is it important to allof functions that generate reductions?
 
 ;; (defun kick (program find-move)
-;;   (multiple-value-bind (siblings locus move) (funcall find-move program nil)
+;;   (mvbind (siblings locus move) (funcall find-move program nil)
 ;;     (
 
 ;; (let (())

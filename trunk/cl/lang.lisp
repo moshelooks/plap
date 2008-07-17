@@ -126,7 +126,7 @@ This defines the basic language used to represent evolved programs.
     ((mkdecomposer (name &body conditions)
        `(defmacro ,name (expr &body clauses)
 	  `(cond ,@(mapcar (lambda (clause)
-			     (destructuring-bind (pred &body body) clause
+			     (dbind (pred &body body) clause
 			       (let ((condition (case pred
 						  ((t) 't)
 						  ,@conditions)))
@@ -140,7 +140,12 @@ This defines the basic language used to represent evolved programs.
 			      `(eq (car ,expr) ',pred)))))
   (mkdecomposer decompose-bool
 		(literal `(literalp ,expr))
-		(junctor `(junctorp ,expr))))
+		(junctor `(junctorp ,expr)))
+  (mkdecomposer decompose-function
+		(lambda `(and (consp ,expr) (eq (car ,expr) 'lambda))))
+  (mkdecomposer decompose-list
+		(append `(and (consp ,expr) (eq (car ,expr) 'append)))
+		(list  `(and (consp ,expr) (eq (car ,expr) 'list)))))
 (define-test decompose-num
   (assert-equal 
    '(cond ((numberp expr) foo) 
@@ -163,7 +168,7 @@ This defines the basic language used to represent evolved programs.
 (defun split-by-coefficients (exprs &key (op '*) (identity 1))
   (with-collectors (coefficient term)
     (mapc (lambda (expr)
-	    (destructuring-bind (coefficient term)
+	    (dbind (coefficient term)
 		(if (and (consp expr) (eq (car expr) op) (numberp (cadr expr)))
 		    `(,(cadr expr) ,(if (cdddr expr)
 					(cons op (cddr expr))
@@ -174,7 +179,7 @@ This defines the basic language used to represent evolved programs.
 	  exprs)))
 (defun dual-decompose (expr op op-identity dual dual-identity)
   (flet ((mksplit (offset exprs)
-	   (multiple-value-bind (weights terms)
+	   (mvbind (weights terms) 
 	       (split-by-coefficients exprs :op dual :identity dual-identity)
 	     (values offset weights terms))))
     (cond ((numberp expr) (values expr nil nil))
@@ -189,11 +194,11 @@ This defines the basic language used to represent evolved programs.
 
 (define-test dual-decompose
   (flet ((ldass (expr o1 ws1 ts1 o2 ws2 ts2)
-	   (multiple-value-bind (o ws ts) (split-sum-of-products expr)
+	   (mvbind (o ws ts) (split-sum-of-products expr)
 	     (assert-equal o1 o)
 	     (assert-equal ws1 ws)
 	     (assert-equal ts1 ts))
-	   (multiple-value-bind (o ws ts) (split-product-of-sums expr)
+	   (mvbind (o ws ts) (split-product-of-sums expr)
 	     (assert-equal o2 o)
 	     (assert-equal ws2 ws)
 	     (assert-equal ts2 ts))))
