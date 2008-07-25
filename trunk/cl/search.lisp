@@ -35,7 +35,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (define-test neighbors-at
   (flet ((test (against expr type bindings &optional nocanon)
-	   (let* ((expr (if nocanon expr (canonize expr :type type)))
+	   (let* ((expr (if nocanon expr (canonize expr type)))
 		  (tmp (copy-tree expr))
 		  (bindings (init-type-map `((,type ,bindings)))))
 	     (assert-equal
@@ -132,7 +132,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (validate expr bindings)
 	  (print* 'kicked-to expr))))
 					;(return-from hillclimb expr)))
-    (setf expr (canonize expr :type type)))
+    (setf expr (canonize expr type)))
   expr)
 
 (defun make-count-or-score-terminator (count score score-target)
@@ -162,13 +162,11 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun make-pair-scorer (pairs var)
   (lambda (expr)
     (blockn
-      (- (reduce #'+ (mapcar (lambda (p) 
-			       (let ((d (abs (- (eval-expr expr :bindings
-							   `((,var ,(car p))))
-						(cadr p)))))
-				 (if (> d 1)
-				     (return (* -2 (length pairs)))
-				     d)))
+      (- (reduce #'+ (mapcar (lambda (p &aux 
+				      (d (abs (- (eval-expr expr 
+							    `((,var ,(car p))))
+						 (cadr p)))))
+			       (if (> d 1) (return (* -2 (length pairs))) d))
 			     pairs))))))
 
 (defun num-hillclimb-with-target-pairs (target-pairs nsteps)

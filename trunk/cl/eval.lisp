@@ -15,7 +15,7 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun eval-expr (expr &key bindings type)
+(defun eval-expr (expr &optional bindings &key type)
   (labels ((eval-subexpr (expr)
 	     (if (consp expr)
 		 (call (car expr) (cdr expr))
@@ -41,7 +41,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (true t)
 		   (false nil)
 		   (nil nil)
-		   (t (lookup-bindings arg bindings)))
+		   (t (acase (lookup-bindings arg bindings)
+			(true t)
+			(false nil)
+			(t it))))
 		 arg))
 	   (and-op (args) (and (eval-subexpr (car args))
 			       (aif (cdr args) (and-op it) t)))

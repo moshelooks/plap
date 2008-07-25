@@ -34,9 +34,9 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 (defvar bool 'bool)
 (defvar num 'num)
 
-(defun list-type-p (type) (and (consp type) (eq (car type) 'list)))
-(defun tuple-type-p (type) (and (consp type) (eq (car type) 'tuple)))
-(defun function-type-p (type) (and (consp type) (eq (car type) 'function)))
+(defun list-type-p (type) (eq (acar type) 'list))
+(defun tuple-type-p (type) (eq (acar type) 'tuple))
+(defun function-type-p (type) (eq (acar type) 'function))
 
 ;;; is every x a y? note that this is a partial ordering
 (defun isa (x y)
@@ -171,49 +171,19 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 				'(function ((function (bool) num)) num)))
     (assert-equal bool (intersection-type bool t))))
 
-(let ((fun2type 
-       (init-hash-table
-	'((and (function (list bool) bool))
-	  (or (function (list bool) bool))
-	  (not (function bool bool))
-	 
-	  (+ (function (list num) num))
-	  (* (function (list num) num))
-	  (exp (function num num))
-	  (log (function num num))
-	  (sin (function num num))
-	  
-	  (< (function (num num) bool))
-	 
-	  ;(append (function (list any) (list (list any))))
-	  ;(car (function any (list any)))
-	  ;(cdr (function (list any) (list any)))
-	  (length (function (list t) num))))))
-	  ;(accumulate (function any (function any any any) (list any) any))
-	  ;(mapcar (function (list any) (function any any) (list any)))
+;; look in svn for function-type code
 
-;; 	  (progn (act-result any),type-of-first)
-;; 	  (andseq ,type-of-first)
-;; 	  (orseq ,type-of-first)))))
-
-;; 	   (cons ,(lambda (x l) (type-union `(list ,(tree-type x))
-;; 					    (tree-type l))))
-;; 	   (append ,(lambda (&rest ls) (apply #'type-union 
-;; 					      (mapcar '#tree-type ls))))
-;; 	   (car ,(lambda (l) (if (eq (car l) 'list)
-;; 				 (tree-type (car l))
-;; 				 (cadr (tree-type l)))))
-;; 	   (cdr ,(lambda (l) (if (eq (car l) 'list)
-;; 				 (tree-type `(list ,(cddr l)))
-;; 				 (tree-type l))))
-;; (type-of-first (lambda (&rest l) (tree-type (car l))))
-  (defun function-type (f) (gethash f fun2type)))
-
-(defun atom-type (x)
+(defun atom-type (x) ; returns nil iff no type found
   (cond ((or (eq x true) (eq x false)) bool)
 	((numberp x) num)
-	((null x) '(list nil))
-	(t (function-type x))))
+	((null x) '(list nil))))
+
+(defun value-type (expr) ; returns nil iff no type found
+  (cond
+    ((consp expr) `(list ,(reduce #'union-type (cdr expr) :key #'value-type)))
+    ((arrayp expr) `(tuple ,@(map 'list #'value-type expr)))
+    (t (atom-type expr))))
+
 (let ((type-finders 
        (init-hash-table
 	`((car ,(lambda (fn args) (cadr (funcall fn (car args)))))
@@ -223,39 +193,55 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	  (append ,(lambda (fn args) (reduce #'union-type args :key fn)))
 	  (tuple ,(lambda (fn args) `(tuple ,@(mapcar fn args))))))))
   (defun expr-type (expr &optional bindings)
-    (if (consp expr) 
+    (if (consp expr)
 	(case (car expr)
 	  ((and or not <) bool)
 	  ((+ - * / exp log sin) num)
 	  (t (aif (gethash (car expr) type-finders)
 		  (funcall it (bind #'expr-type /1 bindings) (cdr expr))
-		  (error "unrecognized function ~S." (car expr)))))
-	(aif (and bindings (lookup-bindings expr bindings))
-	     (value-type it)
-	     (atom-type expr)))))
+		  (error "unrecognized function ~S" (car expr)))))
+	(or (atom-type expr) 
+	    (aif (lookup-bindings expr bindings) ;fixme
+		 (value-type it))))))
 (define-all-equal-test expr-type
     `((bool (true false (and true false) (not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) (+ 1 2 3) (* (+ 1 0) 3)))
-      ((function (list bool) bool) (and or))
-      ((function bool bool) (not))
-      ((function (list num) num) (+ *))
+      ;((function (list bool) bool) (and or))
+      ;((function bool bool) (not))
+      ;((function (list num) num) (+ *))
       (bool ((< 2 3)))))
 (define-test expr-type-with-bindings
   (assert-equal bool (expr-type 'x (init-hash-table '((x true)))))
   (assert-equal num (expr-type 'x (acons 'x 42 nil)))
   (assert-equal '(list num) (expr-type '(list x) (acons 'x 3.3 nil)))
   (assert-equal num (expr-type '(car (list x)) (init-hash-table '((x 0))))))
-(defun value-type (expr)
-  (cond
-    ((consp expr) `(list ,(reduce #'union-type (cdr expr) :key #'value-type)))
-    ((arrayp expr) `(tuple ,@(map 'list #'value-type expr)))
-    (t (atom-type expr))))
+
+;;; contextually determines the types for the children
+(defun arg-types (expr type)
+  (assert (not (eq 'lambda (acar expr))))
+  (case (car expr)
+    (< '(num num)) ;fixme
+    (list (mapcar (bind #'identity (cadr type)) (cdr expr)))
+    (split `((tuple ,@()) (function (
+    (t (mapcar (bind #'identity type) (cdr expr))))) ; works for most things
+    
 
 ;;; a typemap is a hashtable of types mapping to hashset of var names
 (defun make-type-map () (make-hash-table))
 (defun init-type-map (contents)
   (init-hash-table (mapcar (bind #'list (car /1) (init-hash-set (cadr /1)))
 			   contents)))
+
+(defun default-value (type)
+  (ecase (icar type)
+    (bool true)
+    (num 0)
+    (function (assert nil));`(lambda ,(
+    (list nil)))
+
+(defun genname (type)
+  (gensym (symbol-name type)))
+
 
 ;; (defun is-type-p (type) 
 ;;   (if (consp type)

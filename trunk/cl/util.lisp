@@ -15,8 +15,8 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(declaim (optimize (speed 0) (safety 3) (debug 3)))
-;(declaim (optimize (speed 3) (safety 0) (debug 0)))
+;(declaim (optimize (speed 0) (safety 3) (debug 3)))
+(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
@@ -30,6 +30,9 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro awhen (test &body body)	; onlisp
   `(aif ,test
         (progn ,@body)))
+(defmacro acase (keyform &body clauses)
+  `(let ((it ,keyform))
+     (case it ,@clauses)))
 (defmacro dorepeat (n &body body)
   (let ((var (gensym)))
     `(dotimes (,var ,n)
@@ -42,6 +45,13 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (rec rest (cons (subseq source 0 n) acc)) 
 		   (nreverse (cons source acc)))))) 
     (if source (rec source nil) nil)))
+(defun single (lst) ;onlisp
+  "Test list for one element."   ; LMH
+  (and (consp lst) (not (cdr lst))))
+
+(defun acar (x) (and (consp x) (car x)))
+(defun icar (x) (if (consp x) (car x) x))
+(defun ncons (x) (cons x nil))
 
 ;;; abbreviations
 (defmacro mvbind (vars values &body body)
@@ -72,29 +82,41 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun iota (n) (loop for i from 0 to (- n 1) collect i))
 (defun sort-copy (l cmp) (sort (copy-seq l) cmp))
 
+;;; interleave copies of elem between elements of l, with elem iteself as
+;;; the last element
+(defun interleave (elem l)
+  (reduce (lambda (x sofar) (cons (copy-tree elem) (cons x sofar)))
+	  l :from-end t :initial-value (ncons elem)))
+
 (defmacro bind-collectors (collectors collectors-body &body body)
   `(mvbind ,collectors (with-collectors ,collectors ,collectors-body)
      ,@body))
 
-(defun split-lists (lists defaults fn &aux (listmap (make-hash-table)))
+;;; (split (vector l1 d1 l2 d2 ... lN dN) fn)
+;;; li are lists, fn is a function of 2N arguments
+;;; Sequentially tests lists l1 ... lN for emptiness - if some list li is found
+;;; to be empty, returns the value di. If no lists are empty, then fn is called
+;;; with argument list (first1 rest1 first2 rest2 ... firstN restN), where 
+;;; firsti is (car li) and resti is (cdr li)
+(defun split (lists defaults fn &aux (listmap (make-hash-table)))
   (bind-collectors (cars cdrs)
       (mapc (lambda (list default)
 	      (aif (and list (mvbind (v exists) (gethash list listmap)
 			       (if exists v list)))
 		   (progn (cars (car it))
 			  (cdrs (setf (gethash list listmap) (cdr it))))
-		   (return-from split-lists default)))
+		   (return-from split default)))
 	    lists defaults)
     (apply fn (nconc cars cdrs))))
-(define-test split-lists
+(define-test split
   (let ((x '(1 2 3))
 	(y '(a b c))
 	(z '(q)))
     (assert-equal '(1 a 2 3 b (2 3) (b c) (3) nil (c))
-		  (split-lists (list x y x x y) '(nil nil nil nil nil)
-			       (lambda (&rest args) args)))
-    (assert-equal 42 (split-lists (list x y z z x) '(nil nil nil 42 nil)
-				  (lambda (&rest args) args)))))
+		  (split (list x y x x y) '(nil nil nil nil nil)
+			 (lambda (&rest args) args)))
+    (assert-equal 42 (split (list x y z z x) '(nil nil nil 42 nil)
+			    (lambda (&rest args) args)))))
 
 ;;; generalized argument-binding construct
 (defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9
@@ -303,7 +325,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal '((1 (2 3) 4) (2 3) 3 4) 
 		(collecting (map-subtrees (lambda (sub) (collect sub))
 					  '(1 (2 3) 4)))))
-
+(defun tree-size (tree)
+  (if (atom tree) 1 (reduce #'+ (cdr tree) :key #'tree-size :initial-value 1)))
 ;;; io
 (defun print* (&rest args)
   (print (car args))

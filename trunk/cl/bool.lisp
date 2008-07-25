@@ -30,12 +30,13 @@ Author: madscience@google.com (Moshe Looks) |#
 	     (if vars 
 		 (flet ((make-bindings (sub-binding v)
 			  (acons (car vars) v sub-binding)))
-		   (mapcan (lambda (b) (list (make-bindings b t)
-					     (make-bindings b nil)))
+		   (mapcan (lambda (b) (list (make-bindings b 'true)
+					     (make-bindings b 'false)))
 			   (enum-bindings (cdr vars))))
 		 (list nil))))
-    (mapcar (bind #'eq (eval-expr expr :bindings /1) 'true)
-	    (enum-bindings vars))))
+    (let ((res (mapcar (bind #'eq (eval-expr expr /1) 'true)
+		       (enum-bindings vars))))
+      res)))
 
 (defun truth-table-hamming-distance (tt1 tt2)
   (let ((i 0))
@@ -70,16 +71,17 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (return nil)))))
 
 (defun dual-bool-op (f) (ecase f (and 'or) (or 'and)))
-(defun junctorp (expr) (and (consp expr) (matches (car expr) (and or))))
+(defun junctorp (expr) (matches (acar expr) (and or)))
 (defun literalp (expr)
-  (or (not (consp expr)) 
-      (and (eq (car expr) 'not) (not (consp (cadr expr))))))
+  (if (consp expr)
+      (and (eq (car expr) 'not) (not (consp (cadr expr))))
+      (not (matches expr (true false)))))
 
 (define-reduction dangling-junctors (expr)
   :type bool
   :condition (junctorp expr)
   :action 
-  (flet ((pred (x) (and (consp x) (not (cdr x)) (matches (car x) (and or)))))
+  (flet ((pred (x) (and (single x) (matches (car x) (and or)))))
     (if (find-if #'pred (cdr expr))
 	(cons (car expr) (remove-if #'pred (cdr expr)))
 	expr))
