@@ -15,98 +15,144 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun canonize (expr &key (type (expr-type expr)) parent)
-  (let ((op (if (consp expr) (car expr)))
-	(ops '(exp log sin))
-	(op-offsets '(0 1 0)))
-    (labels
-	((canonize-children (expr)
-	   (if (consp expr)
-	       (cons (car expr) (mapcar (bind #'canonize /1 :parent op ;fixme
-					      :type (or (expr-type /1) type))
-					(cdr expr)))
-	       expr))
-	 (bool-structure (expr)
-	   (if parent 
-	       (list (dual-bool-op parent) expr)
-	       (list 'or (list 'and) (list 'and expr))))
-	 (sub-product (op offset)
-	   (list '* 0 (list op
-			    (nconc (list '+ offset)
-				   (mapcar 
-				    (bind #'list '* 0 (list /1 (list '+ /2)))
-				    ops op-offsets)))))
-	 (dual-assemble (op ops-terms splitter builder o ws ts &optional top)
-	   (nconc (list op o) ops-terms
-		  (cond 
-		    ((or top (longerp ws 1))
-		     (nconc (list (funcall builder (identity-elem op) nil nil))
-			    (mapcar (lambda (weight term)
-				      (mvbind (o ws ts) (funcall splitter term)
-					(declare (ignore o))
-					(funcall builder weight ws ts)))
-				    ws ts)))
-		    (ws (list 
-			 (list (dual-num-op op) (car ws)
-			       (canonize-children (car ts))))))))
-	 (sum-of-products (o ws ts &optional top)
-	   (dual-assemble 
-	    '+ (mapcar #'sub-product ops op-offsets)
-	    #'split-product-of-sums #'product-of-sums o ws ts top))
-	 (product-of-sums (o ws ts &optional top)
-	   (dual-assemble 
-	    '* (collecting
-		 (mapc (lambda (op offset)
-			 (unless (find op ts :key (lambda (x)
-						    (and (consp x) (car x))))
-			   (collect (list '+ 1 (sub-product op offset)))))
-		       ops op-offsets))
-	    #'split-sum-of-products #'sum-of-products o ws ts top)))
-      (ecase (if (consp type) (car type) type)
-	(bool
-	 (decompose-bool expr
-	   (literal (bool-structure expr))
-	   (junctor (let ((body (nconc (list op (list (dual-bool-op op)))
-				       (cdr (canonize-children expr)))))
-		      (if parent 
-			  body 
-			  (list (dual-bool-op op) (list op) body))))
-	   (t (bool-structure (canonize-children expr)))))
-	(num 
-	 (dbind (splitter builder)
-	     (if (and (consp expr) (eq (car expr) '+) 
-		      (longerp expr (if (numberp (cadr expr)) 3 2)))
-		 `(,#'split-product-of-sums ,#'product-of-sums)
-		 `(,#'split-sum-of-products ,#'sum-of-products))
-	   (mvbind (o ws ts) (funcall splitter expr)
-	     (funcall builder o ws ts t))))
-	(function
-	 (dbind (arg-types return-type) (cdr type)
-	   (decompose-function expr
-	     (lambda
-	       (dbind (arg-names body) (cdr expr)
-		 (if (and (or (not (consp body)) (not (eq (car body) 'split)))
-			  (find-if #'list-type-p arg-types))
-		     (list 'lambda arg-names 
-			   (list 'split nil nil 
-				 (list 'lambda nil 
-				       (canonize body 
-						 :type return-type))))))))))
-;	(list
-;	 (decompose-list expr
-;	   (append
-;	    ))))
+(defun canonize-children (expr type)
+  (if (atom expr) expr
+      (cons (car expr) (mapcar #'canonize (cdr expr) (arg-types expr type)))))
+
+(labels 
+    ((structure-bool (op children)
+       (cons
+	(list op)
+	(mapcar (lambda (expr)
+		  (cons op (decompose-bool expr
+			     (literal (ncons expr))
+			     (junctor (structure-bool (dual-bool-op op) 
+						      (cdr expr)))
+			     (t (ncons (canonize-children expr 'bool))))))
+		children))))
+  (defun canonize-bool (expr &aux (op (if (junctorp expr) (car expr) 'and))
+			(dual (dual-bool-op op)))
+    `(,dual (,op) ,(cons op (decompose-bool expr
+			      (literal (ncons expr))
+			      (constant nil)
+			      (junctor (structure-bool dual (cdr expr)))
+			      (t (ncons (canonize-children expr 'bool))))))))
+
+(defun canonize-num (expr &aux (ops '(exp log sin)) (op-offsets '(0 1 0)))
+  (labels
+      ((sub-product (op offset)
+	 (list '* 0 (list op
+			  (nconc (list '+ offset)
+				 (mapcar 
+				  (bind #'list '* 0 (list /1 (list '+ /2)))
+				  ops op-offsets)))))
+       (dual-assemble (op ops-terms splitter builder o ws ts &optional top)
+	 (nconc (list op o) ops-terms
+		(cond 
+		  ((or top (longerp ws 1))
+		   (nconc (list (funcall builder (identity-elem op) nil nil))
+			  (mapcar (lambda (weight term)
+				    (mvbind (o ws ts) (funcall splitter term)
+				      (declare (ignore o))
+				      (funcall builder weight ws ts)))
+				  ws ts)))
+		  (ws (list 
+		       (list (dual-num-op op) (car ws)
+			     (canonize-children (car ts) 'num)))))))
+       (sum-of-products (o ws ts &optional top)
+	 (dual-assemble 
+	  '+ (mapcar #'sub-product ops op-offsets)
+	  #'split-product-of-sums #'product-of-sums o ws ts top))
+       (product-of-sums (o ws ts &optional top)
+	 (dual-assemble 
+	  '* (collecting
+	       (mapc (lambda (op offset)
+		       (unless (find op ts :key #'acar)
+			 (collect (list '+ 1 (sub-product op offset)))))
+		     ops op-offsets))
+	  #'split-sum-of-products #'sum-of-products o ws ts top)))
+    (dbind (splitter builder)
+	(if (and (eq (acar expr) '+)
+		 (longerp expr (if (numberp (cadr expr)) 3 2)))
+	    `(,#'split-product-of-sums ,#'product-of-sums)
+	    `(,#'split-sum-of-products ,#'sum-of-products))
+      (mvbind (o ws ts) (funcall splitter expr)
+	(funcall builder o ws ts t)))))
+
+(defun structure-list (list elem type)
+  (cons 'append
+	(interleave elem (mapcar (lambda (x)
+				   `(if true ,(canonize-children x type) nil))
+				 list))))
+
+(defun canonize (expr &optional (type (expr-type expr)))
+  (print* 'got expr type)
+  (ecase (icar type)
+    (bool (canonize-bool expr))
+    (num  (canonize-num expr))
+    (function
+     (cons 
+      'lambda
+      (dbind (arg-types return-type) (cdr type)
+	(decompose-function expr
+	  (lambdsa
+	   (dbind (arg-names body) (cdr expr)
+	     (list arg-names
+		   (if (find-if #'list-type-p arg-types)
+		       (cons 'split 
+			     (if (not (eq (acar body) 'split))
+				 `(() () (lambda ()
+					   ,(canonize body return-type)))
+				 (dbind (lists defaults body) (cdr body)
+				   (list (should canonical form for the 
+						 list of lists go here?)
+					 (mapcar #'canonize defaults
+						 (mapcar 
+						  fck, get types of defaults
+						  somehow and canonize
+						  
+						  get based on types of lists
+						  we need bindings(?)
+
+						  wait this isn't list list any
+						  it breaks type system
+						  do we care?
+						  ))
+					 (canonize-function ;create me
+					  body `(function ,default-types
+							  return-type)
+
+				 
+	  (t (let ((arg-names (mapcar #'genname arg-types)))
+	       (cons arg-names
+		     (nconc (if (consp expr)
+				`(funcall ,(canonize-children expr type))
+				`(,expr))
+			    (mapcar #'canonize arg-names arg-types)))))))))
+    (list
+     (let* ((subtype (cadr type))
+	    (elem `(if false
+		       (list ,(canonize (default-value subtype) subtype))
+		       nil)))
+       (structure-list (decompose-list expr (append (cdr expr)) (t `(,expr)))
+		       elem type)))))
+
+;; should inclusion of already present list elements be conditional?
+;; should we build the boolean canonical form?
+;; if not, maybe just let true/false slip into a literal?
+
+
 (define-test canonize
   ;; boolean cases
   (assert-equal '(or (and) (and x))
-		(canonize 'x :type 'bool))
+		(canonize 'x 'bool))
   (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
-		(canonize '(and x1 (not x4)) :type 'bool))
+		(canonize '(and x1 (not x4)) 'bool))
   (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
-		(canonize '(or x1 (not x4)) :type 'bool))
-  (assert-equal '(or (and) (and x1)) (canonize 'x1 :type 'bool))
+		(canonize '(or x1 (not x4)) 'bool))
+  (assert-equal '(or (and) (and x1)) (canonize 'x1 'bool))
   (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
-		 (canonize '(or (and x1 x2) x3) :type 'bool))
+		 (canonize '(or (and x1 x2) x3) 'bool))
   ;; mixed boolean-numeric and numeric cases
   (let* ((exp-block '(* 0 (exp (+ 0
 				(* 0 (exp (+ 0)))
@@ -127,12 +173,12 @@ Author: madscience@google.com (Moshe Looks) |#
 			 (+ 1 ,sin-block))))
     (assert-equal `(or (and) (and (< (+ 2 ,@add-blocks ,mult-block) 
 				     (+ 3 ,@add-blocks ,mult-block))))
-		  (canonize '(< 2 3) :type 'bool))
+		  (canonize '(< 2 3) 'bool))
     (assert-equal `(+ 0 ,@add-blocks ,mult-block)
 		  (canonize 0))
     (assert-equal `(+ 0 ,@add-blocks ,mult-block
 		      (* 1 ,@(cddr mult-block) (+ 0 x)))
-		  (canonize 'x :type 'num))
+		  (canonize 'x 'num))
     (assert-equal `(+ 0 ,@add-blocks ,mult-block
 		      (* 1
 			 (+ 1 ,exp-block)
@@ -161,9 +207,23 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (* 1 ,@(cddr mult-block) (+ 0 y))))
 		   (canonize '(+ 1 x y))))
   ;; function type cases
-  (assert-equal '(lambda (list x) (split () () (lambda () (or (and) (and x)))))
-		(canonize '(lambda (list x) x) 
-			  :type '(function ((list bool) bool) bool))))
+  (assert-equal '(lambda (l x) (split () () (lambda () (or (and) (and x)))))
+		(canonize '(lambda (l x) x)
+			  '(function ((list bool) bool) bool)))
+  (assert-equal '(lambda (l x) 
+		  (split (l) (true)
+		   (lambda (first rest)
+		     (split () () 
+		      (or (and) (and (or) (or first) (or x)))))))
+		(canonize '(lambda (l x)
+			    (split (l) (true)
+			     (lambda (first rest) (and first x))))
+			  '(function ((list bool) bool) bool)))
+  ;; list type cases
+  (assert-equal `(append (if false (list ,(canonize 0)) nil)
+			 (if true (list ,(canonize 42)) nil)
+			 (if false (list ,(canonize 0)) nil))
+		(canonize '(list 42))))
 
 (defun loci (fn expr &key (type (expr-type expr)) parents)
   (flet ((boolrec (&optional type)
@@ -305,3 +365,4 @@ Author: madscience@google.com (Moshe Looks) |#
 						      terms)
 					      terms))))))
 			    tovisit)))))))))
+

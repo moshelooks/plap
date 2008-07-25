@@ -140,6 +140,7 @@ This defines the basic language used to represent evolved programs.
 			      `(eq (car ,expr) ',pred)))))
   (mkdecomposer decompose-bool
 		(literal `(literalp ,expr))
+		(constant `(matches ,expr (true false)))
 		(junctor `(junctorp ,expr)))
   (mkdecomposer decompose-function
 		(lambda `(and (consp ,expr) (eq (car ,expr) 'lambda))))
