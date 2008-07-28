@@ -92,6 +92,11 @@ Author: madscience@google.com (Moshe Looks) |#
   `(mvbind ,collectors (with-collectors ,collectors ,collectors-body)
      ,@body))
 
+(defun ntimes (elt n)
+  (loop for i from 1 to n collect elt))
+(defun odds (l)
+  (if l (cons l (odds (cddr l)))))
+
 ;;; (split (vector l1 d1 l2 d2 ... lN dN) fn)
 ;;; li are lists, fn is a function of 2N arguments
 ;;; Sequentially tests lists l1 ... lN for emptiness - if some list li is found
@@ -327,6 +332,8 @@ Author: madscience@google.com (Moshe Looks) |#
 					  '(1 (2 3) 4)))))
 (defun tree-size (tree)
   (if (atom tree) 1 (reduce #'+ (cdr tree) :key #'tree-size :initial-value 1)))
+(defun arity (tree)
+  (1- (length tree)))
 ;;; io
 (defun print* (&rest args)
   (print (car args))

@@ -24,7 +24,8 @@ Author: madscience@google.com (Moshe Looks) |#
 			      :key #'free-variables)))
       (list expr)))
 
-(def-memoized-function truth-table (expr 
+(def-memoized-function truth-table (expr  ;fixme create efficient
+					;abstractions for context manipulation
 				    &optional (vars (free-variables expr)))
   (labels ((enum-bindings (vars) ; vars is an alist
 	     (if vars 

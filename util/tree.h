@@ -35,22 +35,25 @@
 
      Because, excepting the "end" sentinel, internal node are in one-to-one
      correspondence with sentinel nodes, the "structural" memory overhead of a
-     tree with n internal nodes and m leaves is exactly 6n + 3m + 1 pointers.
+     tree with n internal nodes and m leaves is exactly 6n + 3m + 1
+     pointers. An exception to this is if a child iterator (begin() or end())
+     is taken of a leaf. In this case an additional placeholder sentinel node
+     will be created for the leaf. Of course, even in the worst case 
 ****/
 
 /****
      Warnings and Injunctions
 
      Currently, any iterator type may be happily implicitly converted to any
-     other. This is often convenient, at the cost of risking some serious error
-     which the compiler would otherwise flag. For example, a valid range of
-     pre-order iterators, when converted to child iterators, may become
-     invalid. It is the user's responsiblity to ensure that ranges passed to
+     other. This is often convenient, at the cost of risking some serious
+     errors which the compiler would otherwise flag. For example, a valid range
+     of pre-order iterators, when converted to child iterators, may become
+     invalid. It is the user's responsibility to ensure that ranges passed to
      functions remain valid *after* any implicit conversions have been
      performed.
 
      If this turns out to be too big a nuisance, future versions may take a
-     more restrictive approach to implicit iterator-type conversions.
+     more restrictive approach to implicit iterator type conversions.
 ****/
 
 /****
@@ -74,12 +77,19 @@
      Comparison Operators
 
      Trees holding an equality-comparable, less-than-comparable, etc. type
-     themselves support the corresponding operators. Comparison is according to
-     the following rules:
+     themselves support the corresponding operators. Comparison occurs
+     node-by-node in pre-order, until a structural or content difference is
+     encountered, according to the following rules (obeyed sequentially):
 
-     1) A smaller tree is always less-than a larger tree
-     2) 
+     1) If a leaf is compared to an internal node, the leaf is lesser,
+        regardless of tree contents.
 
+     2) If two nodes, both being equal, or both being leaves, have unequal
+        contents, the tree with the lesser contents is lesser.
+     
+     3) If two internal nodes with equal contents are compared, having
+        differing numbers of children, and all children (that are present) are
+        equal, the tree with fewer children is lesser.
 ****/
 
 #ifndef PLAP_UTIL_TREE_H__

@@ -30,6 +30,8 @@ Note that the type nil corresponds to the empty set (no values), whereas t
 corresponds to the universal set (all values). The type of nil is (list nil).
 |# 
 
+;;;todo (maybe): add symbol, atom(?) types
+
 ;;; for convenience
 (defvar bool 'bool)
 (defvar num 'num)
@@ -192,17 +194,15 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 			 `(list ,(reduce #'union-type args :key fn))))
 	  (append ,(lambda (fn args) (reduce #'union-type args :key fn)))
 	  (tuple ,(lambda (fn args) `(tuple ,@(mapcar fn args))))))))
-  (defun expr-type (expr &optional bindings)
+  (defun expr-type (expr &optional context)
     (if (consp expr)
 	(case (car expr)
 	  ((and or not <) bool)
 	  ((+ - * / exp log sin) num)
-	  (t (aif (gethash (car expr) type-finders)
-		  (funcall it (bind #'expr-type /1 bindings) (cdr expr))
-		  (error "unrecognized function ~S" (car expr)))))
-	(or (atom-type expr) 
-	    (aif (lookup-bindings expr bindings) ;fixme
-		 (value-type it))))))
+	  (t (assert (gethash (car expr) type-finders))
+	     (funcall (gethash (car expr) type-finders)
+		      (bind #'expr-type /1 context) (cdr expr))))
+	(or (atom-type expr) (lookup-type expr context)))))
 (define-all-equal-test expr-type
     `((bool (true false (and true false) (not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) (+ 1 2 3) (* (+ 1 0) 3)))
@@ -210,21 +210,25 @@ corresponds to the universal set (all values). The type of nil is (list nil).
       ;((function bool bool) (not))
       ;((function (list num) num) (+ *))
       (bool ((< 2 3)))))
-(define-test expr-type-with-bindings
+(define-test expr-type-with-bindings ;fixme instead of init-hash mkcontext
   (assert-equal bool (expr-type 'x (init-hash-table '((x true)))))
   (assert-equal num (expr-type 'x (acons 'x 42 nil)))
   (assert-equal '(list num) (expr-type '(list x) (acons 'x 3.3 nil)))
   (assert-equal num (expr-type '(car (list x)) (init-hash-table '((x 0))))))
 
-;;; contextually determines the types for the children
-(defun arg-types (expr type)
-  (assert (not (eq 'lambda (acar expr))))
+;;; determines the types for the children based on the structure of expr and
+;;; its type, given the bindings in context
+(defun arg-types (expr &optional context (type (expr-type expr context)))
+  (assert (not (eq 'lambda (acar expr)))) ; lamba-list are not properly typed
   (case (car expr)
-    (< '(num num)) ;fixme
-    (list (mapcar (bind #'identity (cadr type)) (cdr expr)))
-    (split `((tuple ,@()) (function (
-    (t (mapcar (bind #'identity type) (cdr expr))))) ; works for most things
-    
+    (< (let ((x (reduce #'union-type (cdr expr) :key #'expr-type))) `(,x ,x)))
+    (list (ntimes (arity expr) (cadr type)))
+    (split (let ((ttype (expr-type (cadr expr) context)))
+	     (assert (eq 'tuple (car ttype)))
+	     `(,ttype (function ,(odds (cdr ttype)) type))))
+    (t (ntimes (arity expr) type)))) ; works for most things
+
+;fixme should typemaps be integrated into contexts?
 
 ;;; a typemap is a hashtable of types mapping to hashset of var names
 (defun make-type-map () (make-hash-table))
