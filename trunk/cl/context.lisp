@@ -13,25 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Author: madscience@google.com (Moshe Looks) |#
+(in-package :plop)
 
-(in-package :cl-user)
-(defpackage :plop-asd
-  (:use :cl :asdf :cl-utilities))
+(defgeneric lookup-bindings (symbol bindings))
 
-(in-package :plop-asd)
-(defsystem :plop
-  :serial t
-  :components ((:file "packages")
-               (:file "util")
-	       (:file "dag")
-	       (:file "lang")
-	       (:file "context")
-	       (:file "enum")
-	       (:file "type")
-	       (:file "eval")
-	       (:file "rewrite")
-	       (:file "bool")
-	       (:file "num")
-	       (:file "represent")
-	       (:file "search")
-	       (:file "tests")))
+(defmethod lookup-bindings (symbol (bindings list))
+  (cdr (assoc symbol bindings)))  ; bindings should be an alist
+
+(defmethod lookup-bindings (symbol (bindings hash-table))
+  (mvbind (value exists) (gethash symbol bindings)
+    (assert exists ()
+	    "couldn't find a binding for presumed variable ~S" symbol)
+    value))

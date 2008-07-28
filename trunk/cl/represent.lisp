@@ -85,7 +85,15 @@ Author: madscience@google.com (Moshe Looks) |#
 				   `(if true ,(canonize-children x type) nil))
 				 list))))
 
-(defun canonize (expr &optional (type (expr-type expr)))
+better name?
+def-on-expr body -> (defun 
+(defmacro defunexpr (name &body body)
+  `(defun ,name (expr &optional context (type (expr-type expr)))
+     ,@body))
+
+    
+
+(defun canonize (expr &optional context (type (expr-type expr)))
   (print* 'got expr type)
   (ecase (icar type)
     (bool (canonize-bool expr))
