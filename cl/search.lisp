@@ -35,7 +35,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (define-test neighbors-at
   (flet ((test (against expr type bindings &optional nocanon)
-	   (let* ((expr (if nocanon expr (canonize expr type)))
+	   (let* ((expr (if nocanon expr (canonize expr nil type)))
 		  (tmp (copy-tree expr))
 		  (bindings (init-type-map `((,type ,bindings)))))
 	     (assert-equal
@@ -132,7 +132,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (validate expr bindings)
 	  (print* 'kicked-to expr))))
 					;(return-from hillclimb expr)))
-    (setf expr (canonize expr type)))
+    (setf expr (canonize expr type)));fixme
   expr)
 
 (defun make-count-or-score-terminator (count score score-target)

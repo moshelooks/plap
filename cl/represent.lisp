@@ -15,6 +15,9 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
+fixme- canonize-children must take a context arg - should a (expr type context)
+struct be created, or something?
+
 (defun canonize-children (expr type)
   (if (atom expr) expr
       (cons (car expr) (mapcar #'canonize (cdr expr) (arg-types expr type)))))
@@ -85,52 +88,32 @@ Author: madscience@google.com (Moshe Looks) |#
 				   `(if true ,(canonize-children x type) nil))
 				 list))))
 
-better name?
-def-on-expr body -> (defun 
-(defmacro defunexpr (name &body body)
-  `(defun ,name (expr &optional context (type (expr-type expr)))
-     ,@body))
-
-    
-
-(defun canonize (expr &optional context (type (expr-type expr)))
+(defun canonize (expr &optional context (type (expr-type expr context)))
   (print* 'got expr type)
   (ecase (icar type)
     (bool (canonize-bool expr))
     (num  (canonize-num expr))
+    (tuple (canonize-children expr type))
     (function
      (cons 
       'lambda
       (dbind (arg-types return-type) (cdr type)
 	(decompose-function expr
-	  (lambdsa
+	  (lambda
 	   (dbind (arg-names body) (cdr expr)
 	     (list arg-names
 		   (if (find-if #'list-type-p arg-types)
 		       (cons 'split 
 			     (if (not (eq (acar body) 'split))
-				 `(() () (lambda ()
-					   ,(canonize body return-type)))
-				 (dbind (lists defaults body) (cdr body)
-				   (list (should canonical form for the 
-						 list of lists go here?)
-					 (mapcar #'canonize defaults
-						 (mapcar 
-						  fck, get types of defaults
-						  somehow and canonize
-						  
-						  get based on types of lists
-						  we need bindings(?)
-
-						  wait this isn't list list any
-						  it breaks type system
-						  do we care?
-						  ))
-					 (canonize-function ;create me
-					  body `(function ,default-types
-							  return-type)
-
-				 
+				 `((tuple) (lambda () ,(canonize body context 
+								 return-type)))
+				 (dbind (tuple body) (cdr body)
+				   (dbind (ttype ftype) 
+				       (arg-types (cdr body) context
+						  return-type)
+				     (list (canonize tuple context ttype)
+					   (canonize body context ftype))))))
+		       (canonize body return-type)))))
 	  (t (let ((arg-names (mapcar #'genname arg-types)))
 	       (cons arg-names
 		     (nconc (if (consp expr)
@@ -145,93 +128,94 @@ def-on-expr body -> (defun
        (structure-list (decompose-list expr (append (cdr expr)) (t `(,expr)))
 		       elem type)))))
 
-;; should inclusion of already present list elements be conditional?
-;; should we build the boolean canonical form?
-;; if not, maybe just let true/false slip into a literal?
-
-
 (define-test canonize
-  ;; boolean cases
-  (assert-equal '(or (and) (and x))
-		(canonize 'x 'bool))
-  (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
-		(canonize '(and x1 (not x4)) 'bool))
-  (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
-		(canonize '(or x1 (not x4)) 'bool))
-  (assert-equal '(or (and) (and x1)) (canonize 'x1 'bool))
-  (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
-		 (canonize '(or (and x1 x2) x3) 'bool))
-  ;; mixed boolean-numeric and numeric cases
-  (let* ((exp-block '(* 0 (exp (+ 0
-				(* 0 (exp (+ 0)))
-				(* 0 (log (+ 1)))
-				(* 0 (sin (+ 0)))))))
-	 (log-block '(* 0 (log (+ 1
-				(* 0 (exp (+ 0)))
-				(* 0 (log (+ 1)))
-				(* 0 (sin (+ 0)))))))
-	 (sin-block '(* 0 (sin (+ 0
-				(* 0 (exp (+ 0)))
-				(* 0 (log (+ 1)))
-				(* 0 (sin (+ 0)))))))
-	 (add-blocks `(,exp-block ,log-block ,sin-block))
-	 (mult-block `(* 0
-			 (+ 1 ,exp-block)
-			 (+ 1 ,log-block)
-			 (+ 1 ,sin-block))))
-    (assert-equal `(or (and) (and (< (+ 2 ,@add-blocks ,mult-block) 
-				     (+ 3 ,@add-blocks ,mult-block))))
-		  (canonize '(< 2 3) 'bool))
-    (assert-equal `(+ 0 ,@add-blocks ,mult-block)
-		  (canonize 0))
-    (assert-equal `(+ 0 ,@add-blocks ,mult-block
-		      (* 1 ,@(cddr mult-block) (+ 0 x)))
-		  (canonize 'x 'num))
-    (assert-equal `(+ 0 ,@add-blocks ,mult-block
-		      (* 1
-			 (+ 1 ,exp-block)
-			 (+ 1 ,log-block)
-			 (+ 0 (sin (+ 0 ,@add-blocks ,mult-block
-				      (* 1 ,@(cddr mult-block) (+ 0 x)))))))
-		  (canonize '(sin x)))
-    (assert-equal `(+ 0 ,@add-blocks ,mult-block
-		      (* 1 
-			 ,@(cddr mult-block) 
-			 (+ 1 ,@add-blocks)
-			 (+ 0 ,@add-blocks (* 1 x))
-			 (+ 0 ,@add-blocks (* 1 y))))
-		  (canonize '(* x y)))
-     (assert-equal `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
-		       (+ 0 ,@add-blocks ,mult-block
-			  (* 1 ,@(cddr mult-block) (+ 0 x))
-			  (* 1 ,@(cddr mult-block) (+ 0 y))))
-		       (canonize '(+ x y)))
-     (assert-equal `(+ 1 ,@add-blocks ,mult-block
-		       (* 1 ,@(cddr mult-block) (+ 0 x)))
-		   (canonize '(+ 1 x)))
-     (assert-equal `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
-		       (+ 1 ,@add-blocks ,mult-block
-			  (* 1 ,@(cddr mult-block) (+ 0 x))
-			  (* 1 ,@(cddr mult-block) (+ 0 y))))
-		   (canonize '(+ 1 x y))))
+  (let ((context (init-context '((x1 true) (x2 true) (x3 true) (x4 true)
+				 (x 0) (y 0)))))
+    ;; boolean cases
+    (assert-equal '(or (and) (and x1))
+		  (canonize 'x1 context))
+    (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
+		  (canonize '(and x1 (not x4)) context))
+    (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
+		  (canonize '(or x1 (not x4)) context))
+    (assert-equal '(or (and) (and x1)) (canonize 'x1 context))
+    (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
+		   (canonize '(or (and x1 x2) x3) context))
+    ;; mixed boolean-numeric and numeric cases
+    (let* ((exp-block '(* 0 (exp (+ 0
+				  (* 0 (exp (+ 0)))
+				  (* 0 (log (+ 1)))
+				  (* 0 (sin (+ 0)))))))
+	   (log-block '(* 0 (log (+ 1
+				  (* 0 (exp (+ 0)))
+				  (* 0 (log (+ 1)))
+				  (* 0 (sin (+ 0)))))))
+	   (sin-block '(* 0 (sin (+ 0
+				  (* 0 (exp (+ 0)))
+				  (* 0 (log (+ 1)))
+				  (* 0 (sin (+ 0)))))))
+	   (add-blocks `(,exp-block ,log-block ,sin-block))
+	   (mult-block `(* 0
+			   (+ 1 ,exp-block)
+			   (+ 1 ,log-block)
+			   (+ 1 ,sin-block))))
+      (assert-equal `(or (and) (and (< (+ 2 ,@add-blocks ,mult-block) 
+				       (+ 3 ,@add-blocks ,mult-block))))
+		    (canonize '(< 2 3)))
+      (assert-equal `(+ 0 ,@add-blocks ,mult-block)
+		    (canonize 0))
+      (assert-equal `(+ 0 ,@add-blocks ,mult-block
+			(* 1 ,@(cddr mult-block) (+ 0 x)))
+		    (canonize 'x context))
+      (assert-equal `(+ 0 ,@add-blocks ,mult-block
+			(* 1
+			   (+ 1 ,exp-block)
+			   (+ 1 ,log-block)
+			   (+ 0 (sin (+ 0 ,@add-blocks ,mult-block
+					(* 1 ,@(cddr mult-block) (+ 0 x)))))))
+		    (canonize '(sin x) context))
+      (assert-equal `(+ 0 ,@add-blocks ,mult-block
+			(* 1 
+			   ,@(cddr mult-block) 
+			   (+ 1 ,@add-blocks)
+			   (+ 0 ,@add-blocks (* 1 x))
+			   (+ 0 ,@add-blocks (* 1 y))))
+		    (canonize '(* x y) context)))))
+;;       (assert-equal `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
+;; 			(+ 0 ,@add-blocks ,mult-block
+;; 			   (* 1 ,@(cddr mult-block) (+ 0 x))
+;; 			   (* 1 ,@(cddr mult-block) (+ 0 y))))
+;; 		    (canonize '(+ x y) context))
+;;       (assert-equal `(+ 1 ,@add-blocks ,mult-block
+;; 			(* 1 ,@(cddr mult-block) (+ 0 x)))
+;; 		    (canonize '(+ 1 x) context))
+;;       (assert-equal `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
+;; 			(+ 1 ,@add-blocks ,mult-block
+;; 			   (* 1 ,@(cddr mult-block) (+ 0 x))
+;; 			   (* 1 ,@(cddr mult-block) (+ 0 y))))
+;; 		    (canonize '(+ 1 x y) context)))
+;;     ;; tuple type case
+;;     (assert-equal '(tuple) (canonize '(tuple)))
+;;     (assert-equal `(tuple (or (and) (and)) ,(canonize 42)) 
+;; 		  (canonize '(tuple true 42)))))
   ;; function type cases
-  (assert-equal '(lambda (l x) (split () () (lambda () (or (and) (and x)))))
-		(canonize '(lambda (l x) x)
-			  '(function ((list bool) bool) bool)))
-  (assert-equal '(lambda (l x) 
-		  (split (l) (true)
-		   (lambda (first rest)
-		     (split () () 
-		      (or (and) (and (or) (or first) (or x)))))))
-		(canonize '(lambda (l x)
-			    (split (l) (true)
-			     (lambda (first rest) (and first x))))
-			  '(function ((list bool) bool) bool)))
-  ;; list type cases
-  (assert-equal `(append (if false (list ,(canonize 0)) nil)
-			 (if true (list ,(canonize 42)) nil)
-			 (if false (list ,(canonize 0)) nil))
-		(canonize '(list 42))))
+;;   (assert-equal '(lambda (l x) (split () () (lambda () (or (and) (and x)))))
+;; 		(canonize '(lambda (l x) x)
+;; 			  '(function ((list bool) bool) bool)))
+;;   (assert-equal '(lambda (l x) 
+;; 		  (split (l) (true)
+;; 		   (lambda (first rest)
+;; 		     (split () () 
+;; 		      (or (and) (and (or) (or first) (or x)))))))
+;; 		(canonize '(lambda (l x)
+;; 			    (split (l) (true)
+;; 			     (lambda (first rest) (and first x))))
+;; 			  '(function ((list bool) bool) bool)))
+;;   ;; list type cases
+;;   (assert-equal `(append (if false (list ,(canonize 0)) nil)
+;; 			 (if true (list ,(canonize 42)) nil)
+;; 			 (if false (list ,(canonize 0)) nil))
+;; 		(canonize '(list 42))))
 
 (defun loci (fn expr &key (type (expr-type expr)) parents)
   (flet ((boolrec (&optional type)

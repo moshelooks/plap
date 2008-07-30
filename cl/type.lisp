@@ -22,7 +22,7 @@ types are as follows:
  * num
  * (list type)
  * (tuple type1 type2 type3 .... typeN) with N>1
- * (function (arg-type1 arg-type2 ... arg-typeN) value-type) with N>=0
+ * (function (arg-type1 arg-type2 ... arg-typeN) result-type) with N>=0
  * (enum name) where name may be any symbol
  * (act-result name) where name may be any symbol
  * t
@@ -181,7 +181,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	((null x) '(list nil))))
 
 (defun value-type (expr) ; returns nil iff no type found
-  (cond
+  (cond ;fixme
     ((consp expr) `(list ,(reduce #'union-type (cdr expr) :key #'value-type)))
     ((arrayp expr) `(tuple ,@(map 'list #'value-type expr)))
     (t (atom-type expr))))
@@ -202,7 +202,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	  (t (assert (gethash (car expr) type-finders))
 	     (funcall (gethash (car expr) type-finders)
 		      (bind #'expr-type /1 context) (cdr expr))))
-	(or (atom-type expr) (lookup-type expr context)))))
+	(or (atom-type expr) (get-type expr context)))))
 (define-all-equal-test expr-type
     `((bool (true false (and true false) (not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) (+ 1 2 3) (* (+ 1 0) 3)))
@@ -211,10 +211,10 @@ corresponds to the universal set (all values). The type of nil is (list nil).
       ;((function (list num) num) (+ *))
       (bool ((< 2 3)))))
 (define-test expr-type-with-bindings ;fixme instead of init-hash mkcontext
-  (assert-equal bool (expr-type 'x (init-hash-table '((x true)))))
-  (assert-equal num (expr-type 'x (acons 'x 42 nil)))
-  (assert-equal '(list num) (expr-type '(list x) (acons 'x 3.3 nil)))
-  (assert-equal num (expr-type '(car (list x)) (init-hash-table '((x 0))))))
+  (assert-equal bool (expr-type 'x (init-context '((x true)))))
+  (assert-equal num (expr-type 'x (init-context '((x 42)))))
+  (assert-equal '(list num) (expr-type '(list x) (init-context '((x 3.3)))))
+  (assert-equal num (expr-type '(car (list x)) (init-context '((x 0))))))
 
 ;;; determines the types for the children based on the structure of expr and
 ;;; its type, given the bindings in context
@@ -240,17 +240,9 @@ corresponds to the universal set (all values). The type of nil is (list nil).
   (ecase (icar type)
     (bool true)
     (num 0)
+    (tuple (cons 'tuple (mapcar #'default-value (cdr type))))
     (function (assert nil));`(lambda ,(
     (list nil)))
 
 (defun genname (type)
   (gensym (symbol-name type)))
-
-
-;; (defun is-type-p (type) 
-;;   (if (consp type)
-;;       (matches (car type) (list tuple fun))
-;;       (matches type (bool num))
-
-;		     or atom-type? what about (1 2 3)???
-;		     add the quote operator??
