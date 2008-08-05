@@ -218,14 +218,19 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 
 ;;; determines the types for the children based on the structure of expr and
 ;;; its type, given the bindings in context
-(defun arg-types (expr &optional context (type (expr-type expr context)))
+(defun arg-types (expr context type)
   (assert (not (eq 'lambda (acar expr)))) ; lamba-list are not properly typed
   (case (car expr)
-    (< (let ((x (reduce #'union-type (cdr expr) :key #'expr-type))) `(,x ,x)))
+    (< (let ((type (reduce #'union-type (cdr expr) 
+			   :key (bind #'expr-type /1 context))))
+	 `(,type ,type)))
     (list (ntimes (arity expr) (cadr type)))
     (split (let ((ttype (expr-type (cadr expr) context)))
 	     (assert (eq 'tuple (car ttype)))
-	     `(,ttype (function ,(odds (cdr ttype)) type))))
+	     `(,ttype (function ,(mapcan (lambda (list-type)
+					   (list (cadr list-type) list-type))
+					 (odds (cdr ttype)))
+				,type))))
     (t (ntimes (arity expr) type)))) ; works for most things
 
 ;fixme should typemaps be integrated into contexts?
@@ -238,11 +243,12 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 
 (defun default-value (type)
   (ecase (icar type)
-    (bool true)
+    (bool false)
     (num 0)
     (tuple (cons 'tuple (mapcar #'default-value (cdr type))))
     (function (assert nil));`(lambda ,(
     (list nil)))
 
 (defun genname (type)
-  (gensym (symbol-name type)))
+  (declare (ignore type))
+  (gensym)); (symbol-name type)))

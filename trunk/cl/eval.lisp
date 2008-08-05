@@ -25,12 +25,12 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (call (op args)
 	     (case op
 	       (and (and-op args))
-	       (or (or-op args))
+	       (or (or (not args) (or-op args)))
 	       (not (not (eval-subexpr (car args) context)))
 
 	       (+ (reduce #'+ args :key (bind #'eval-subexpr /1 context)))
 	       (* (reduce #'* args :key (bind #'eval-subexpr /1 context)))
-	       (exp (exp (eval-subexpr (car args))))
+	       (exp (exp (eval-subexpr (car args) context)))
 	       (log (let ((arg (eval-subexpr (car args) context)))
 		      (if (< arg 0.01) most-positive-single-float (log arg))))
 	       (sin (sin (eval-subexpr (car args) context)))

@@ -142,6 +142,8 @@ This defines the basic language used to represent evolved programs.
 		(literal `(literalp ,expr))
 		(constant `(matches ,expr (true false)))
 		(junctor `(junctorp ,expr)))
+  (mkdecomposer decompose-tuple
+		(tuple `(eq (acar ,expr) 'tuple)))
   (mkdecomposer decompose-function
 		(lambda `(and (consp ,expr) (eq (car ,expr) 'lambda))))
   (mkdecomposer decompose-list
@@ -227,3 +229,10 @@ This defines the basic language used to represent evolved programs.
     (ldass 0
 	   0 nil nil
 	   0 nil nil)))
+
+(defmacro defdefbytypematch (defname name)
+  `(progn 
+     (defvar ,name n
+  `(defmacro name (typematch
+(defmacro defcanonizer (typematch args &body body)
+  `(push (cons ',typematch (lambda ,args ,@body)) *type-canonizers*))
