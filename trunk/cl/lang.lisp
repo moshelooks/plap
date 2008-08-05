@@ -25,7 +25,7 @@ This defines the basic language used to represent evolved programs.
 ;; a total ordering on all plop expressions
 ;; returns less, nil, or greater, with the important property that (not symbol)
 ;; is always ordered immediately after symbol
-(defun total-cmp (l r) 
+(defun total-cmp (l r)
   (flet ((elem-cmp (l r)
 	   (if (numberp l)
 	       (if (numberp r)
@@ -33,26 +33,25 @@ This defines the basic language used to represent evolved programs.
 		   'less)
 	       (if (numberp r)
 		   'greater
-		   (if (eql l r) nil (if (string< l r) 'less 'greater))))))
-    (let ((lnot (and (consp l) (eq (car l) 'not) (not (consp (cadr l)))))
-	  (rnot (and (consp r) (eq (car r) 'not) (not (consp (cadr r))))))
-      (if (consp l)
-	  (if lnot
-	      (if rnot
-		  (elem-cmp (cadr l) (cadr r))
-		  (aif (total-cmp (cadr l) r) it 'greater))
-	      (if (consp r)
-		  (if rnot
-		      (aif (total-cmp l (cadr r)) it 'less)
-		      (aif (total-cmp (car l) (car r))
-			   it 
-			   (total-cmp (cdr l) (cdr r))))
-		  'greater))
-	  (if (consp r) 
-	      (if rnot
-		  (aif (elem-cmp l (cadr r)) it 'less)
-		  'less)
-	      (elem-cmp l r))))))
+		   (if (eql l r) nil (if (string< l r) 'less 'greater)))))
+	 (notp (x) (and (consp x) (eq (car x) 'not) (not (consp (cadr x))))))
+    (if (consp l)
+	(if (notp l)
+	    (if (notp r)
+		(elem-cmp (cadr l) (cadr r))
+		(aif (total-cmp (cadr l) r) it 'greater))
+	    (if (consp r)
+		(if (notp r)
+		    (aif (total-cmp l (cadr r)) it 'less)
+		    (aif (total-cmp (car l) (car r))
+			 it 
+			 (total-cmp (cdr l) (cdr r))))
+		'greater))
+	(if (consp r) 
+	    (if (notp r)
+		(aif (elem-cmp l (cadr r)) it 'less)
+		'less)
+	    (elem-cmp l r)))))
 (defun total-order (l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order

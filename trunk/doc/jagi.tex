@@ -17,14 +17,14 @@
 
 \begin{abstract}
   Algorithmic probability theory describes perfect inductive inference but is
-  incomputable, and prohibitively expensive to directly estimate. Rather, the
-  assumption of insufficient knowledge and resources must be employed in hopes
-  of reaching the design of an artificial general intelligence implementable on
-  current hardware. Guided by theories of human cognition, I hypothesize that
-  computationally intractable feats inductive inference may approximated
+  incomputable, and prohibitively expensive to estimate directly. Thus, to
+  design an artificial general intelligence implementable on current hardware,
+  the assumption of insufficient knowledge and resources must be
+  employed. Guided by theories of human cognition, I hypothesize that
+  computationally intractable feats of inductive inference may approximated
   through heuristics and other background knowledge, grouped into a number of
-  key domains. The primary mechanism for heuristic inductive inference,
-  exploiting this background knowledge, is Bayesian program evolution. This
+  key domains. The primary mechanism for heuristic inductive inference that
+  exploits this background knowledge is Bayesian program evolution. This
   approach also sheds light on the problem of selecting and implementing
   top-level goals.
 \end{abstract}
@@ -34,33 +34,109 @@
   friendliness
 \end{keywords}
 
+\section{Overview}
+
+How can we program modern computers to attain and surpass human achievements in
+science, technology, and ethics? As a first approximation, we can partition
+this into ``what'' and ``how'' problems; ``what do we mean by these goals?''
+and ``how may be program a computer to orient towards achieving these goals''?
+I begin from the premise that the ``how'' problem has already been solved, at
+least in the limiting case of infinite computational resources. The solution is
+algorithmic probability theory~\cite{Solomonoff}, extended recently to the case
+of sequential decision theory~\cite{Hutter}. The bulk of this paper
+(Sections~\ref{sec:premises} and \ref{sec:design}) focuses on practical
+techniques for approximating this ideal. Afterwards in Section~\ref{sec:fai} I
+discuss the ``what''.
+
 \section{Premises}
 
+\subsection{Premise \#0: Human Intelligence}
 
-\textbf{Premise \#0: Human Intelligence}
- A principled approach to designing an intelligent system to learn and reason about programs requires some understanding of intelligence. One way to go about this is to consider that humans are intelligent, and are capable of learning and reasoning about programs, at least to some extent. It is possible to derive a ``cognitive core'' of essential capabilities by considering the defining features of human intelligence on Marr's level computational theory. To the extent that we actually \emph{understand}
- cognition this core will less and less resemble a descriptive account of human thought (while still accounting for human thought as a special case). The Turing Test definition of intelligence accordingly corresponds to the degenerate case of no actual understanding (premise \#2 elaborates on why this is the case). \textbf{Rationale}
- See Mixing Cognitive Science Concepts with Computer Science Algorithms and Data Structures, by Moshe Looks and Ben Goertzel. \textbf{Premise \#1: Insufficient Knowledge and Resources}
- My work herein is based on what Pei Wang has termed the \emph{assumption of insufficient knowledge and resources}
- (AIKR). The system resembles a functional programming language inasmuch as it contains the usual mechanisms for defining and invoking functions, passing around arguments (including functions themselves), etc. However, it is a programming language designed such that individual functions, and in many cases pieces of functions, are not only organized by type and scope, but also by degree of belief, expected utility, and computational overhead.\\ 
-\\ 
- The system has the top-level goal of obtaining the most certain result or range of results of executing the user's program, given user-specified constraints on resource usage (time and space). A usual programming language may be seen as the special case of completely certain knowledge and unlimited time in which to execute the user's program (although of course speedier execution is still generally preferred!). Note that we cannot assume that the ``best result'' provided to the user will be especially good. Contrariwise, in a usual programming language, the system can either evaluate an expression to obtain \emph{the}
- result, or it cannot obtain any result at all. \textbf{Rationale}
- See The Logic of Intelligence, by Pei Wang. \textbf{Premise \#2: Understanding = Compression}
- As clearly articulated by Eric Baum (and as has been observed dating back to Leibnitz), understanding is in many respects equivalent to compression. A compact program that accurately models some dataset not only deciphers the structure of the data; it will also aid us in understanding related data. Many problems are thus best solved by searching for compact programs that exploit (i.e. map to) problem structure.\\ 
-\\ 
- One important refinement to the classical Kolmogorov complexity approach to defining compact programs is needed, however. This is to consider compactness in terms of general resource consumption (program length, speed, runtime memory usage, etc.), rather than program length alone. This loses some useful theoretical properties, but gains a very important one (the complexity measure is now computable), and in practice has few downsides. Two examples of this approach are Levin's complexity Kt and Schmidhuber's Speed Prior. \textbf{Rationale}
- See A Working Hypothesis for General Intelligence, by Eric Baum. \textbf{Premise \#3: Necessary Inductive Bias}
- Discovering compact programs to explain data is computationally costly, and effectively intractable in most cases. Assuming insufficient knowledge and resources at first seems to make this even worse. One way to make program induction tractable is with useful prior knowledge, of the particular problem or problem class at hand, the general domain, or both. More generally, ``inductive bias'' may refers to any knowledge/assumptions we can use to direct search, whether coded or taught.\\ 
-\\ 
- Which biases are pertinent here? The aim is not to encode ``commonsense knowledge'', but rather sufficient bias to make \emph{the learning of}
- common sense tractable. These are the inductive biases pertaining to: space, time, action, perception, causality, theory-of-mind, and reflection. Teaching (and compactly describing) biases across all of these areas will require embodiment in one or more interactive, partially observable environments. \textbf{Rationale}
+A principled approach to designing an intelligent system to learn and reason
+about programs requires some understanding of intelligence. One way to go about
+this is to consider that humans are intelligent, and are capable of learning
+and reasoning about programs, at least to some extent. It is possible to derive
+a ``cognitive core'' of essential capabilities by considering the defining
+features of human intelligence on Marr's level computational theory. To the
+extent that we actually \emph{understand} cognition this core will less and
+less resemble a descriptive account of human thought (while still accounting
+for human thought as a special case). The Turing Test definition of
+intelligence accordingly corresponds to the degenerate case of no actual
+understanding (premise \#2 elaborates on why this is the case).
+
+\subsubsection{Rationale}
+
+See Mixing Cognitive Science Concepts with Computer Science Algorithms and Data
+Structures, by Moshe Looks and Ben Goertzel.
+
+\subsection{Premise \#1:   Insufficient Knowledge and Resources}
+
+My work herein is based on what Pei Wang has termed the \emph{assumption of
+  insufficient knowledge and resources} (AIKR). The system resembles a
+functional programming language inasmuch as it contains the usual mechanisms
+for defining and invoking functions, passing around arguments (including
+functions themselves), etc. However, it is a programming language designed such
+that individual functions, and in many cases pieces of functions, are not only
+organized by type and scope, but also by degree of belief, expected utility,
+and computational overhead.
+
+The system has the top-level goal of obtaining the most certain result or range
+of results of executing the user's program, given user-specified constraints on
+resource usage (time and space). A usual programming language may be seen as
+the special case of completely certain knowledge and unlimited time in which to
+execute the user's program (although of course speedier execution is still
+generally preferred!). Note that we cannot assume that the ``best result''
+provided to the user will be especially good. Contrariwise, in a usual
+programming language, the system can either evaluate an expression to obtain
+\emph{the} result, or it cannot obtain any result at all.
+
+\subsubsection{Rationale}
+
+See The Logic of Intelligence, by Pei Wang. \textbf{Premise \#2: Understanding
+  = Compression} As clearly articulated by Eric Baum (and as has been observed
+dating back to Leibnitz), understanding is in many respects equivalent to
+compression. A compact program that accurately models some dataset not only
+deciphers the structure of the data; it will also aid us in understanding
+related data. Many problems are thus best solved by searching for compact
+programs that exploit (i.e. map to) problem structure.
+
+One important refinement to the classical Kolmogorov complexity approach to
+defining compact programs is needed, however. This is to consider compactness
+in terms of general resource consumption (program length, speed, runtime memory
+usage, etc.), rather than program length alone. This loses some useful
+theoretical properties, but gains a very important one (the complexity measure
+is now computable), and in practice has few downsides. Two examples of this
+approach are Levin's complexity Kt and Schmidhuber's Speed
+Prior. \textbf{Rationale} See A Working Hypothesis for General Intelligence, by
+Eric Baum. \textbf{Premise \#3: Necessary Inductive Bias} Discovering compact
+programs to explain data is computationally costly, and effectively intractable
+in most cases. Assuming insufficient knowledge and resources at first seems to
+make this even worse. One way to make program induction tractable is with
+useful prior knowledge, of the particular problem or problem class at hand, the
+general domain, or both. More generally, ``inductive bias'' may refers to any
+knowledge/assumptions we can use to direct search, whether coded or taught.
+
+Which biases are pertinent here? The aim is not to encode ``commonsense
+knowledge'', but rather sufficient bias to make \emph{the learning of} common
+sense tractable. These are the inductive biases pertaining to: space, time,
+action, perception, causality, theory-of-mind, and reflection. Teaching (and
+compactly describing) biases across all of these areas will require embodiment
+in one or more interactive, partially observable
+environments. 
+
+\subsubsection{Rationale}
+
 \emph{Space and Time}
-\\ 
-\\ 
- A significant proportion of human cognition is spatiotemporal in nature, and performs structured inference based on proximity, trajectories through space, containment, etc. There are biases in examining data with a spatiotemporal interpretation, for example, to focus on searching for relationships among proximate elements. Data structures such as stacks and queues are clearly grounded in our basic physical intuitions relating to actual stacks and queues.\\ 
-\\ 
- As another example, the algebra of containment is widely applicable: \begin{itemize}
+
+A significant proportion of human cognition is spatiotemporal in nature, and
+performs structured inference based on proximity, trajectories through space,
+containment, etc. There are biases in examining data with a spatiotemporal
+interpretation, for example, to focus on searching for relationships among
+proximate elements. Data structures such as stacks and queues are clearly
+grounded in our basic physical intuitions relating to actual stacks and queues.
+
+As another example, the algebra of containment is widely
+applicable: \begin{itemize}
 \item visuospatial (the block is in the box)
 \item abstracted spatial (San Francisco is in California)
 \item organizational (Fred is in the CIA)
@@ -69,41 +145,104 @@
 \item etc.
 
 \end{itemize}
- These situations are all ``the same'' in the sense that they all invoke a visual frame of reference with characteristic inferences (if A is in B and B is in C then A is in C, if A is in B then you will have to reach/go into B to get to A, etc.).\\ 
-\\ 
+ These situations are all ``the same'' in the sense that they all invoke a
+ visual frame of reference with characteristic inferences (if A is in B and B
+ is in C then A is in C, if A is in B then you will have to reach/go into B to
+ get to A, etc.).
+
 \emph{Causality and Theory-of-Mind}
-\\ 
-\\ 
- Causality and theory-of-mind are employed when we speak about agents (typically other people and ourselves) having beliefs and desires, and causing things to happen, e.g.: \begin{itemize}
+
+Causality and theory-of-mind are employed when we speak about agents (typically
+other people and ourselves) having beliefs and desires, and causing things to
+happen, e.g.:
+ 
+\begin{itemize}
 \item Fred knows where the box is
 \item Fred picked up the glass of water so he could drink it
 \item Fred doesn't know that I know where the box is
 \item The rooster crowed because the sun rose
-\item That rock is not an agent - it has no beliefs or desires, and cannot cause things to happen.
-
+\item That rock is not an agent - it has no beliefs or desires, and cannot
+  cause things to happen.
 \end{itemize}
+
 \emph{Reflexivity, Perception, and Action}
-\\ 
-\\ 
- By reflective knowledge, I mean that the regularities in and relationships amongst the system's primitive functions should be declared and exploited whenever possible in the course of searching for compact programs (e.g. a + b is always equal to b + a, etc.). This includes imprecise knowledge - if A is near B and B is near C then we can speculatively conclude that A is probably near C to some degree (but quantifying the degree of nearness requires specific domain knowledge that the system may or may not possess).\\ 
-\\ 
- This sort of reflexivity is also paramount in relating action to perception. A very important bias is to associate perceptions with related actions - observing something to one's left and moving to the left, for instance. This may be quite easy to learn, but to admit the possibility puts constraints on the system's design. \textbf{Premise \#4: Sufficient Inductive Bias}
- While the third premise posits the necessity of extensive inductive bias in order to make general-purpose program induction tractable, the fourth and final premise posits sufficiency; specifically that an adequate core for an artifical general intelligence (AGI) may be designed without addressing natural language processing, real-world perception and action, or real-time interaction. Certainly these capabilities are immensely useful, and will be needed eventually - the fourth premise states, rather, that they may be added on top of an initial system that does not contain them, without a need for significant redesign. \textbf{Rationale}
+ 
+By reflective knowledge, I mean that the regularities in and relationships
+amongst the system's primitive functions should be declared and exploited
+whenever possible in the course of searching for compact programs (e.g. a + b
+is always equal to b + a, etc.). This includes imprecise knowledge - if A is
+near B and B is near C then we can speculatively conclude that A is probably
+near C to some degree (but quantifying the degree of nearness requires specific
+domain knowledge that the system may or may not possess).
+
+This sort of reflexivity is also paramount in relating action to perception. A
+very important bias is to associate perceptions with related actions -
+observing something to one's left and moving to the left, for instance. This
+may be quite easy to learn, but to admit the possibility puts constraints on
+the system's design. \textbf{Premise \#4: Sufficient Inductive Bias} While the
+third premise posits the necessity of extensive inductive bias in order to make
+general-purpose program induction tractable, the fourth and final premise
+posits sufficiency; specifically that an adequate core for an artifical general
+intelligence (AGI) may be designed without addressing natural language
+processing, real-world perception and action, or real-time
+interaction. Certainly these capabilities are immensely useful, and will be
+needed eventually - the fourth premise states, rather, that they may be added
+on top of an initial system that does not contain them, without a need for
+significant redesign.
+
+\textbf{Rationale} 
+
 \emph{Language}
-\\ 
-\\ 
- The intrinsic complexity of language, given the necessary inductive biases of the third premise (along with embodied interactive learning), is much less than the converse. That is to say, whereas an integrated system with a grounded understanding of space, time, causality, and theory-of-mind should have great inductive biases for learning language, a system with an ungrounded understanding language will have comparatively little usable bias for learning about space, time, causality, theory-of-mind, etc. The hard part of language-learning is not the acquiring the sort of declarative knowledge found in databases such as WordNet, but rather associating words and phrases with \emph{programs}
- which serve to construct and manipulate the mental spaces associated with language comprehension (a dynamic, contextual process).\\ 
-\\ 
- This viewpoint is supported by our understanding of how language functions in humans. Modern language arguably arose only 50,000 years ago (far later than control of fire, hunting with stone tools, etc.). Many grammatical features may be seen as having a basis in physical inference (cf. ``Grammatical Processing Using the Mechanisms of Physical Inference'', by Nick Cassmatis). Research into analogy and metaphor (cf. Mappings in Thought and Language, by Gilles Fauconnier), and work on how language arose concurrently with evolutionary adaptations enabling disparate mental modules to be linked together in cognition (cf. The Prehistory of Mind, by Steven Mithen) clearly indicate that linguistic capability is not an independent module, or a foundational style of cognition, but rather an ensemble of competencies seated on top of preexisting and more fundamental modes of cognition.\\ 
-\\ 
+
+The intrinsic complexity of language, given the necessary inductive biases of
+the third premise (along with embodied interactive learning), is much less than
+the converse. That is to say, whereas an integrated system with a grounded
+understanding of space, time, causality, and theory-of-mind should have great
+inductive biases for learning language, a system with an ungrounded
+understanding language will have comparatively little usable bias for learning
+about space, time, causality, theory-of-mind, etc. The hard part of
+language-learning is not the acquiring the sort of declarative knowledge found
+in databases such as WordNet, but rather associating words and phrases with
+\emph{programs} which serve to construct and manipulate the mental spaces
+associated with language comprehension (a dynamic, contextual process).
+
+This viewpoint is supported by our understanding of how language functions in
+humans. Modern language arguably arose only 50,000 years ago (far later than
+control of fire, hunting with stone tools, etc.). Many grammatical features may
+be seen as having a basis in physical inference (cf. ``Grammatical Processing
+Using the Mechanisms of Physical Inference'', by Nick Cassmatis). Research into
+analogy and metaphor (cf. Mappings in Thought and Language, by Gilles
+Fauconnier), and work on how language arose concurrently with evolutionary
+adaptations enabling disparate mental modules to be linked together in
+cognition (cf. The Prehistory of Mind, by Steven Mithen) clearly indicate that
+linguistic capability is not an independent module, or a foundational style of
+cognition, but rather an ensemble of competencies seated on top of preexisting
+and more fundamental modes of cognition.
+
 \emph{Real-World and Real-Time}
-\\ 
-\\ 
- The argument for the omission of real-world perception and action stems from the observation that in neural processing, the most immediate representations of perception (e.g. the firings of individual photreceptor cells) and action (e.g. individual muscle contractions) are generally processed in very rigid ways, and cut off from the rest of cognition (a much stronger argument along these lines may be found in Jerry Fodor's The Language of Thought). This rigidity and isolation gradually decrease as one ascends the perception-action hierarchy. Accordingly, a system with greatly simplified low-level perception and action subsystems should be extensible to contain these facilities without any significant redesign of the core.\\ 
-\\ 
- Some aspects real-time interaction are simply extreme cases of the assumption of insufficient knowledge and resources, and do not require additional mechanisms. Where real-time interaction \emph{will}
- require new design principles is with respect to the general issue of the allocation of attention. When operating outside of a read-eval-print loop, with multiple competing goals and shifting contexts, augmentations will be needed to prioritize computations and actions, and to achieve adequate credit allocation when causes and effects occur far apart in time. Fortunately, the core mechanisms used for the general probabilistic learning of programs will be suitable for solving most of the hard computational problems that will arise here. \hline 
+
+The argument for the omission of real-world perception and action stems from
+the observation that in neural processing, the most immediate representations
+of perception (e.g. the firings of individual photreceptor cells) and action
+(e.g. individual muscle contractions) are generally processed in very rigid
+ways, and cut off from the rest of cognition (a much stronger argument along
+these lines may be found in Jerry Fodor's The Language of Thought). This
+rigidity and isolation gradually decrease as one ascends the perception-action
+hierarchy. Accordingly, a system with greatly simplified low-level perception
+and action subsystems should be extensible to contain these facilities without
+any significant redesign of the core.
+
+Some aspects real-time interaction are simply extreme cases of the assumption
+of insufficient knowledge and resources, and do not require additional
+mechanisms. Where real-time interaction \emph{will} require new design
+principles is with respect to the general issue of the allocation of
+attention. When operating outside of a read-eval-print loop, with multiple
+competing goals and shifting contexts, augmentations will be needed to
+prioritize computations and actions, and to achieve adequate credit allocation
+when causes and effects occur far apart in time. Fortunately, the core
+mechanisms used for the general probabilistic learning of programs will be
+suitable for solving most of the hard computational problems that will arise
+here.
 
 \section{Design}
 
@@ -112,92 +251,176 @@ foo~\cite{Solomonoff}
 \section{Goals or, Prolegomenon to any Future Theory of Friendliness}
 
  \textbf{Summary:}
- This is an attempt to outline those requirements for an AI to be deemed \emph{Friendly}
- (benevolent towards humans) that are not anticipated to be especially controversial.
-\\ 
-\hline 
-\\ 
 
+This is an attempt to outline those requirements for an AI to be deemed
+\emph{Friendly} (benevolent towards humans) that are not anticipated to be
+especially controversial.
 
- It is critical that the goals (or mechanisms whereby goals are determined) of an artificial general intelligence (i.e. thinking machine) be chosen with great care. This becomes even more essential when considering the possibility of an artificial general intelligence improving itself. Specifically, I would like any artificial general intelligence created to pay special attention to sentient beings (e.g. humans), rather than rocks, paper clips, or its own navel. Furthermore, I would like its behavior to be broadly characterizable as \emph{Friendly}
- - benevolent and moral in at least the sense that reasonable people can recognize Gandhi and Hillel as more benevolent and moral than Hitler and Pol Pot.\\ 
-\\ 
+It is critical that the goals (or mechanisms whereby goals are determined) of
+an artificial general intelligence (i.e. thinking machine) be chosen with great
+care. This becomes even more essential when considering the possibility of an
+artificial general intelligence improving itself. Specifically, I would like
+any artificial general intelligence created to pay special attention to
+sentient beings (e.g. humans), rather than rocks, paper clips, or its own
+navel. Furthermore, I would like its behavior to be broadly characterizable as
+\emph{Friendly} - benevolent and moral in at least the sense that reasonable
+people can recognize Gandhi and Hillel as more benevolent and moral than Hitler
+and Pol Pot.
 
+The problem of building a Friendly AI (FAI) has a large technical component,
+although it is not entirely a technical problem (compare to the problem of
+becoming a more moral person). Here are some of the major premises, and
+corresponding technical problems to be solved, in building an FAI.
+ 
+\emph{Premise:}
 
-
- The problem of building a Friendly AI (FAI) has a large technical component, although it is not entirely a technical problem (compare to the problem of becoming a more moral person). Here are some of the major premises, and corresponding technical problems to be solved, in building an FAI.\\ 
-\\ 
-
-\begin{enumerate}
-\item \emph{Premise:}
- Any definition of Friendliness will be grounded in relations over the mind-states of sentients. \\ 
-\\ 
+Any definition of Friendliness will be grounded in relations over the
+mind-states of sentients.
+ 
 \emph{Technical Requirement:}
- A definition of what constitutes sentience. This need not be a crisp mathematical predicate (and indeed should not be); it may be context-dependent, and quantify various sorts of uncertainty. This may of course be implemented as a search specification, rather than a fixed definition. For example, many current adaptive systems learn through examples to distinguish among classes of objects (e.g. circles vs. rectangles vs. triangles). This obviates the need for an exact specification to be hard-coded. Modern supervised classification methods are certainly inadequate for inducing a reasonable definition of sentience - this is merely evocative. In other words, one need not know how to define sentience in order to build an FAI, but one must know how to define a procedure for defining sentience. \\ 
-\\ 
-\emph{Speculation:}
- I consider the problem of explicitly encoding an adequate definition of sentience (or even a simpler concept such as ``chair'') to be simply intractable for unaided humans. I suspect that an adequate definition will be arrived at through many iterations of experimentation and analysis of learning scenarios (sequences of problems to solve, interactions with environments, and elements of background knowledge to assimilate), progressing through ever-deeper representations of ever-thornier concepts. In crafting constructive theories of concepts, human practitioners will rely on applying the AI system itself as an analytical tool, as well as more traditional methods from computational science. \\ 
-\\ 
-\\ 
 
-\item \emph{Premise:}
- Sentients' mind-states are presumed equivalent to their brain-states. That is to say, the mind-state of a particular sentient will always and only ever exist as a particular arrangement of physical items (neurons, circuits, tinker-toys, whatever). \\ 
-\\ 
+A definition of what constitutes sentience. This need not be a crisp
+mathematical predicate (and indeed should not be); it may be context-dependent,
+and quantify various sorts of uncertainty. This may of course be implemented as
+a search specification, rather than a fixed definition. For example, many
+current adaptive systems learn through examples to distinguish among classes of
+objects (e.g. circles vs. rectangles vs. triangles). This obviates the need for
+an exact specification to be hard-coded. Modern supervised classification
+methods are certainly inadequate for inducing a reasonable definition of
+sentience - this is merely evocative. In other words, one need not know how to
+define sentience in order to build an FAI, but one must know how to define a
+procedure for defining sentience.
+ 
+\emph{Speculation:} I consider the problem of explicitly encoding an adequate
+definition of sentience (or even a simpler concept such as ``chair'') to be
+simply intractable for unaided humans. I suspect that an adequate definition
+will be arrived at through many iterations of experimentation and analysis of
+learning scenarios (sequences of problems to solve, interactions with
+environments, and elements of background knowledge to assimilate), progressing
+through ever-deeper representations of ever-thornier concepts. In crafting
+constructive theories of concepts, human practitioners will rely on applying
+the AI system itself as an analytical tool, as well as more traditional methods
+from computational science.
+
+\emph{Premise:}
+
+Sentients' mind-states are presumed equivalent to their brain-states. That is
+to say, the mind-state of a particular sentient will always and only ever exist
+as a particular arrangement of physical items (neurons, circuits, tinker-toys,
+whatever).
+ 
 \emph{Technical Requirement:}
- A specification allowing the FAI to identify or learn to identify sentients via its sensors and actuators acting on the physical world. \\ 
-\\ 
-\emph{Speculation:}
- If the speculation above is proven correct, then a means of identifying sentients will fall out directly from the definition of sentience, and require no additional effort. The converse does not hold - an black-box ``sentient recognizer'' does not provide us with a usable concept or theory of sentience. \\ 
-\\ 
-\\ 
 
-\item \emph{Premise:}
- Friendliness is concerned with satisfying the goals of sentients, which must accordingly correspond to some possible arrangements of physical items in sentients' brains. An FAI is assumed to select actions it believes are more likely to lead to states of the world in which sentients' goals are satisfied, all else being equal. \\ 
-\\ 
+A specification allowing the FAI to identify or learn to identify sentients via
+its sensors and actuators acting on the physical world.
+ 
+\emph{Speculation:}
+
+If the speculation above is proven correct, then a means of identifying
+sentients will fall out directly from the definition of sentience, and require
+no additional effort. The converse does not hold - an black-box ``sentient
+recognizer'' does not provide us with a usable concept or theory of sentience.
+
+\emph{Premise:}
+
+Friendliness is concerned with satisfying the goals of sentients, which must
+accordingly correspond to some possible arrangements of physical items in
+sentients' brains. An FAI is assumed to select actions it believes are more
+likely to lead to states of the world in which sentients' goals are satisfied,
+all else being equal.
+
 \emph{Technical Requirement:}
- A definition of what constitutes a ``goal of a sentient''. I presume that each atomic ``goal of a sentient'' may be construed as a preference assignment or parameterized uncertain partial ordering over possible worlds. The technical problem then is defining and/or getting the AI to determine what these goals are by observing and potentially interacting with sentients. I say ``goal of a sentient'' rather than the more precise ``utility function of a sentient'' because sentients such as humans may not have a well-defined single utility function, but will still have some coherent goals and hence preferences. \\ 
-\\ 
-\emph{Speculation:}
- The primary difficulty in realizing this requirement is that sentients do not all have complete and unchanging utility functions. I propose that conflicting goals within a single sentient at a given time, and at different points in time, be addressed according to the same general principles used for addressing conflicting goals of different sentients (next item). \\ 
-\\ 
-\\ 
 
-\item \emph{Premise:}
- An FAI will need to take into consideration and integrate conflicting goals of sentients, together with any other goals the FAI may have. \\ 
-\\ 
+A definition of what constitutes a ``goal of a sentient''. I presume that each
+atomic ``goal of a sentient'' may be construed as a preference assignment or
+parameterized uncertain partial ordering over possible worlds. The technical
+problem then is defining and/or getting the AI to determine what these goals
+are by observing and potentially interacting with sentients. I say ``goal of a
+sentient'' rather than the more precise ``utility function of a sentient''
+because sentients such as humans may not have a well-defined single utility
+function, but will still have some coherent goals and hence preferences.
+ 
+\emph{Speculation:}
+
+The primary difficulty in realizing this requirement is that sentients do not
+all have complete and unchanging utility functions. I propose that conflicting
+goals within a single sentient at a given time, and at different points in
+time, be addressed according to the same general principles used for addressing
+conflicting goals of different sentients (next item).
+
+\emph{Premise:}
+
+An FAI will need to take into consideration and integrate conflicting goals of
+sentients, together with any other goals the FAI may have.
+
 \emph{Technical Requirement:}
- A procedure for resolving conflicting goals, based on the definition of a goal from the previous requirement. A solution to this sentient-goal conflict resolution problem will allow the FAI to decide what to do when the satisfaction of one ``goal of a sentient'' conflicts with the satisfaction of with another. These conflicts may be considered within and across sentients, across different times, and may even involve considerations of currently nonexistent sentients that are extrapolated to come into being at some point in the future. \\ 
-\\ 
-\emph{Speculation:}
- This requirement is appears to have the largest non-technical component. To wit: one could imagine identical FAIs, one built to attempt to maximize the instantaneous goal satisfaction of all living sentients, under the principle of ``one being, one vote'', another that maximizes expected accumulated goal satisfaction averaged over all times from now into the future, a third with a time discounting factor, a fourth that gave greater importance to the goals of ``more sentient'', or more internally consistent, beings, a fifth that only considered explicit verbal requests as goals, etc. There does not appear to be a technical solution that, even in principle, would determine which of such FAIs to prefer (though general principles of parsimony, expressed as maximum entropy, may be helpful). \\ 
-\\ 
-\\ 
 
-\item \emph{Premise:}
- The satisfaction of goals generally relates to the external world (external to the FAI and to sentients) - at least for simply stated goals such as ``Moshe wants a banana''. Consider three possible future worlds. In one, Moshe has a banana. In a second one, Moshe's goal is ``satisfied'' (read as ``no longer unsatisfied'') in some way such that only the sentient's mind-state (i.e. brain-state) is changed. So while Moshe no longer wants a banana, neither does Moshe have a banana. In the third possible world, the FAI does nothing to Moshe one way or the other. I assume not only that the first possible world more desirable than the third, but that the second possible world is \emph{least}
- desirable, unless Moshe has an explicit goal of having his brain-state altered in this fashion. Consequently, FAI will not put all humans in the Matrix, unreasonably. \\ 
-\\ 
+A procedure for resolving conflicting goals, based on the definition of a goal
+from the previous requirement. A solution to this sentient-goal conflict
+resolution problem will allow the FAI to decide what to do when the
+satisfaction of one ``goal of a sentient'' conflicts with the satisfaction of
+with another. These conflicts may be considered within and across sentients,
+across different times, and may even involve considerations of currently
+nonexistent sentients that are extrapolated to come into being at some point in
+the future.
+
+\emph{Speculation:}
+
+This requirement is appears to have the largest non-technical component. To
+wit: one could imagine identical FAIs, one built to attempt to maximize the
+instantaneous goal satisfaction of all living sentients, under the principle of
+``one being, one vote'', another that maximizes expected accumulated goal
+satisfaction averaged over all times from now into the future, a third with a
+time discounting factor, a fourth that gave greater importance to the goals of
+``more sentient'', or more internally consistent, beings, a fifth that only
+considered explicit verbal requests as goals, etc. There does not appear to be
+a technical solution that, even in principle, would determine which of such
+FAIs to prefer (though general principles of parsimony, expressed as maximum
+entropy, may be helpful).
+
+\emph{Premise:}
+
+The satisfaction of goals generally relates to the external world (external to
+the FAI and to sentients) - at least for simply stated goals such as ``Moshe
+wants a banana''. Consider three possible future worlds. In one, Moshe has a
+banana. In a second one, Moshe's goal is ``satisfied'' (read as ``no longer
+unsatisfied'') in some way such that only the sentient's mind-state
+(i.e. brain-state) is changed. So while Moshe no longer wants a banana, neither
+does Moshe have a banana. In the third possible world, the FAI does nothing to
+Moshe one way or the other. I assume not only that the first possible world
+more desirable than the third, but that the second possible world is
+\emph{least} desirable, unless Moshe has an explicit goal of having his
+brain-state altered in this fashion. Consequently, FAI will not put all humans
+in the Matrix, unreasonably.
+
 \emph{Technical Requirement:}
- This requirement seems straightforward at first, but upon further examination has some of the thorniness of the previous requirement. This is because in some situations (conflicting goals, or goals whose satisfaction would lead to unforeseen side-effects), persuasion may be justified, up to and including involuntary modification of brain-states (in cases of insanity, for example). So there is a tradeoff here that must be explicitly and clearly parameterized in any given FAI. \\ 
-\\ 
+
+This requirement seems straightforward at first, but upon further examination
+has some of the thorniness of the previous requirement. This is because in some
+situations (conflicting goals, or goals whose satisfaction would lead to
+unforeseen side-effects), persuasion may be justified, up to and including
+involuntary modification of brain-states (in cases of insanity, for
+example). So there is a tradeoff here that must be explicitly and clearly
+parameterized in any given FAI.
+
 \emph{Speculation:}
- As with the above requirements, it may not be possible for humans to sit down and describe the right trade-offs to make - employing an AI system to invent and explore various tradeoff schemes based on examples and observations should be more approachable (of course such tradeoffs should not contradict or conflict with other tradeoffs such as those indicated by the previous requirement).\\ 
-\\ 
 
+As with the above requirements, it may not be possible for humans to sit down
+and describe the right trade-offs to make - employing an AI system to invent
+and explore various tradeoff schemes based on examples and observations should
+be more approachable (of course such tradeoffs should not contradict or
+conflict with other tradeoffs such as those indicated by the previous
+requirement).
 
-\end{enumerate}
- Reducing these to slogans, we have: \begin{enumerate}
+Reducing these to slogans, we have: \begin{enumerate}
 \item FAI cares about your mind.
 \item Your mind is your brain.
 \item FAI wants to help you.
 \item FAI will try to play nice.
-\item FAI won't talk you out of it, or trick you out of it.\\ 
-\\ 
-
-
+\item FAI won't talk you out of it, or trick you out of it.
 \end{enumerate}
-\textbf{Discussion}
 
+\textbf{Discussion}
 
 There is at the moment no technical theory of FAI. There has been some
 discussion as to what such a theory should look like, and what an AI 
@@ -210,17 +433,21 @@ Friendliness content (cf., Coherent Extrapolated Volition), or enumerate
 Transcension and Growth, Choice, and Joy). Additionally, please note that I am
 attempting to give requirements for a \emph{Friendly} AI, not necessarily the
 \emph{Friendliest} AI possible. If you agree with my premises, then the
-corresponding technical
-requirements may serve as very basic desiderata for any future theory of
- Friendliness. The accompanying speculations may or may not prove useful.\\
-\\
+corresponding technical requirements may serve as very basic desiderata for any
+future theory of Friendliness. The accompanying speculations may or may not
+prove useful.
 
 \textbf{Acknowledgments}
- This work draws heavily on ideas from the writings of Eliezer Yudkowsky and Ben Goertzel. In fact, it probably won't make much sense to someone unfamiliar with these authors' oeuvres (particularly Yudkowsky's, where the terminology of capitol 'F' Friendliness originated). For the confused,  What is Friendly AI? is a good place to start. The wiki page SimplifiedFAI has overlapping aims and content. Thanks to Anna Salomon for nudging me to finish this essay.   &
 
-
-
-\acks{goo.}
+\acks{ 
+  This work draws heavily on ideas from the writings of Eliezer Yudkowsky
+  and Ben Goertzel. In fact, it probably won't make much sense to someone
+  unfamiliar with these authors' oeuvres (particularly Yudkowsky's, where the
+  terminology of capitol 'F' Friendliness originated). For the confused, What
+  is Friendly AI? is a good place to start. The wiki page SimplifiedFAI has
+  overlapping aims and content. Thanks to Anna Salomon for nudging me to finish
+  this essay.
+}
 
 \bibliography{refs}
 \end{document}
