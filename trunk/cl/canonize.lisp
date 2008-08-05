@@ -20,10 +20,16 @@ Author: madscience@google.com (Moshe Looks) |#
       (cons (car expr) (mapcar (bind #'canonize /1 context /2)
 			       (cdr expr) (arg-types expr context type)))))
 
-(defparameter *type-canonizers* nil)
+;; (defparameter *type-canonizers* nil)
+;; (defmacro defcanonizer (typematch args &body body)
+;;   `(push (cons ',typematch (lambda ,args ,@body)) *type-canonizers*))
+;; (defun canonize (expr context type)
+;;   (apply (cdr (assoc (icar type) *type-canonizers*))
+;; 	 (if (consp type) `(,expr ,context ,type) `(,expr ,context))))
 
-(defmacro defcanonizer (typematch args &body body)
-  `(push (cons ',typematch (lambda ,args ,@body)) *type-canonizers*))
+(defdefbytype defcanonizer canonize)
+(defun qcanonize (expr) ;;;useful for testing
+  (canonize expr *empty-context* (expr-type expr *empty-context*)))
 
 (defun structure-bool (op children context)
   (cons
@@ -35,7 +41,6 @@ Author: madscience@google.com (Moshe Looks) |#
 						 context))
 			(t (ncons (canonize-children expr context 'bool))))))
 	   children)))
-
 (defcanonizer bool (expr context &aux 
 		    (op (cond ((junctorp expr) (car expr))
 			      ((eq expr true) 'or)
@@ -47,6 +52,17 @@ Author: madscience@google.com (Moshe Looks) |#
 			 (constant nil)
 			 (junctor (structure-bool dual (cdr expr) context))
 			 (t (ncons (canonize-children expr context 'bool)))))))
+(define-test canonize-bool
+  (assert-equal '(or (and) (and)) (qcanonize false))
+  (assert-equal '(and (or) (or)) (qcanonize true))
+  (assert-equal '(or (and) (and x1))
+		(canonize 'x1 *empty-context* 'bool))
+  (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
+		(qcanonize '(and x1 (not x4))))
+  (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
+		(qcanonize '(or x1 (not x4))))
+  (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
+		 (qcanonize '(or (and x1 x2) x3))))
 
 (defcanonizer num (expr context &aux 
 		   (ops '(exp log sin)) (op-offsets '(0 1 0)))
@@ -89,80 +105,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	    `(,#'split-sum-of-products ,#'sum-of-products))
       (mvbind (o ws ts) (funcall splitter expr)
 	(funcall builder o ws ts t)))))
-
-(defcanonizer tuple (expr context type)
-  (decompose-tuple expr
-    (tuple (cons 'tuple (mapcar (bind #'canonize /1 context /2)
-				(cdr expr) (cdr type))))
-    (t (canonize-children expr context type))))
-
-(defun structure-list (list elem context type)
-  (cons 'append
-	(interleave elem (mapcar (lambda (x) 
-				   `(if true 
-					,(canonize-children x context type) 
-					nil))
-				 list))))
-
-(defcanonizer list (expr context type)
-  (let* ((subtype (cadr type))
-	 (elem `(if false
-		    (list ,(canonize (default-value subtype) context subtype))
-		    nil)))
-    (structure-list (decompose-list expr (append (cdr expr)) (t `(,expr)))
-		    elem context type)))
-
-(defcanonizer function (expr context type)
-  (cons 
-   'lambda
-   (dbind (arg-types return-type) (cdr type)
-     (decompose-function expr
-       (lambda
-	(dbind (arg-names body) (cdr expr)
-	  ; first, bind arg names to their types in the context
-	  (mapcar (bind #'bind-type context /1 /2) arg-names arg-types)
-	  (prog1
-	      (list arg-names		; now build the body of the lambda
-		    (if (find-if #'list-type-p arg-types)
-			(cons 'split 
-			      (if (not (eq (acar body) 'split))
-				  `((tuple) (lambda () 
-					      ,(canonize body context 
-							 return-type)))
-				  (dbind (tuple function) (cdr body)
-				    (dbind (ttype ftype)
-					(arg-types body context return-type)
-				      `(,(canonize tuple context ttype)
-					,(canonize function context ftype))))))
-			(canonize body context return-type)))
-	    (mapcar (bind #'unbind-type context /1) arg-names))))
-       (t (let ((arg-names (mapcar #'genname arg-types)))
-	    (list arg-names
-		  (nconc (if (consp expr)
-			     `(funcall ,(canonize-children expr context type))
-			     `(,expr))
-			 (mapcar (bind #'canonize /1 context /2)
-				 arg-names arg-types)))))))))
-
-(defun canonize (expr context type)
-  (apply (cdr (assoc (icar type) *type-canonizers*))
-	 (if (consp type) `(,expr ,context ,type) `(,expr ,context))))
-
-;;;useful for testing
-(defun qcanonize (expr)
-  (canonize expr *empty-context* (expr-type expr *empty-context*)))
-
-(define-test canonize-bool
-  (assert-equal '(or (and) (and)) (qcanonize false))
-  (assert-equal '(and (or) (or)) (qcanonize true))
-  (assert-equal '(or (and) (and x1))
-		(canonize 'x1 *empty-context* 'bool))
-  (assert-equal '(or (and) (and (or) (or x1) (or (not x4)))) 
-		(qcanonize '(and x1 (not x4))))
-  (assert-equal '(and (or) (or (and) (and x1) (and (not x4))))
-		(qcanonize '(or x1 (not x4))))
-  (assert-equal  '(and (or) (or (and) (and (or) (or x1) (or x2)) (and x3)))
-		 (qcanonize '(or (and x1 x2) x3))))
 
 (define-test canonize-numeric
   (let* ((exp-block '(* 0 (exp (+ 0
@@ -239,16 +181,72 @@ Author: madscience@google.com (Moshe Looks) |#
 			    (init-context '((l (list true))))
 			    'num)))))
 
+(defcanonizer tuple (expr context type)
+  (decompose-tuple expr
+    (tuple (cons 'tuple (mapcar (bind #'canonize /1 context /2)
+				(cdr expr) (cdr type))))
+    (t (canonize-children expr context type))))
 (define-test canonize-tuple
   (assert-equal '(tuple) (qcanonize '(tuple)))
   (assert-equal `(tuple (and (or) (or)) ,(qcanonize 42))
 		(qcanonize '(tuple true 42))))
+
+(defun structure-list (list elem context type)
+  (cons 'append
+	(interleave elem (mapcar (lambda (x) 
+				   `(if true 
+					,(canonize-children x context type) 
+					nil))
+				 list))))
+
+(defcanonizer list (expr context type)
+  (let* ((subtype (cadr type))
+	 (elem `(if false
+		    (list ,(canonize (default-value subtype) context subtype))
+		    nil)))
+    (structure-list (decompose-list expr (append (cdr expr)) (t `(,expr)))
+		    elem context type)))
 
 (define-test canonize-list
   (assert-equal `(append (if false (list ,(qcanonize 0)) nil)
 			 (if true (list ,(qcanonize 42)) nil)
 			 (if false (list ,(qcanonize 0)) nil))
 		(qcanonize '(list 42))))
+
+(defcanonizer function (expr context type)
+  (cons 
+   'lambda
+   (dbind (arg-types return-type) (cdr type)
+     (decompose-function expr
+       (lambda
+	(dbind (arg-names body) (cdr expr)
+	  ; first, bind arg names to their types in the context
+	  (mapcar (bind #'bind-type context /1 /2) arg-names arg-types)
+	  (prog1
+	      (list arg-names		; now build the body of the lambda
+		    (if (find-if #'list-type-p arg-types)
+			(cons 'split 
+			      (if (not (eq (acar body) 'split))
+				  `((tuple) (lambda () 
+					      ,(canonize body context 
+							 return-type)))
+				  (dbind (tuple function) (cdr body)
+				    (dbind (ttype ftype)
+					(arg-types body context return-type)
+				      `(,(canonize tuple context ttype)
+					,(canonize function context ftype))))))
+			(canonize body context return-type)))
+	    (mapcar (bind #'unbind-type context /1) arg-names))))
+       (t (let ((arg-names (mapcar #'genname arg-types)))
+	    (list arg-names
+		  (nconc (if (consp expr)
+			     `(funcall ,(canonize-children expr context type))
+			     `(,expr))
+			 (mapcar (bind #'canonize /1 context /2)
+				 arg-names arg-types)))))))))
+
+
+
 
 (define-test canonize-function
   (assert-equal '(lambda (l x) (split (tuple) (lambda () 

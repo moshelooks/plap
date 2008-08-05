@@ -52,4 +52,4 @@ Author: madscience@google.com (Moshe Looks) |#
       (when newtype
 	(setf (gethash name (get-symbols newtype context)) nil)))))
 
-(defconstant *empty-context* (make-context))
+(defvar *empty-context* (make-context))

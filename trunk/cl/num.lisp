@@ -35,3 +35,6 @@ Author: madscience@google.com (Moshe Looks) |#
   :type num
   :condition (and (eq (car expr) '+) (eql (cadr expr) 0))
   :action (if (longerp expr 3) (cons '+ (cddr expr)) (caddr expr)))
+
+(defun ring-op-p (expr) ;true if rooted in + or * or and or or
+  (matches (acar expr) (+ * and or)))
