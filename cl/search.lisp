@@ -35,7 +35,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (define-test neighbors-at
   (flet ((test (against expr type bindings &optional nocanon)
-	   (let* ((expr (if nocanon expr (canonize expr nil type)))
+	   (let* ((expr (if nocanon expr (canonize expr *empty-context* type)))
 		  (tmp (copy-tree expr))
 		  (bindings (init-type-map `((,type ,bindings)))))
 	     (assert-equal
@@ -131,8 +131,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		     knobs)
 	  (validate expr bindings)
 	  (print* 'kicked-to expr))))
+)
 					;(return-from hillclimb expr)))
-    (setf expr (canonize expr type)));fixme
+    ;;fixme(setf expr (canonize expr type)));fixme
   expr)
 
 (defun make-count-or-score-terminator (count score score-target)
@@ -169,11 +170,11 @@ Author: madscience@google.com (Moshe Looks) |#
 			       (if (> d 1) (return (* -2 (length pairs))) d))
 			     pairs))))))
 
-(defun num-hillclimb-with-target-pairs (target-pairs nsteps)
-  (let ((vars '(x))
-	(scorer (make-pair-scorer target-pairs 'x)))
-    (hillclimb (canonize 0) vars (make-greedy-scoring-acceptor scorer)
-	       (make-count-or-score-terminator nsteps scorer -0.01))))
+;; (defun num-hillclimb-with-target-pairs (target-pairs nsteps)
+;;   (let ((vars '(x))
+;; 	(scorer (make-pair-scorer target-pairs 'x)))
+;;     (hillclimb (canonize 0) vars (make-greedy-scoring-acceptor scorer)
+;; 	       (make-count-or-score-terminator nsteps scorer -0.01))))
 				 
 
 ;; (

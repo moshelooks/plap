@@ -33,12 +33,16 @@ Author: madscience@google.com (Moshe Looks) |#
   (or (gethash type (context-type-map context))
       (setf (gethash type (context-type-map context)) (make-hash-table))))
 
+(defun bind-type (context name type) ;fixme
+  (bind-symbol context name nil type))
+(defun unbind-type (context name) ;fixme
+  (unbind-symbol context name))
+
 ;;; when binding a symbol, value must be already evaled
 (defun bind-symbol (context name value
 		    &optional (type (value-type value)))
   (push (cons value type) (gethash name (context-symbol-bindings context)))
   (setf (gethash name (get-symbols type context)) nil))
-
 
 (defun unbind-symbol (context name)
   (let ((oldtype (cdr (pop (gethash name (context-symbol-bindings context)))))
@@ -47,3 +51,5 @@ Author: madscience@google.com (Moshe Looks) |#
       (remhash name (get-symbols oldtype context))
       (when newtype
 	(setf (gethash name (get-symbols newtype context)) nil)))))
+
+(defconstant *empty-context* (make-context))

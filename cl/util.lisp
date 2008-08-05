@@ -15,8 +15,8 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-;(declaim (optimize (speed 0) (safety 3) (debug 3)))
-(declaim (optimize (speed 3) (safety 0) (debug 0)))
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
+;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
@@ -92,10 +92,12 @@ Author: madscience@google.com (Moshe Looks) |#
   `(mvbind ,collectors (with-collectors ,collectors ,collectors-body)
      ,@body))
 
-(defun ntimes (elt n)
+(defun ntimes (n elt)
   (loop for i from 1 to n collect elt))
 (defun odds (l)
-  (if l (cons l (odds (cddr l)))))
+  (if l (cons (car l) (odds (cddr l)))))
+(defun evens (l)
+  (odds (cdr l)))
 
 ;;; (split (vector l1 d1 l2 d2 ... lN dN) fn)
 ;;; li are lists, fn is a function of 2N arguments
@@ -339,3 +341,23 @@ Author: madscience@google.com (Moshe Looks) |#
   (print (car args))
   (mapc (lambda (x) (prin1 x) (write-char #\space)) (cdr args))
   nil)
+
+;;; uses '? for any atom, '* for any subtree
+(defun tree-matches (pattern tree)
+  (flet ((atom-matches (pattern atom) (or (eq atom pattern) (eq atom '?))))
+    (or (eq pattern '*) (if (atom tree)
+			    (atom-matches tree pattern)
+			    (and (consp pattern)
+				 (same-length-p tree pattern)
+				 (every #'tree-matches pattern tree))))))
+
+(defun tree-diff (x y)
+  (flet ((pdiff () (print* x) (print* '> y)))
+    (unless (equalp x y)
+      (if (or (atom x) (atom y))
+	  (pdiff)
+	  (let* ((n (max (length x) (length y)))
+		 (x (append x (ntimes (- n (length x)) nil)))
+		 (y (append y (ntimes (- n (length y)) nil))))
+	      (mapc #'tree-diff x y)))
+      t)))
