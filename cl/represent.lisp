@@ -96,64 +96,68 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (res (vector '(1) '(1 a) '(1 b) '(1 c))))
     (test-knob list knob res)))
 
-(defun knobs-at (expr bindings &key (type (expr-type expr)))
-  (let ((tovisit (copy-hash-table (gethash type bindings))))
+(defdefbytype defknobs knobs-at)
+
+(defknobs bool (expr context)
+  (when (junctorp expr)
     (collecting
-      (ecase type
-	(bool
-	 (decompose-bool expr
-	   (junctor
-	    (aif (extract-literal expr)
-		 (remhash (litvariable it) tovisit)
-		 (mapl (lambda (l)
-			 (let ((at (car l)))
-			   (awhen (extract-literal at)
-			     (assert (junctorp at))
-			     (remhash (litvariable it) tovisit)
-			     (collect (make-replacer-knob 
-				       (cdr at) ; a single knob for:
-				       (identity-elem (car at)) ; 1 rm
-				       (litnegation it))))))    ; 2 negate
-		       (cdr expr)))
-	    (maphash-keys (lambda (x)
-			    (collect (make-inserter-knob 
-				      expr x (litnegation x))))
-			  tovisit))))
-	(num
-	 (decompose-num expr
-	   ((* +)
-	    (let ((body
-		   (let ((x (cadr expr)))
-		     (if (numberp x)
-			 (let ((e1 (little-epsilon x)) (e2 (big-epsilon x)))
-			   (collect (make-replacer-knob (cdr expr)
-							(+ x e1)
-							(- x e1)
-							(- x e2)
-							(+ x e2)))
-			   (cdr expr))
-			 expr)))
-		  (mult (eq (car expr) '*)))
-	      (mvbind (o ws ts) (funcall (if mult
-					     #'split-product-of-sums
-					     #'split-sum-of-products)
-					 expr)
+      (let ((tovisit (copy-hash-table (get-symbols 'bool context))))
+	(aif (extract-literal expr)
+	     (remhash (litvariable it) tovisit)
+	     (mapl (lambda (l)
+		     (let ((at (car l)))
+		       (awhen (extract-literal at)
+			 (assert (junctorp at))
+			 (remhash (litvariable it) tovisit)
+			 (collect (make-replacer-knob 
+				   (cdr at) ; a single knob for:
+				   (identity-elem (car at)) ; 1 rm
+				   (litnegation it))))))    ; 2 negate
+		   (cdr expr)))
+	(maphash-keys (lambda (x)
+			(collect (make-inserter-knob expr x (litnegation x))))
+		      tovisit)))))
+
+(defknobs num (expr context)
+  (when (ring-op-p expr)
+    (collecting     
+      (let* ((tovisit (copy-hash-table (get-symbols 'num context)))
+	     (x (cadr expr))
+	     (body (if (numberp x)
+		       (let ((e1 (little-epsilon x)) (e2 (big-epsilon x)))
+			 (collect (make-replacer-knob (cdr expr)
+						      (+ x e1) (- x e1)
+						      (- x e2) (+ x e2)))
+			 (cdr expr))
+		       expr))
+	     (mult (eq (car expr) '*)))
+	(mvbind (o ws ts) (funcall (if mult
+				       #'split-product-of-sums
+				       #'split-sum-of-products)
+				   expr)
 		(declare (ignore o ws))
 		(mapc (bind #'remhash /1 tovisit)
 		      (mapcar #'haxx-num-2
 			      (mapcar #'haxx-num-1 ts))))
-	      (maphash-keys (lambda (x)
-			      (let ((e1 (little-epsilon x))
-				    (e2 (big-epsilon x)))
-				(collect 
-				 (apply #'make-inserter-knob body
-					(let ((terms`((* ,e1 ,x)
-						      (* ,(- e1) ,x)
-						      (* ,(- e2) ,x)
-						      (* ,(+ e2) ,x))))
-					  (if mult 
-					      (mapcar (bind #'list '+ 1 /1) 
-						      terms)
-					      terms))))))
-			    tovisit)))))))))
+	(maphash-keys (lambda (x)
+			(let ((e1 (little-epsilon x))
+			      (e2 (big-epsilon x)))
+			  (collect 
+			   (apply #'make-inserter-knob body
+				  (let ((terms`((* ,e1 ,x)
+						(* ,(- e1) ,x)
+						(* ,(- e2) ,x)
+						(* ,(+ e2) ,x))))
+				    (if mult 
+					(mapcar (bind #'list '+ 1 /1) 
+						terms)
+					terms))))))
+		      tovisit)))))
 
+(defknobs tuple (expr context type)
+  (declare (ignore expr context type))
+  nil)
+
+;; (defknobs list (expr context type)
+;;   (case (car expr)
+;;     (if 

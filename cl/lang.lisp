@@ -230,9 +230,11 @@ This defines the basic language used to represent evolved programs.
 	   0 nil nil
 	   0 nil nil)))
 
-(defmacro defdefbytypematch (defname name)
+(defmacro defdefbytype (defname name)
   `(progn 
-     (defvar ,name n
-  `(defmacro name (typematch
-(defmacro defcanonizer (typematch args &body body)
-  `(push (cons ',typematch (lambda ,args ,@body)) *type-canonizers*))
+     (defvar ,name nil)
+     (defmacro ,defname (typematch args &body body)
+       `(push (cons ',typematch (lambda ,args ,@body)) ,',name))
+     (defun ,name (expr context type)
+       (apply (cdr (assoc (icar type) ,name))
+	      (if (consp type) `(,expr ,context ,type) `(,expr ,context))))))
