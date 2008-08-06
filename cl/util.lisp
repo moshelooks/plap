@@ -145,8 +145,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	    (rest-arg (gensym)))
 	`(lambda ,(append
 		   (mapcar (lambda (i) 
-			     (intern (concatenate 'string 
-						  "/" (write-to-string i))))
+			     (read-from-string
+			      (concatenate 'string "/" (write-to-string i))))
 			   (loop for i from 1 to bind-max-arg-idx collect i))
 		   `(&rest ,rest-arg)) 
 	   (declare (ignore ,rest-arg))

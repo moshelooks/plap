@@ -15,16 +15,40 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks)
 
 This defines the basic language used to represent evolved programs.
-|#
+
+Expressions in plop are either lisp atoms or function applications. Function
+applications are ((fn . markup) . args) where args are the arguments to the
+function fn, and markup is arbitrary metadata. Note that args and markup must
+be proper lists. |#
 (in-package :plop)
 
 ;;; for convenice - the plop language uses these instead of t and nil
 (defvar true 'true)
 (defvar false 'false)
 
+;;; use these accessors and predicates instead of car/cdr & friends
+(defun fn (expr) (car expr))
+(defun ifn (expr) (if (consp expr) (car expr) expr))
+(defun args (expr) (cdr expr))
+(defun arg0 (expr) (second expr))
+(defun arg1 (expr) (third expr))
+(defun arg2 (expr) (fourth expr))
+(defun arg3 (expr) (fifth expr))
+(defun arg4 (expr) (sixth expr))
+(defun arg5 (expr) (seventh expr))
+(defun arg6 (expr) (eighth expr))
+(defun arg7 (expr) (ninth expr))
+(defun arg8 (expr) (tenth expr))
+
+;;; use these constructors instead of cons/list/quote
+(defun mkexpr (fn args) (cons (ncons fn) args))
+
+(defun eqfn (expr fn) (and (consp expr) (eq (fn expr) fn)))
+
 ;; a total ordering on all plop expressions
 ;; returns less, nil, or greater, with the important property that (not symbol)
 ;; is always ordered immediately after symbol
+;; markup is ignored
 (defun total-cmp (l r)
   (flet ((elem-cmp (l r)
 	   (if (numberp l)
@@ -33,40 +57,61 @@ This defines the basic language used to represent evolved programs.
 		   'less)
 	       (if (numberp r)
 		   'greater
-		   (if (eql l r) nil (if (string< l r) 'less 'greater)))))
-	 (notp (x) (and (consp x) (eq (car x) 'not) (not (consp (cadr x))))))
+		   (if (eql l r) nil (if (string< l r) 'less 'greater))))))
     (if (consp l)
-	(if (notp l)
-	    (if (notp r)
-		(elem-cmp (cadr l) (cadr r))
-		(aif (total-cmp (cadr l) r) it 'greater))
+	(if (eq (fn l) 'not)
+	    (if (eqfn r 'not)
+		(total-cmp (arg0 l) (arg0 r))
+		(or (total-cmp (arg0 l) r) 'greater))
 	    (if (consp r)
-		(if (notp r)
-		    (aif (total-cmp l (cadr r)) it 'less)
-		    (aif (total-cmp (car l) (car r))
-			 it 
-			 (total-cmp (cdr l) (cdr r))))
+		(if (eq (fn r) 'not)
+		    (or (total-cmp l (arg0 r)) 'less)
+		    (or (elem-cmp (fn l) (fn r))
+			(prog () (mapl 
+				  (lambda (l r)
+				    (aif (total-cmp (car l) (car r))
+					 (return it)
+					 (let ((x (consp (cdr l))) 
+					       (y (consp (cdr r))))
+					   (unless (eq x y)
+					     (return (if x 'greater 'less))))))
+				  (args l) (args r)))))
 		'greater))
-	(if (consp r) 
-	    (if (notp r)
-		(aif (elem-cmp l (cadr r)) it 'less)
+	(if (consp r)
+	    (if (eq (fn r) 'not) 
+		(or (total-cmp l (arg0 r)) 'less)
 		'less)
 	    (elem-cmp l r)))))
 (defun total-order (l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order
-  (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
-  (assert-equal '((a 1) (a 1 1) (a 2)) 
-		(sort-copy '((a 2) (a 1) (a 1 1)) #'total-order))
-  (assert-equal 
-   '(1 2 a b c nil (a 1) (a 2) (b b) (b b b))
-   (sort-copy '(2 b 1 a c (a 2) (a 1) (b b) (b b b) nil) #'total-order))
-  (assert-equal
-   '((a (a (b c))) (a (a (b c)) b) (a (a (b c d))))
-   (sort-copy '((a (a (b c))) (a (a (b c)) b) (a (a (b c d)))) #'total-order))
-  (assert-equal
-   '(a (not a) b (not b) c)
-   (sort-copy '((not a) (not b) c b a) #'total-order))
+   (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
+
+   (assert-equal '((a 1) (a 1 1) (a 2))
+		 (sort-copy '((a 2) (a 1) (a 1 1)) #'total-order))
+   (assert-equal 
+    '(1 2 a b c nil (a 1) (a 2) (b b) (b b b))
+    (sort-copy '(2 b 1 a c (a 2) (a 1) (b b) (b b b) nil) #'total-order))
+   (assert-equal
+    '((a (a (b c))) (a (a (b c)) b) (a (a (b c d))))
+    (sort-copy '((a (a (b c))) (a (a (b c)) b) (a (a (b c d)))) #'total-order))
+   (assert-equal
+    '(a (not a) b (not b) c)
+    (sort-copy '((not a) (not b) c b a) #'total-order))
+
+
+;;   (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
+;;   (assert-equal '(((a) 1) ((a) 1 1) ((a) 2)) 
+;; 		(sort-copy '(((a) 2) ((a) 1) ((a) 1 1)) #'total-order))
+;;   (assert-equal '(1 2 a b c nil ((a) 1) ((a) 2) ((b) b) ((b) b b))
+;; 		(sort-copy '(2 b 1 a c ((a) 2) ((a) 1) ((b) b) ((b) b b) nil) 
+;; 			   #'total-order))
+;;   (assert-equal '(((a) ((a) ((b) c))) ((a) ((a) ((b) c)) b)
+;; 		  ((a) ((a) ((b) c d))))
+;;    (sort-copy '(((a) ((a) ((b) c))) ((a) ((a) ((b) c)) b)
+;; 		((a) ((a) ((b) c d)))) #'total-order))
+;;   (assert-equal'(a ((not) a) b ((not) b) c)
+;;    (sort-copy '(((not) a) ((not) b) c b a) #'total-order))
   (let ((exprs (randremove 0.9 (enum-trees *enum-trees-test-symbols* 2))))
     (block enumerative-test
       (flet ((opp (x) (case x
@@ -76,8 +121,8 @@ This defines the basic language used to represent evolved programs.
 	(dolist (expr1 exprs)
 	  (dolist (expr2 exprs)
 	    (unless (assert-equal (total-cmp expr1 expr2)
-				  (opp (total-cmp expr2 expr1)))
-	      (print* expr1 expr2)
+				  (opp (total-cmp expr2 expr1))
+				  expr1 expr2)
 	      (return-from enumerative-test nil))))))))
 
 (defun commutativep (x)
@@ -95,18 +140,18 @@ This defines the basic language used to represent evolved programs.
 
 (defun expr-size (expr) 
   (if (consp expr)
-      (reduce #'+ (mapcar #'expr-size (cdr expr)) :initial-value 1) 
+      (reduce #'+ (mapcar #'expr-size (args expr)) :initial-value 1) 
       1))
 
 (defun expr-depths (expr)
   (if (consp expr)
-      (mapcar #'1+ (mapcan #'expr-depths (cdr expr)))
+      (mapcar #'1+ (mapcan #'expr-depths (args expr)))
       (list 0)))
 (define-test expr-depths
   (assert-equal '(1 2 2 1) (expr-depths '(and x (or y z) q)))
   (assert-equal '(0) (expr-depths 'x)))
 
-(defun equalp-to-eq (expr)
+(defun equalp-to-eq (expr) ;fixme - do we need/use this?
   (mapl (lambda (expr1) (if (consp (car expr1))
 			 (mapl (lambda (expr2)
 				 (if (equalp (car expr1) (car expr2))
@@ -134,25 +179,25 @@ This defines the basic language used to represent evolved programs.
   (mkdecomposer decompose-num
 		(constant `(numberp ,expr))
 		(t `(and (consp ,expr)
-			 ,(if (consp pred) 
-			      `(matches (car ,expr) ,pred)
-			      `(eq (car ,expr) ',pred)))))
+			 ,(if (consp pred)
+			      `(matches (fn ,expr) ,pred)
+			      `(eq (fn ,expr) ',pred)))))
   (mkdecomposer decompose-bool
 		(literal `(literalp ,expr))
 		(constant `(matches ,expr (true false)))
 		(junctor `(junctorp ,expr)))
   (mkdecomposer decompose-tuple
-		(tuple `(eq (acar ,expr) 'tuple)))
+		(tuple `(and (consp ,expr) (eq (fn ,expr) 'tuple))))
   (mkdecomposer decompose-function
-		(lambda `(and (consp ,expr) (eq (car ,expr) 'lambda))))
+		(lambda `(and (consp ,expr) (eq (fn ,expr) 'lambda))))
   (mkdecomposer decompose-list
-		(append `(and (consp ,expr) (eq (car ,expr) 'append)))
-		(list  `(and (consp ,expr) (eq (car ,expr) 'list)))))
+		(append `(and (consp ,expr) (eq (fn ,expr) 'append)))
+		(list  `(and (consp ,expr) (eq (fn ,expr) 'list)))))
 (define-test decompose-num
   (assert-equal 
    '(cond ((numberp expr) foo) 
-     ((and (consp expr) (eq (car expr) '/)) goo)
-     ((and (consp expr) (matches (car expr) (* +))) loo)
+     ((and (consp expr) (eq (fn expr) '/)) goo)
+     ((and (consp expr) (matches (fn expr) (* +))) loo)
      (t moo))
    (macroexpand-1 '(decompose-num 
 		    expr (constant foo) (/ goo) ((* +) loo) (t moo)))))
@@ -171,10 +216,10 @@ This defines the basic language used to represent evolved programs.
   (with-collectors (coefficient term)
     (mapc (lambda (expr)
 	    (dbind (coefficient term)
-		(if (and (consp expr) (eq (car expr) op) (numberp (cadr expr)))
-		    `(,(cadr expr) ,(if (cdddr expr)
-					(cons op (cddr expr))
-					(caddr expr)))
+		(if (and (consp expr) (eq (fn expr) op) (numberp (arg0 expr)))
+		    `(,(arg0 expr) ,(if (cddr (args expr))
+					(cons op (cdr (args expr)))
+					(arg1 expr)))
 		    `(,identity ,expr))
 	      (coefficient coefficient)
 	      (term term)))
@@ -186,9 +231,9 @@ This defines the basic language used to represent evolved programs.
 	     (values offset weights terms))))
     (cond ((numberp expr) (values expr nil nil))
 	  ((not (consp expr)) (values op-identity `(,dual-identity) `(,expr)))
-	  ((eq (car expr) op) (if (numberp (cadr expr))
-				  (mksplit (cadr expr) (cddr expr))
-				  (mksplit op-identity (cdr expr))))
+	  ((eq (fn expr) op) (if (numberp (arg0 expr))
+				 (mksplit (arg0 expr) (cdr (args expr)))
+				 (mksplit op-identity (args expr))))
 	  (t (mksplit op-identity `(,expr))))))
 
 (defun split-sum-of-products (expr) (dual-decompose expr '+ 0 '* 1))

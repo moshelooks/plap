@@ -158,6 +158,6 @@ Author: madscience@google.com (Moshe Looks) |#
   (declare (ignore expr context type))
   nil)
 
-;; (defknobs list (expr context type)
-;;   (case (car expr)
-;;     (if 
+(defknobs list (expr context type)
+  (case (fn expr)
+     (if 
