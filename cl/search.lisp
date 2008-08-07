@@ -25,9 +25,13 @@ Author: madscience@google.com (Moshe Looks) |#
 	(knobs-at expr context type))
   expr)
 
-;;;fixme for nested varying types
-(defun enum-neighbors (fn expr context type)
-  (upwards (bind #'neighbors-at (bind fn expr) /1 context type) expr))
+
+(defun enum-neighbors (fn expr context type &aux (fn (bind fn expr)))
+  (labels ((rec (subexpr type) 
+	     (when (consp subexpr)
+	       (neighbors-at fn subexpr context type)
+	       (mapc #'rec (args subexpr) (arg-types subexpr context type)))))
+     (rec expr type)))
 
 (define-test neighbors-at
   (flet ((test (against expr type vars &optional nocanon)

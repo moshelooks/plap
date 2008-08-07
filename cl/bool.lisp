@@ -69,7 +69,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			     (funcall ,rewrite expr))
 	 (return nil)))))
 
-(defun dual-bool-op (f) (ecase f (and 'or) (or 'and)))
+(defun bool-dual (f) (ecase f (and 'or) (or 'and) (true false) (false true)))
 (defun junctorp (expr) (matches (acar expr) (and or)))
 (defun literalp (expr)
   (if (consp expr)
@@ -94,7 +94,7 @@ Author: madscience@google.com (Moshe Looks) |#
     :action 
     (if (eq (caadr expr) 'not) 
 	(cadadr expr)
-	(cons (dual-bool-op (caadr expr)) 
+	(cons (bool-dual (caadr expr)) 
 	      (mapcar (bind #'cons 'not (list /1)) (cdadr expr))))
     :order downwards)
 (define-test push-nots
@@ -175,7 +175,7 @@ Author: madscience@google.com (Moshe Looks) |#
   :condition (eq operator (car expr))
   :action (if (var-and-negation-p (cdr expr)) complement expr)
   :prerequisites '(sort-commutative)
-  :cleanups (list (bool-identities (dual-bool-op operator)) 'sort-commutative)
+  :cleanups (list (bool-identities (bool-dual operator)) 'sort-commutative)
   :order upwards)
 (define-test identify-contradictions
   (assert-equal 'false (identify-contradictions '(and x (not x))))

@@ -15,7 +15,7 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(declaim (optimize (speed 0) (safety 3) (debug 3)))
+(proclaim '(optimize debug safety debug))
 ;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
 ;;; control structures
@@ -65,9 +65,6 @@ Author: madscience@google.com (Moshe Looks) |#
       (and (not (null l2)) (same-length-p (cdr l1) (cdr l2)))))
 (defun longerp (list n)
   (and list (or (eql n 0) (longerp (cdr list) (1- n)))))
-(defun push_back (list elem)
-  (rplacd (last list) (list elem))
-  list)
 ;;; a stalk is a list with a single child (the cadr)
 (defun stalkp (l) (and (consp l) (consp (cdr l)) (not (cddr l))))
 (defun reduce-until (v f l)
@@ -300,6 +297,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (maphash (bind fn /1) table))
 (defun hash-table-empty-p (table) ;;could be faster
   (eql (hash-table-size table) 0))
+(defun keys-to-list (table)
+  (collecting (maphash-keys (lambda (x) (collect x)) table)))
 
 ;;; mathematical functions
 (macrolet ((declare-argcmp (name cmp)

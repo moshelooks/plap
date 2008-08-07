@@ -29,8 +29,8 @@ Author: madscience@google.com (Moshe Looks) |#
   `(caar (gethash ,name (context-symbol-bindings ,context))))
 (defun get-type (name context)
   (cdar (gethash name (context-symbol-bindings context))))
-(defun get-symbols (type context)
-  (or (gethash type (context-type-map context))
+(defun get-symbols (type context) ; returns a hashmap where keys are symbols,
+  (or (gethash type (context-type-map context)) ; values nil
       (setf (gethash type (context-type-map context)) (make-hash-table))))
 
 (defun bind-type (context name type) ;fixme

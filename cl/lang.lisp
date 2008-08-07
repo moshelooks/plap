@@ -171,33 +171,29 @@ be proper lists. |#
        `(defmacro ,name (expr &body clauses)
 	  `(cond ,@(mapcar (lambda (clause)
 			     (dbind (pred &body body) clause
-			       (let ((condition (case pred
-						  ((t) 't)
-						  ,@conditions)))
+			       (let ((condition 
+				      (case pred
+					((t) 't)
+					,@conditions
+					(t (if (consp pred)
+					       `(matches (ifn ,expr) ,pred)
+					       `(eq (ifn ,expr) ',pred))))))
 				 `(,condition ,@body))))
 			   clauses)))))
   (mkdecomposer decompose-num
-		(constant `(numberp ,expr))
-		(t `(and (consp ,expr)
-			 ,(if (consp pred)
-			      `(matches (fn ,expr) ,pred)
-			      `(eq (fn ,expr) ',pred)))))
+		(constant `(numberp ,expr)))
   (mkdecomposer decompose-bool
 		(literal `(literalp ,expr))
 		(constant `(matches ,expr (true false)))
 		(junctor `(junctorp ,expr)))
-  (mkdecomposer decompose-tuple
-		(tuple `(and (consp ,expr) (eq (fn ,expr) 'tuple))))
-  (mkdecomposer decompose-function
-		(lambda `(and (consp ,expr) (eq (fn ,expr) 'lambda))))
-  (mkdecomposer decompose-list
-		(append `(and (consp ,expr) (eq (fn ,expr) 'append)))
-		(list  `(and (consp ,expr) (eq (fn ,expr) 'list)))))
+  (mkdecomposer decompose-tuple)
+  (mkdecomposer decompose-function)
+  (mkdecomposer decompose-list))
 (define-test decompose-num
   (assert-equal 
    '(cond ((numberp expr) foo) 
-     ((and (consp expr) (eq (fn expr) '/)) goo)
-     ((and (consp expr) (matches (fn expr) (* +))) loo)
+     ((eq (ifn expr) '/) goo)
+     ((matches (ifn expr) (* +)) loo)
      (t moo))
    (macroexpand-1 '(decompose-num 
 		    expr (constant foo) (/ goo) ((* +) loo) (t moo)))))
@@ -210,7 +206,8 @@ be proper lists. |#
     (assert-equal 'literal (dectest 'x))
     (assert-equal 'literal (dectest '(not x)))
     (assert-equal 'junctor (dectest '(and x y)))
-    (assert-equal 'other (dectest '(foo bar baz)))))
+    (assert-equal 'other (dectest '(foo bar baz))))
+  (assert-equal 42 (decompose-bool true (true 42) (false 3) (t 99))))
 
 (defun split-by-coefficients (exprs &key (op '*) (identity 1))
   (with-collectors (coefficient term)
