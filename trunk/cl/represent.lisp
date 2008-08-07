@@ -98,6 +98,13 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defdefbytype defknobs knobs-at)
 
+;;; call enum-knobs to get a list of all knobs for a particular expression - 
+;;; just calling knobs-at recursively is not enough because we have to add and
+;;; remove local variables from the context
+(defun enum-knobs (expr context type)
+  (when (eqfn expr 'lambda)
+  (nconc (knobs-at expr context type))))
+
 (defknobs bool (expr context)
   (when (junctorp expr)
     (collecting
@@ -159,5 +166,21 @@ Author: madscience@google.com (Moshe Looks) |#
   nil)
 
 (defknobs list (expr context type)
-  (case (fn expr)
-     (if 
+  (when (eqfn expr 'if)
+    (assert (or (eq (arg0 expr) 'true) (eq (arg0 expr) 'false)))
+    (cons (apply #'make-replacer-knob (args expr) (bool-dual (arg0 expr))
+		 (mapcan (lambda (var) (list var `(not ,var)))
+			 (keys-to-list (get-symbols bool context))))
+	  (when (or (atom (arg1 expr)) (atom (arg2 expr)))
+	    (let ((xs (keys-to-list (get-symbols type context))))
+	      (flet ((mkknob (arglist)
+		       (apply #'make-replacer-knob arglist
+			      (aif (car arglist) (remove it xs) xs))))
+		(collecting (when (atom (arg1 expr))
+			      (collect (mkknob (cdr (args expr)))))
+			    (when (atom (arg2 expr))
+			      (collect (mkknob (cddr (args expr))))))))))))
+
+;;(defknobs functions (expr context type)
+;;  )
+
