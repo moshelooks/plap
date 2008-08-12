@@ -41,7 +41,7 @@ be proper lists. |#
 (defun arg8 (expr) (tenth expr))
 
 ;;; use these constructors instead of cons/list/quote
-(defun mkexpr (fn args) (cons (ncons fn) args))
+(defun mkexpr (fn args) (cons fn args))
 
 (defun eqfn (expr fn) (and (consp expr) (eq (fn expr) fn)))
 

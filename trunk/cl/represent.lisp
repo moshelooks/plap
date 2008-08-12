@@ -101,9 +101,18 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;; call enum-knobs to get a list of all knobs for a particular expression - 
 ;;; just calling knobs-at recursively is not enough because we have to add and
 ;;; remove local variables from the context
+(defun map-knobs (fn expr context type)
+  (if (eqfn expr 'lambda)
+      (dbind (arg-names body) (args expr)
+	(dbind (arg-types return-type) (cdr type)
+	  (mapc (bind #'bind-type context /1 /2) arg-names arg-types)
+	  (map-knobs fn body context return-type)
+	  (mapc (bind #'unbind-type context /1) arg-names)))
+      (progn (mapc fn (nconc (knobs-at expr context type)))
+	     (mapc (bind #'map-knobs fn /1 context /2) (args expr) 
+		   (arg-types expr context type)))))
 (defun enum-knobs (expr context type)
-  (when (eqfn expr 'lambda)
-  (nconc (knobs-at expr context type))))
+  (collecting (map-knobs (collector) expr context type)))
 
 (defknobs bool (expr context)
   (when (junctorp expr)
@@ -181,6 +190,6 @@ Author: madscience@google.com (Moshe Looks) |#
 			    (when (atom (arg2 expr))
 			      (collect (mkknob (cddr (args expr))))))))))))
 
-;;(defknobs functions (expr context type)
-;;  )
-
+;; (defknobs functions (expr context type)
+;;   (declare (ignore expr context type))
+;;   nil)

@@ -38,3 +38,44 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun ring-op-p (expr) ;true if rooted in + or * or and or or
   (matches (acar expr) (+ * and or)))
+
+(defun cons-cars (expr)
+  (if (consp expr)
+      (cons (ncons (car expr)) (mapcar #'cons-cars (cdr expr)))
+      expr))
+
+;;; expr should be already cons-car'ed
+(defun to-maxima (expr)
+  (if (atom expr) expr
+      (let ((subexprs (mapcar #'to-maxima (cdr expr))))
+	(cons (ncons (acase (caar expr)
+		       (+ 'maxima::mplus)
+		       (* 'maxima::mtimes)
+		       (sin 'maxima::%sin)
+		       (exp 'maxima::mexp)
+		       (log (return-from to-maxima
+			      `((maxima::%log) ((maxima::mabs) ,@subexprs))))
+		       (t it)))
+	      subexprs))))
+	    
+(defun from-maxima (expr)
+  (if (atom expr) expr
+      (let ((args (cdr expr)))
+	(mkexpr (acase (caar expr)
+		  (maxima::mplus '+)
+		  (maxima::mtimes '*)
+		  (maxima::%sin 'sin)
+		  (maxima::mexp 'exp)
+		  (maxima::%log (assert (eq 'maxima::mabs (caadr expr)))
+				(setf args (cddr expr))
+				'log)
+		  (t it))
+		(mapcar #'from-maxima args)))))
+
+(define-reduction maxima-reduce (expr)
+  :type num
+  :action
+  (from-maxima (maxima::meval*
+		`((maxima::$ev)
+		  ((maxima::trigsimp)
+		   ,(maxima::meval* (to-maxima (cons-cars expr))))))))
