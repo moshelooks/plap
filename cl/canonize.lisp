@@ -236,21 +236,14 @@ Author: madscience@google.com (Moshe Looks) |#
        (t (let ((arg-names (mapcar #'genname arg-types)))
 	    (assert (not (consp expr)))
 	    (list arg-names 
-		  (let ((result (cons expr
-				      (mapcar (bind #'canonize /1 context /2)
-					      arg-names arg-types))))
+		  (let ((subexpr (cons expr
+				       (mapcar (bind #'canonize /1 context /2)
+					       arg-names arg-types))))
 		    (if arg-names
-			(nsubst result (car arg-names)
+			(nsubst subexpr (car arg-names)
 				(canonize (car arg-names) 
 					  context return-type))
-			result)))))))))
-;;		      (canonize (ncons expr) context return-type))
-;; 		   (if (consp expr)
-;; 		       `(funcall ,(canonize-children expr context type))
-;; 		       `(,expr))
-;; 			 (mapcar (bind #'canonize /1 context /2)
-;; 				 arg-names arg-types)))))))))
-
+			subexpr)))))))))
 
 (define-test canonize-function
   (assert-equal '(lambda (l x) (split (tuple) (lambda () 

@@ -15,7 +15,7 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun neighbors-at (fn expr context type)
+(defun map-neighbors-at (fn expr context type)
   (mapc (lambda (knob)
 	  (map nil (lambda (setting) 
 		     (funcall setting)
@@ -25,15 +25,17 @@ Author: madscience@google.com (Moshe Looks) |#
 	(knobs-at expr context type))
   expr)
 
-
-(defun enum-neighbors (fn expr context type &aux (fn (bind fn expr)))
+(defun map-neighbors (fn expr context type &aux (fn (bind fn expr)))
   (labels ((rec (subexpr type) 
 	     (when (consp subexpr)
-	       (neighbors-at fn subexpr context type)
+	       (map-neighbors-at fn subexpr context type)
 	       (mapc #'rec (args subexpr) (arg-types subexpr context type)))))
      (rec expr type)))
+(defun enum-neighbors (expr context type)
+  (collecting (map-neighbors (lambda (expr) (collect (copy-tree expr)))
+			     expr context type)))
 
-(define-test neighbors-at
+(define-test enum-neighbors
   (flet ((test (against expr type vars &optional nocanon)
 	   (let* ((expr (if nocanon expr (canonize expr *empty-context* type)))
 		  (tmp (copy-tree expr))
@@ -41,12 +43,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	     (mapc (bind #'bind-type context /1 type) vars)
 	     (assert-equal
 	      (setf against (sort (copy-seq against) #'total-order))
-	      (sort (collecting (enum-neighbors
-				 (lambda (expr2) 
-				   (declare (ignore expr2))
-				   (collect (copy-tree expr)))
-				 expr context type))
-		     #'total-order))
+	      (sort (enum-neighbors expr context type) #'total-order))
 	     (assert-equal tmp expr))))
     ;; bool
     (test '((or (and x) (and x))

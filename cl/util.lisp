@@ -53,6 +53,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun icar (x) (if (consp x) (car x) x))
 (defun ncons (x) (cons x nil))
 
+(defmacro collector () '(lambda (x) (collect x)))
+
 ;;; abbreviations
 (defmacro mvbind (vars values &body body)
   `(multiple-value-bind ,vars ,values ,@body))
@@ -298,7 +300,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun hash-table-empty-p (table) ;;could be faster
   (eql (hash-table-size table) 0))
 (defun keys-to-list (table)
-  (collecting (maphash-keys (lambda (x) (collect x)) table)))
+  (collecting (maphash-keys (collector) table)))
 
 ;;; mathematical functions
 (macrolet ((declare-argcmp (name cmp)
@@ -329,8 +331,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (if tree (rec tree))))
 (define-test map-subtrees
   (assert-equal '((1 (2 3) 4) (2 3) 3 4) 
-		(collecting (map-subtrees (lambda (sub) (collect sub))
-					  '(1 (2 3) 4)))))
+		(collecting (map-subtrees (collector) '(1 (2 3) 4)))))
 (defun tree-size (tree)
   (if (atom tree) 1 (reduce #'+ (cdr tree) :key #'tree-size :initial-value 1)))
 (defun arity (tree)
