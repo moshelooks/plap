@@ -52,9 +52,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (+ 'maxima::mplus)
 		       (* 'maxima::mtimes)
 		       (sin 'maxima::%sin)
-		       (exp 'maxima::mexp)
+		       (exp 'maxima::$exp)
 		       (log (return-from to-maxima
 			      `((maxima::%log) ((maxima::mabs) ,@subexprs))))
+		       (/ 'maxima::mquotient)
 		       (t it)))
 	      subexprs))))
 	    
@@ -65,17 +66,101 @@ Author: madscience@google.com (Moshe Looks) |#
 		  (maxima::mplus '+)
 		  (maxima::mtimes '*)
 		  (maxima::%sin 'sin)
-		  (maxima::mexp 'exp)
-		  (maxima::%log (assert (eq 'maxima::mabs (caadr expr)))
-				(setf args (cddr expr))
+;		  (maxima::mexp 'exp)
+		  (maxima::%log ;(assert (eq 'maxima::mabs (caaadr expr)))
+				;(setf args (cddr expr))fixme
 				'log)
 		  (t it))
 		(mapcar #'from-maxima args)))))
 
+;; (defun mung (expr)
+;;   (if (atom expr) expr
+;;       (if (eq (car expr) 'maxima::mabs)
+;; 	  (mung (cadr expr))
+;; 	  (if (and (eq (car expr) 'maxima::mexpt) 
+;; 		   (or (eq (cadr expr) 'maxima::$%e)
+;; 		       (eql (cadr expr) 2.718281828459045)))
+;; 	      (list 'maxima::exp (mung (caddr expr)))
+;; 	      (cons (car expr) (mapcar #'mung (cdr expr)))))))
+
+
+(setf maxima::$ratprint nil) ; to prevent maxima from spewing out warnings
+(setf maxima::errorsw t)     ; and error messages
+(setf maxima::errrjfflag t)
+
 (define-reduction maxima-reduce (expr)
   :type num
   :action
-  (from-maxima (maxima::meval*
-		`((maxima::$ev)
-		  ((maxima::trigsimp)
-		   ,(maxima::meval* (to-maxima (cons-cars expr))))))))
+  (handler-case
+      (catch 'maxima::macsyma-quit
+	(return-from maxima-reduce
+	  (mung
+	   (from-maxima (maxima::$float 
+			(maxima::simplify (to-maxima (cons-cars expr)))))))
+	'nan)
+    (system::simple-floating-point-overflow () 'nan)
+    (system::simple-arithmetic-error () 'nan)))
+
+(define-reduction eliminate-division (expr)
+  :type num
+  :action
+  (if (eq (fn expr) '/)
+      (if (eq (acar (arg0 expr)) '*)
+	  (if (eq (acar (arg1 expr)) '*)
+	      `(* ,@(args (arg0 expr)) ,@(mapcar (lambda (subexpr)
+						   `(expt ,subexpr -1))
+						 (args (arg1 expr))))
+	      `(* ,@(args (arg0 expr)) (expt ,(arg1 expr) -1)))
+	  (if (eq (acar (arg1 expr)) '*)
+	      `(* ,(arg0 expr) ,@(mapcar (lambda (subexpr)
+					   `(expt ,subexpr -1))
+				       (args (arg1 expr))))
+	      `(* ,(arg0 expr) (expt ,(arg1 expr) -1))))
+      expr))
+
+(defparameter raw-sexprs nil)
+(with-open-file
+    (stream "/Users/madscience/work/plap/trunk/cl/sample_real_trees_10k")
+  (do ((expr (read stream nil) (read stream nil))) ((null expr))
+    (push expr raw-sexprs)))
+
+(defparameter combo-sexprs nil)
+(with-open-file
+    (stream "/Users/madscience/work/moses/moses2/combo_sexprs")
+  (do ((expr (read stream nil) (read stream nil))) ((null expr))
+	  (push expr combo-sexprs)))
+
+(defun mmtry (fn expr)
+  (handler-case
+      (catch 'maxima::raterr
+	(catch 'maxima::errorsw
+	  (catch 'maxima::macsyma-quit
+	    (funcall fn (to-maxima (cons-cars expr))))))
+    (system::simple-floating-point-overflow () 'infinity)
+    (system::simple-arithmetic-error () 'infinity)))
+
+(defun mtry (fn expr)
+  (handler-case
+      (catch 'maxima::raterr
+	(catch 'maxima::errorsw
+	  (catch 'maxima::macsyma-quit
+	    (from-maxima (funcall fn (to-maxima (cons-cars expr)))))))
+    (system::simple-floating-point-overflow () 'infinity)
+    (system::simple-arithmetic-error () 'infinity)))
+(defun mung (expr)
+  (if (atom expr) expr
+      (if (eq (car expr) 'maxima::mabs)
+	  (mung (cadr expr))
+	  (if (and (eq (car expr) 'maxima::mexpt) 
+		   (or (eq (cadr expr) 'maxima::$%e)
+		       (eql (cadr expr) 2.718281828459045)))
+	      (list 'maxima::exp (mung (caddr expr)))
+	      (cons (car expr) (mapcar #'mung (cdr expr)))))))
+(defun sizeme (fn)
+  (time (reduce #'+ raw-sexprs 
+		:key (lambda (expr) (tree-size (mung (mtry fn expr)))))))
+
+(defparameter combo-nodiv-sexprs 
+  (mapcar (bind #'upwards #'eliminate-division /1) combo-sexprs))
+
+;(defun sexprs-size (sexprs) (reduce #'+ sexprs :key #'tree-size))
