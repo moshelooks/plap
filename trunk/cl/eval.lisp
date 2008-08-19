@@ -40,6 +40,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  ((symbolp expr) (case expr 
 			    (true t)
 			    (false nil)
+			    (nan 'nan)
 			    (nil nil)
 			    (t (acase (get-value expr context)
 				 (true t)

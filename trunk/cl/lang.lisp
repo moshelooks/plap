@@ -279,3 +279,15 @@ be proper lists. |#
      (defun ,name (expr context type)
        (apply (cdr (assoc (icar type) ,name))
 	      (if (consp type) `(,expr ,context ,type) `(,expr ,context))))))
+
+
+;;fixme extend to non-boolean, lambda-awareness...
+(defun free-variables (expr)
+  (if (consp expr)
+      (case (car expr)
+	((and or not) (reduce (bind #'delete-adjacent-duplicates 
+				    (merge 'list /1 /2 #'string<))
+			      (cdr expr)
+			      :key #'free-variables)))
+      (list expr)))
+
