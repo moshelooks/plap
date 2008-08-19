@@ -53,3 +53,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	(setf (gethash name (get-symbols newtype context)) nil)))))
 
 (defvar *empty-context* (make-context))
+
+(defmacro with-bound-symbols (context symbols values &body body)
+  `(prog2 (mapc (bind #'bind-symbol ,context /1 /2) ,symbols ,values)
+	  ,@body
+	  (mapc (bind #'unbind-symbol ,context /1) ,symbols)))

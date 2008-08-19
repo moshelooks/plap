@@ -15,15 +15,6 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun free-variables (expr)
-  (if (consp expr)
-      (case (car expr)
-	((and or not) (reduce (bind #'delete-adjacent-duplicates 
-				    (merge 'list /1 /2 #'string<))
-			      (cdr expr)
-			      :key #'free-variables)))
-      (list expr)))
-
 (defun truth-table (expr &optional (vs (free-variables expr))
 		    &aux (context (make-context)))
   (collecting

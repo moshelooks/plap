@@ -15,7 +15,8 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(proclaim '(optimize debug safety debug))
+;(proclaim '(optimize debug safety debug)
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
 ;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
 ;;; control structures
@@ -93,6 +94,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun ntimes (n elt)
   (loop for i from 1 to n collect elt))
+(defun generate (n fn)
+  (loop for i from 1 to n collect (funcall fn)))
 (defun odds (l)
   (if l (cons (car l) (odds (cddr l)))))
 (defun evens (l)
@@ -361,3 +364,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		 (y (append y (ntimes (- n (length y)) nil))))
 	      (mapc #'tree-diff x y)))
       t)))
+
+(defmacro catch* (tags &body body)
+  (labels ((rec (tags)
+	     (if tags
+		 `(catch ',(car tags) ,(rec (cdr tags)))
+		 `(progn ,@body))))
+    (rec tags)))
