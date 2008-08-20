@@ -32,6 +32,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "rewrite")
 	       (:file "bool")
 	       (:file "num")
+	       (:file "maxima")
 	       (:file "canonize")
 	       (:file "represent")
 	       (:file "search")

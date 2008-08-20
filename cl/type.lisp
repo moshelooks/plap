@@ -198,7 +198,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
     (if (consp expr)
 	(case (car expr)
 	  ((and or not <) bool)
-	  ((+ - * / exp log sin) num)
+	  ((+ - * / exp log sin abs) num)
 	  (t (assert (gethash (car expr) type-finders))
 	     (funcall (gethash (car expr) type-finders)
 		      (bind #'expr-type /1 context) (cdr expr))))

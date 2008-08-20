@@ -39,101 +39,18 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun ring-op-p (expr) ;true if rooted in + or * or and or or
   (matches (acar expr) (+ * and or)))
 
-(defun cons-cars (expr)
-  (if (consp expr)
-      (cons (ncons (car expr)) (mapcar #'cons-cars (cdr expr)))
-      expr))
-
-;;; expr should be already cons-car'ed
-(defun to-maxima (expr)
-  (if (atom expr) expr
-      (let ((subexprs (mapcar #'to-maxima (cdr expr))))
-	(cons (ncons (acase (caar expr)
-		       (+ 'maxima::mplus)
-		       (* 'maxima::mtimes)
-		       (sin 'maxima::%sin)
-		       (exp 'maxima::$exp)
-		       (log (return-from to-maxima
-			      `((maxima::%log) ((maxima::mabs) ,@subexprs))))
-		       (/ 'maxima::mquotient)
-		       (t it)))
-	      subexprs))))
-
 ;; (define-reduction reduce-abs (expr)
 ;;   :type num
 ;;   :condition (matches (car expr) (*
 ;;   :action
-	    
-(defun from-maxima (expr)
-  (if (atom expr) expr
-      (let ((args (cdr expr)))
-	(mkexpr (acase (caar expr)
-		  (maxima::mplus '+)
-		  (maxima::mtimes '*)
-		  (maxima::%sin 'sin)
-		  (maxima::mexp 'exp)
-		  (maxima::%log 'log)
-		  (maxima::mabs 'abs)
-		  (maxima::mexpt 'expt)
-;; 		   (ecase (caaadr expr)
-;; 		     (maxima::mabs (setf args (cddr expr)))
-;; 		     (maxima::mtimes
-;; 		      (mapc (lambda (subexpr) 
-;; 			      (print subexpr)
-;; 			      (assert (or (numberp subexpr)
-;; 					  (eq (caar subexpr) 'maxima::mabs)
-;; 					  (eq (caar subexpr) 'maxima::mexpt))))
-;; 			    (cdadr expr))
-;; 		      (return-from from-maxima
-;; 			`(logabs (* ,@(mapcar #'cadr (cdadr expr))))))))
-		  (t it))
-		(mapcar #'from-maxima args)))))
-
+	 
 ;(defun mknums (d n) (generate n (lambda () (1- (random 2.0)))))
 
 (defun num-table (expr vars table &aux (context (make-context)))
-    (mapcar (lambda (values)
-	      (with-bound-symbols context vars values
-		(eval-expr expr context)))
-	    table))
-
-;; (defun mung (expr)
-;;   (if (atom expr) expr
-;;       (if (eq (car expr) 'maxima::mabs)
-;; 	  (mung (cadr expr))
-;; 	  (if (and (eq (car expr) 'maxima::mexpt) 
-;; 		   (or (eq (cadr expr) 'maxima::$%e)
-;; 		       (eql (cadr expr) 2.718281828459045)))
-;; 	      (list 'maxima::exp (mung (caddr expr)))
-;; 	      (cons (car expr) (mapcar #'mung (cdr expr)))))))
-
-
-(setf maxima::$ratprint nil) ; to prevent maxima from spewing out warnings
-(setf maxima::errorsw t)     ; and error messages
-(setf maxima::errrjfflag t)
-
-(setf maxima::$numer t) ; to force evaluation of e.g. exp(sin(sin(2)))
-
-;;; to avoid trying to factor expressions that produce pathological behavior
-;;; when one tries to factor them (e.g. -0.2+x^0.70086)
-;;; in the future it would be nice to do a more sophisticated check
-(in-package :maxima)
-(defun factor-if-small (expr) expr)
-(in-package :plop)
-
-(define-reduction maxima-reduce (expr)
-  :type num
-  :action
-  (blockn 
-   (handler-case
-       (catch* (maxima::raterr maxima::errorsw maxima::macsyma-quit)
-	 (return
-	   (from-maxima
-	    (maxima::$float 
-	     (maxima::simplify (to-maxima (cons-cars expr)))))))
-     (system::simple-floating-point-overflow ())
-     (system::simple-arithmetic-error ()))
-   'nan))
+  (mapcar (lambda (values)
+	    (with-bound-symbols context vars values
+	      (eval-expr expr context)))
+	  table))
 
 (define-reduction eliminate-division (expr)
   :type num
