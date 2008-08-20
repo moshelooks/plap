@@ -15,6 +15,9 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
+(defconstant *largest-exp-arg* 80.0)
+(defconstant *smallest-log-arg* 0.0001)
+
 ;;; eval-subexpr behaves like eval-expr, only bools evaluate to t/nil instead
 ;;; of true/false
 (defun eval-subexpr (expr context)
@@ -30,9 +33,14 @@ Author: madscience@google.com (Moshe Looks) |#
 
 	       (+ (reduce #'+ args :key (bind #'eval-subexpr /1 context)))
 	       (* (reduce #'* args :key (bind #'eval-subexpr /1 context)))
-	       (exp (exp (eval-subexpr (car args) context)))
-	       (log (let ((arg (eval-subexpr (car args) context)))
-		      (if (< arg 0.01) most-positive-single-float (log arg))))
+	       (exp (let ((result (eval-subexpr (car args) context)))
+		      (if (> result *largest-exp-arg*)
+			  (throw 'nan 'nan)
+			  (exp result))))
+	       (log (let ((arg (abs (eval-subexpr (car args) context))))
+		      (if (< arg *smallest-log-arg*) 
+			  (throw 'nan 'nan)
+			  (log arg))))
 	       (sin (sin (eval-subexpr (car args) context)))
 	       (t (apply (symbol-function op) 
 			 (mapcar (bind #'eval-subexpr /1 context) args))))))
@@ -49,9 +57,16 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (t expr))))
 
 (defun eval-expr (expr &optional context type)
-  (aif (eval-subexpr expr context)
-       (if (eq it t) 'true it)
-       (if (eq (or type (expr-type expr context)) bool) 'false)))
+  (handler-case 
+      (catch 'nan 
+	(return-from eval-expr
+	  (aif (eval-subexpr expr context)
+	       (if (eq it t) 'true it)
+	       (if (eq (or type (expr-type expr context)) bool) 'false))))
+    (system::simple-floating-point-overflow ())
+    (system::simple-arithmetic-error ())
+    (division-by-zero ()))
+  'nan)
 (define-all-equal-test eval-expr
     '((false ((and true false) (or false false) (and false true)))
       (4 ((+ 1 1 1 1) (* 2 2)))))
