@@ -30,7 +30,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	     (when (consp subexpr)
 	       (map-neighbors-at fn subexpr context type)
 	       (mapc #'rec (args subexpr) (arg-types subexpr context type)))))
-     (rec expr type)))
+     (rec expr type))
+  nil)
 (defun enum-neighbors (expr context type)
   (collecting (map-neighbors (lambda (expr) (collect (copy-tree expr)))
 			     expr context type)))
@@ -85,10 +86,10 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; a weak kick selects n knobs in a representation and randomly twiddles them
 ;;; to new settings
-;; (defun weak-kick (n knobs)
-;;   (mapc (lambda (knob)
-;; 	  (funcall (elt knob (1+ (random (1- (knob-arity knob)))))))
-;; 	(random-sample n knobs)))
+(defun weak-kick (n knobs)
+  (mapc (lambda (knob)
+	  (funcall (elt knob (1+ (random (1- (knob-arity knob)))))))
+	(random-sample n knobs)))
       
 ;; ;accepts-locus-p
 ;; (defun validate (expr bindings)
@@ -103,43 +104,36 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;     (num
 ;;      t)))
 
-;; (defun hillclimb (expr vars acceptsp terminationp &aux
-;; 		  (expr (copy-tree expr)) (type (expr-type expr))
-;; 		  (bindings (init-type-map `((,type ,vars)))))
-;;   (while (not (funcall terminationp expr))
-;;     (let ((tmp (copy-tree expr)))
-;;       (blockn (enum-neighbors (lambda (expr) 
-;; 				(validate expr bindings)
-;; 				(when (or (funcall acceptsp tmp expr)
-;; 					  (funcall terminationp expr))
-;; 				  (print* 'improved-to expr)
-;; 				  (return)))
-;; 			      expr
-;; 			      bindings
-;; 			      :type type))
-;;       (when (equalp tmp expr)
-;; 	(print* "local minimum at " expr)
-;; 	(let* ((knobs (knobs-at expr bindings :type type))
-;; 	       (nknobs (length knobs)))
-;; 	  (print* nknobs knobs)
-;; 	  (weak-kick (if (< 2 nknobs)
-;; 			 (+ 2 (random (- nknobs 2)))
-;; 			 nknobs)
-;; 		     knobs)
-;; 	  (validate expr bindings)
-;; 	  (print* 'kicked-to expr))))
-;; )
-;; 					;(return-from hillclimb expr)))
-;;     ;;fixme(setf expr (canonize expr type)));fixme
-;;   expr)
-
-;; (defun make-count-or-score-terminator (count score score-target)
-;;   (lambda (expr) 
-;;     (print* 'nevals count)
-;;     (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
-;; (defun make-greedy-scoring-acceptor (score)
-;;   (lambda (from to)
-;;     (< (funcall score from) (funcall score to))))
+(defun hillclimb (expr context type acceptsp terminationp)
+  (while (not (funcall terminationp expr))
+    (setf expr (canonize expr context type))
+    (let ((tmp (copy-tree expr)))
+      (when (not (blockn (map-neighbors 
+			  (lambda (expr)
+			    ;(validate expr bindings)
+			    (when (or (funcall acceptsp tmp expr)
+				      (funcall terminationp expr))
+			      (print* 'improved-to expr)
+			      (return t)))
+			  expr context type)))
+	(print* 'local-minimum expr)
+	(let* ((knobs (enum-knobs expr context type))
+	       (nknobs (length knobs)))
+	  (print* nknobs knobs)
+	  (weak-kick (if (< 2 nknobs)
+			 (+ 2 (random (- nknobs 2)))
+			 nknobs)
+		     knobs)
+	  ;(validate expr bindings)
+	  (print* 'kicked-to expr)))))
+  expr)
+(defun make-count-or-score-terminator (count score score-target)
+  (lambda (expr) 
+    (print* 'nevals count)
+    (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
+(defun make-greedy-scoring-acceptor (score)
+  (lambda (from to)
+    (< (funcall score from) (funcall score to))))
 
 ;; ;;;fixme dangling junctors
 
@@ -166,6 +160,28 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 						 (cadr p)))))
 ;; 			       (if (> d 1) (return (* -2 (length pairs))) d))
 ;; 			     pairs))))))
+
+(defun make-num-abs-scorer (target test-values vars)
+  (print* target test-values vars)
+  (let* ((c (make-context))
+	 (target-values (mapcar (lambda (v)
+				  (with-bound-symbols c vars v
+				    (eval-expr target c)))
+				test-values)))
+    (print 'ok)
+    (lambda (expr)
+      (reduce #'+ (mapcar (lambda (v tv) (with-bound-symbols c vars v
+					   (abs (- (eval-expr expr c) tv))))
+			  test-values target-values)))))
+
+(defun num-hillclimb-with-target-expr (target-expr values nsteps)
+  (let* ((vars (free-variables target-expr))
+	 (scorer (make-num-abs-scorer target-expr values vars)))
+    (hillclimb 0 vars
+	       (make-greedy-scoring-acceptor scorer)
+	       (make-count-or-score-terminator nsteps scorer 0)
+	       #'qcanonize)))
+
 
 
 ;;;;;;;;adkan

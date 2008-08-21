@@ -35,6 +35,8 @@ Author: madscience@google.com (Moshe Looks) |#
     (aif (case (caar expr)
 	   (+ 'maxima::mplus)
 	   (* 'maxima::mtimes)
+	   (/ (setf (cddr expr) `(((maxima::mexpt) ,(caddr expr) -1)))
+	      'maxima::mtimes)
 	   (sin 'maxima::%sin)
 	   (exp 'maxima::$exp)
 	   (log (setf (cdr expr) (ncons (cons '(maxima::mabs) (cdr expr))))
@@ -47,9 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		  (or (eq (caar mexpr) 'maxima::mexpt)
 		      (find-if #'has-expt (cdr mexpr)))))
 	   (reduce () 
-	     (print mexpr)
-	     (setf mexpr (reduce-maxima-expr
-			  (maxima::$float (maxima::simplify mexpr)))))
+	     (setf mexpr (maxima::$float (maxima::simplify (copy-tree mexpr)))))
 	   (mung-expts (mexpr &aux (munged nil))
 	     (when (consp mexpr)
 	       (mapc (lambda (subexpr) (if (mung-expts subexpr)
@@ -68,9 +68,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		 (setf (cdar mexpr) nil))) ;nix simp flag
 	     munged))
     (handler-case (catch* (maxima::raterr maxima::errorsw maxima::macsyma-quit)
-		    (do ((x nil (copy-tree mexpr)))
-			((progn (reduce) (or (not (mung-expts mexpr))
-					     (equalp mexpr x))))))
+		    (return-from reduce-maxima-expr
+		      (do ((x nil (copy-tree mexpr)))
+			  ((progn (reduce) (or (not (mung-expts mexpr))
+					       (equalp mexpr x))) mexpr))))
     (system::simple-floating-point-overflow ())
     (system::simple-arithmetic-error ()))
     'nan))
@@ -91,7 +92,8 @@ Author: madscience@google.com (Moshe Looks) |#
 		  (maxima::mexpt 
 		   (assert (or (eq (car args) 'maxima::$%e)
 			       (eql (car args) 2.718281828459045)))
-		   (return-from from-maxima (list 'exp (cadr args))))
+		   (return-from from-maxima (list 'exp 
+						  (from-maxima (cadr args)))))
 		  (t it))
 		(mapcar #'from-maxima args)))))
 
