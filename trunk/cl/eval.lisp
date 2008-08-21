@@ -70,3 +70,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-all-equal-test eval-expr
     '((false ((and true false) (or false false) (and false true)))
       (4 ((+ 1 1 1 1) (* 2 2)))))
+
+;; (defun pfuncall (expr context &rest args)
+;;   (assert (eq (fn expr) 'lambda))
+;;   (with-bound-symbols context (arg0 expr) args
+;;     (peval 
