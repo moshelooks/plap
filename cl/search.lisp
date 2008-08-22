@@ -168,11 +168,15 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun make-num-abs-scorer 
     (target-fn context test-values &aux (args (fn-args target-fn))
      (targets (mapcar (bind #'papply target-fn context /1) test-values)))
+(let ((best -99999))
   (lambda (expr)
+    (let ((res
     (- (reduce #'+ (mapcar (lambda (test target)
 			     (with-bound-symbols context args test
 			       (abs (- (peval expr context) target))))
 			   test-values targets)))))
+      (when (> res best) (setf best res) (print* 'new-best res))
+      res))))
 
 (defun num-hillclimb-with-target-fn 
     (target-fn test-values nsteps &aux (context (make-context))

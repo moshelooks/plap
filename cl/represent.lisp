@@ -146,7 +146,7 @@ Author: madscience@google.com (Moshe Looks) |#
       (let* ((tovisit (copy-hash-table (get-symbols 'num context)))
 	     (x (cadr expr))
 	     (body (if (numberp x)
-		       (let ((e1 (little-epsilon x)) (e2 (big-epsilon x)))
+		       (let ((e1 (big-epsilon x)) (e2 (little-epsilon x)))
 			 (collect (make-replacer-knob (cdr expr)
 						      (+ x e1) (- x e1)
 						      (- x e2) (+ x e2)))
@@ -162,8 +162,8 @@ Author: madscience@google.com (Moshe Looks) |#
 		      (mapcar #'haxx-num-2
 			      (mapcar #'haxx-num-1 ts))))
 	(maphash-keys (lambda (x)
-			(let ((e1 (little-epsilon x))
-			      (e2 (big-epsilon x)))
+			(let ((e1 (big-epsilon x))
+			      (e2 (little-epsilon x)))
 			  (collect 
 			   (apply #'make-inserter-knob body
 				  (let ((terms`((* ,e1 ,x)
