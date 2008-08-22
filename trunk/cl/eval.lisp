@@ -57,7 +57,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (t expr))))
 
 (defun peval (expr &optional context type)
-  (print* 'pev expr)
+;  (print* 'pev expr)
   (handler-case 
       (catch 'nan 
 	(return-from peval
