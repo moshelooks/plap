@@ -15,23 +15,28 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun map-neighbors-at (fn expr context type)
-  (mapc (lambda (knob)
-	  (map nil (lambda (setting) 
-		     (funcall setting)
-		     (funcall fn expr))
-	       (subseq knob 1))
-	  (funcall (elt knob 0)))
-	(knobs-at expr context type))
+;; (defun map-neighbors-at (fn expr context type)
+;;   (mapc (lambda (knob)
+;; 	  (map nil (lambda (setting) 
+;; 		     (funcall setting)
+;; 		     (funcall fn expr))
+;; 	       (subseq knob 1))
+;; 	  (funcall (elt knob 0)))
+;; 	(knobs-at expr context type))
+;;   expr)
+
+;; (defun map-neighbors (fn expr context type &aux (fn (bind fn expr)))
+;;   (labels ((rec (subexpr type) 
+;; 	     (when (consp subexpr)
+;; 	       (map-neighbors-at fn subexpr context type)
+;; 	       (mapc #'rec (args subexpr) (arg-types subexpr context type)))))
+;;      (rec expr type))
+;;   nil)
+(defun map-neighbors (fn expr context type)
+  (map-knobs (lambda (knob) (map-knob-settings (bind fn expr) knob))
+	     expr context type)
   expr)
 
-(defun map-neighbors (fn expr context type &aux (fn (bind fn expr)))
-  (labels ((rec (subexpr type) 
-	     (when (consp subexpr)
-	       (map-neighbors-at fn subexpr context type)
-	       (mapc #'rec (args subexpr) (arg-types subexpr context type)))))
-     (rec expr type))
-  nil)
 (defun enum-neighbors (expr context type)
   (collecting (map-neighbors (lambda (expr) (collect (copy-tree expr)))
 			     expr context type)))
@@ -90,6 +95,12 @@ Author: madscience@google.com (Moshe Looks) |#
   (mapc (lambda (knob)
 	  (funcall (elt knob (1+ (random (1- (knob-arity knob)))))))
 	(random-sample n knobs)))
+    
+(defun weak-kick-until (pred n knobs)
+  (weak-kick n knobs)
+  (unless (funcall pred)
+    (weak-kick-until pred n knobs)))
+
       
 ;; ;accepts-locus-p
 ;; (defun validate (expr bindings)
@@ -104,29 +115,31 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;     (num
 ;;      t)))
 
-(defun hillclimb (expr context type acceptsp terminationp)
-  (while (not (funcall terminationp expr))
-    (setf expr (canonize expr context type))
-    (let ((tmp (copy-tree expr)))
-      (when (not (blockn (map-neighbors 
-			  (lambda (expr)
-			    ;(validate expr bindings)
-			    (when (or (funcall acceptsp tmp expr)
-				      (funcall terminationp expr))
-			      (print* 'improved-to expr)
-			      (return t)))
-			  expr context type)))
-	(print* 'local-minimum expr)
-	(let* ((knobs (enum-knobs expr context type))
-	       (nknobs (length knobs)))
-	  (print* nknobs knobs)
-	  (weak-kick (if (< 2 nknobs)
-			 (+ 2 (random (- nknobs 2)))
-			 nknobs)
-		     knobs)
-	  ;(validate expr bindings)
-	  (print* 'kicked-to expr)))))
-  expr)
+(defun find-neighbor-if (fn simplifier expr context type)
+  (map-neighbors (lambda (expr &aux (simp (funcall simplifier expr)))
+		   (when (funcall fn simp)
+		     (print* 'improved-to simp)
+		     (return-from find-neighbor-if simp)))
+		 expr context type)
+  nil)
+
+(defun hillclimb (expr context type simplifier acceptsp terminationp)
+  (do ((canonical (canonize expr context type) (canonize expr context type)))
+      ((funcall terminationp expr) expr)
+    (aif (find-neighbor-if (lambda (nexpr) 
+			     (or (funcall acceptsp expr nexpr)
+				 (funcall terminationp nexpr)))
+			   simplifier canonical context type)
+	 (setf expr it)
+	 (progn (print* 'canonical canonical)
+	 (let* ((knobs (enum-knobs canonical context type))
+		(nknobs (length knobs)))
+	   (print* 'local-minimum expr)
+	   (weak-kick-until 
+	    (lambda () 
+	      (not (eq (setf expr (funcall simplifier canonical)) 'nan)))
+	    (if (< 2 nknobs) (+ 2 (random (- nknobs 2))) nknobs) knobs)
+	   (print* 'kicked-to expr))))))
 (defun make-count-or-score-terminator (count score score-target)
   (lambda (expr) 
     (print* 'nevals count)
@@ -138,53 +151,49 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; ;;;fixme dangling junctors
 
 ;; ; vars should be sorted
-;; (defun make-truth-table-scorer (target vars)
-;;   (lambda (expr)
-;;     (let ((expr (dangling-junctors expr)))
-;;       (- (truth-table-hamming-distance target (truth-table expr vars))))))
+(defun make-truth-table-scorer (target-tt vars)
+  (lambda (expr)
+    (let ((expr (dangling-junctors expr)))
+      (- (truth-table-hamming-distance target-tt (truth-table expr vars))))))
 
-;; (defun bool-hillclimb-with-target-expr (target-expr nsteps)
-;;   (let* ((vars (free-variables target-expr))
-;; 	 (scorer (make-truth-table-scorer (truth-table target-expr vars)
-;; 					  vars)))
-;;     (hillclimb '(or (and) (and)) vars
-;; 	       (make-greedy-scoring-acceptor scorer)
-;; 	       (make-count-or-score-terminator nsteps scorer 0))))
+(defun bool-hillclimb-with-target-fn
+    (target-fn nsteps &aux (context (make-context)) (vars (fn-args target-fn))
+     (scorer (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
+				      vars)))
+  (mapc (bind #'bind-type context /1 'bool) vars)
+  (hillclimb 'true context 'bool (bind #'upwards #'dangling-junctors /1)
+	     (make-greedy-scoring-acceptor scorer)
+	     (make-count-or-score-terminator nsteps scorer 0)))
+
+(defun make-num-abs-scorer 
+    (target-fn context test-values &aux (args (fn-args target-fn))
+     (targets (mapcar (bind #'papply target-fn context /1) test-values)))
+  (lambda (expr)
+    (- (reduce #'+ (mapcar (lambda (test target)
+			     (with-bound-symbols context args test
+			       (abs (- (peval expr context) target))))
+			   test-values targets)))))
+
+(defun num-hillclimb-with-target-fn 
+    (target-fn test-values nsteps &aux (context (make-context))
+     (scorer (make-num-abs-scorer target-fn context test-values)))
+  (mapc (bind #'bind-type context /1 'num) (fn-args target-fn))
+  (hillclimb 0 context 'num #'maxima-reduce
+		 (make-greedy-scoring-acceptor scorer)
+		 (make-count-or-score-terminator nsteps scorer -0.01)))
+
+
+;;;;;;;;adkan
 
 ;; (defun make-pair-scorer (pairs var)
 ;;   (lambda (expr)
 ;;     (blockn
 ;;       (- (reduce #'+ (mapcar (lambda (p &aux 
-;; 				      (d (abs (- (eval-expr expr 
+;; 				      (d (abs (- (peval expr 
 ;; 							    `((,var ,(car p))))
 ;; 						 (cadr p)))))
 ;; 			       (if (> d 1) (return (* -2 (length pairs))) d))
 ;; 			     pairs))))))
-
-(defun make-num-abs-scorer (target test-values vars)
-  (print* target test-values vars)
-  (let* ((c (make-context))
-	 (target-values (mapcar (lambda (v)
-				  (with-bound-symbols c vars v
-				    (eval-expr target c)))
-				test-values)))
-    (print 'ok)
-    (lambda (expr)
-      (reduce #'+ (mapcar (lambda (v tv) (with-bound-symbols c vars v
-					   (abs (- (eval-expr expr c) tv))))
-			  test-values target-values)))))
-
-(defun num-hillclimb-with-target-expr (target-expr values nsteps)
-  (let* ((vars (free-variables target-expr))
-	 (scorer (make-num-abs-scorer target-expr values vars)))
-    (hillclimb 0 vars
-	       (make-greedy-scoring-acceptor scorer)
-	       (make-count-or-score-terminator nsteps scorer 0)
-	       #'qcanonize)))
-
-
-
-;;;;;;;;adkan
 
 ;; (defun num-hillclimb-with-target-pairs (target-pairs nsteps)
 ;;   (let ((vars '(x))

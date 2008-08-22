@@ -291,3 +291,10 @@ be proper lists. |#
 			      :key #'free-variables)))
       (list expr)))
 
+
+(defun fn-args (expr)
+  (assert (eqfn expr 'lambda))
+  (arg0 expr))
+(defun fn-body (expr)
+  (assert (eqfn expr 'lambda))
+  (arg1 expr))
