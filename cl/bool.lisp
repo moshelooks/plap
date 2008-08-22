@@ -25,7 +25,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		     (enum-bindings vs)
 		     (setf (get-value v context) 'false)
 		     (enum-bindings vs))
-		   (collect (eval-subexpr expr context)))))
+		   (collect (peval-cl expr context)))))
       (mapc (bind #'bind-symbol context /1 nil 'bool) vs)
       (enum-bindings vs))))
 (defun truth-table-hamming-distance (tt1 tt2)

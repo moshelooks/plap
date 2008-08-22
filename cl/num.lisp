@@ -49,7 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun num-table (expr vars table &aux (context (make-context)))
   (mapcar (lambda (values)
 	    (with-bound-symbols context vars values
-	      (eval-expr expr context)))
+	      (peval expr context)))
 	  table))
 
 ;; (define-reduction eliminate-division (expr)
