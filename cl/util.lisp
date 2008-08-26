@@ -335,10 +335,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test map-subtrees
   (assert-equal '((1 (2 3) 4) (2 3) 3 4) 
 		(collecting (map-subtrees (collector) '(1 (2 3) 4)))))
-(defun tree-size (tree)
-  (if (atom tree) 1 (reduce #'+ (cdr tree) :key #'tree-size :initial-value 1)))
-(defun arity (tree)
-  (1- (length tree)))
+
 ;;; io
 (defun print* (&rest args)
   (print (car args))
@@ -371,3 +368,17 @@ Author: madscience@google.com (Moshe Looks) |#
 		 `(catch ',(car tags) ,(rec (cdr tags)))
 		 `(progn ,@body))))
     (rec tags)))
+
+(defun equalp-to-eq (expr) ;fixme - do we need/use this?
+  (mapl (lambda (expr1) (if (consp (car expr1))
+			 (mapl (lambda (expr2)
+				 (if (equalp (car expr1) (car expr2))
+				     (setf (car expr2) (car expr1))))
+			       (cdr expr1))))
+	expr))
+(define-test equalp-to-eq
+  (let* ((foo '(and (or x y) (or x y) (or x y)))
+	 (goo (copy-tree foo)))
+    (equalp-to-eq foo)
+    (assert-eq (second foo) (third foo) (fourth foo))
+    (assert-equal foo goo)))

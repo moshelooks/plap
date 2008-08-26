@@ -27,9 +27,9 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (get-sums (n count) (tabulate #'compute-sums sums n count)))
       (compute-sums n count))))
 
-; enum-trees takes an alist of symbols and their arities
-; returns a list of all trees with up to n-internal-nodes
-(defun enum-trees (symbols n-internal-nodes)
+; enum-exprs takes an alist of symbols and their arities
+; returns a list of all exprs with up to n-internal-nodes
+(defun enum-exprs (symbols n-internal-nodes)
   (let ((arity-to-syms (init-hash-table 
 			symbols 
 			:insert (lambda (p table)

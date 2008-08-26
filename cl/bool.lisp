@@ -76,6 +76,10 @@ Author: madscience@google.com (Moshe Looks) |#
 	(cons (car expr) (remove-if #'pred (cdr expr)))
 	expr))
   :order upwards)
+(define-reduction clean-junctors (expr)
+    :type bool
+    :condition (junctorp expr)
+    :action (if (single (args expr)) (arg0 expr) expr))
 
 (define-reduction push-nots (expr)
     :type bool

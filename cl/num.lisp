@@ -122,7 +122,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	      (cons (car expr) (mapcar #'mung (cdr expr)))))))
 (defun sizeme (fn)
   (time (reduce #'+ raw-sexprs 
-		:key (lambda (expr) (tree-size (mung (mtry fn expr)))))))
+		:key (lambda (expr) (expr-size (mung (mtry fn expr)))))))
 
 (defparameter combo-nodiv-sexprs 
   (mapcar (bind #'upwards #'eliminate-division /1) combo-sexprs))
