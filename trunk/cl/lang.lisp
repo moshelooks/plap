@@ -40,10 +40,28 @@ be proper lists. |#
 (defun arg7 (expr) (ninth expr))
 (defun arg8 (expr) (tenth expr))
 
-;;; use these constructors instead of cons/list/quote
-(defun mkexpr (fn args) (cons fn args))
+;;; use these constructors instead of cons/quote
+(defun pcons (fn args) (cons fn args)) 
+(defun expr2p (expr) expr)
+(set-macro-character
+ #\% (lambda (stream char)
+       (declare (ignore char))
+       (list 'quote (expr2p (read stream t nil t)))) t)
 
 (defun eqfn (expr fn) (and (consp expr) (eq (fn expr) fn)))
+
+;;; use to test equality sans markup
+(defun pequal (expr1 expr2)
+  (if (atom expr1) 
+      (and (atom expr2) (eql expr1 expr2))
+      (and (consp expr2)
+	   (eq (fn expr1) (fn expr2))
+	   (let ((a1 (args expr1)) (a2 (args expr2)))
+	     (when (eql (length a1) (length a2))
+	       (mapc (lambda (sub1 sub2) (unless (pequal sub1 sub2)
+					   (return-from pequal)))
+		     a1 a2)
+	       t)))))
 
 ;; a total ordering on all plop expressions
 ;; returns less, nil, or greater, with the important property that (not symbol)
@@ -87,31 +105,19 @@ be proper lists. |#
 (define-test total-order
    (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
 
-   (assert-equal '((a 1) (a 1 1) (a 2))
-		 (sort-copy '((a 2) (a 1) (a 1 1)) #'total-order))
+   (assert-equal `(,%(a 1) ,%(a 1 1) ,%(a 2))
+		 (sort-copy `(,%(a 2) ,%(a 1) ,%(a 1 1)) #'total-order))
    (assert-equal 
-    '(1 2 a b c nil (a 1) (a 2) (b b) (b b b))
-    (sort-copy '(2 b 1 a c (a 2) (a 1) (b b) (b b b) nil) #'total-order))
+    `(1 2 a b c nil ,%(a 1) ,%(a 2) ,%(b b) ,%(b b b))
+    (sort-copy `(2 b 1 a c ,%(a 2) ,%(a 1) ,%(b b) ,%(b b b) nil)
+	       #'total-order))
    (assert-equal
-    '((a (a (b c))) (a (a (b c)) b) (a (a (b c d))))
-    (sort-copy '((a (a (b c))) (a (a (b c)) b) (a (a (b c d)))) #'total-order))
-   (assert-equal
-    '(a (not a) b (not b) c)
-    (sort-copy '((not a) (not b) c b a) #'total-order))
+    `(,%(a (a (b c))) ,%(a (a (b c)) b) ,%(a (a (b c d))))
+    (sort-copy `(,%(a (a (b c))) ,%(a (a (b c)) b) ,%(a (a (b c d))))
+	       #'total-order))
+   (assert-equal `(a ,%(not a) b ,%(not b) c)
+		 (sort-copy `(,%(not a) ,%(not b) c b a) #'total-order))
 
-
-;;   (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
-;;   (assert-equal '(((a) 1) ((a) 1 1) ((a) 2)) 
-;; 		(sort-copy '(((a) 2) ((a) 1) ((a) 1 1)) #'total-order))
-;;   (assert-equal '(1 2 a b c nil ((a) 1) ((a) 2) ((b) b) ((b) b b))
-;; 		(sort-copy '(2 b 1 a c ((a) 2) ((a) 1) ((b) b) ((b) b b) nil) 
-;; 			   #'total-order))
-;;   (assert-equal '(((a) ((a) ((b) c))) ((a) ((a) ((b) c)) b)
-;; 		  ((a) ((a) ((b) c d))))
-;;    (sort-copy '(((a) ((a) ((b) c))) ((a) ((a) ((b) c)) b)
-;; 		((a) ((a) ((b) c d)))) #'total-order))
-;;   (assert-equal'(a ((not) a) b ((not) b) c)
-;;    (sort-copy '(((not) a) ((not) b) c b a) #'total-order))
   (let ((exprs (randremove 0.9 (enum-trees *enum-trees-test-symbols* 2))))
     (block enumerative-test
       (flet ((opp (x) (case x
@@ -138,32 +144,10 @@ be proper lists. |#
     (* 1)
     (+ 0)))
 
-(defun expr-size (expr) 
-  (if (consp expr)
-      (reduce #'+ (mapcar #'expr-size (args expr)) :initial-value 1) 
-      1))
-
-(defun expr-depths (expr)
-  (if (consp expr)
-      (mapcar #'1+ (mapcan #'expr-depths (args expr)))
-      (list 0)))
-(define-test expr-depths
-  (assert-equal '(1 2 2 1) (expr-depths '(and x (or y z) q)))
-  (assert-equal '(0) (expr-depths 'x)))
-
-(defun equalp-to-eq (expr) ;fixme - do we need/use this?
-  (mapl (lambda (expr1) (if (consp (car expr1))
-			 (mapl (lambda (expr2)
-				 (if (equalp (car expr1) (car expr2))
-				     (setf (car expr2) (car expr1))))
-			       (cdr expr1))))
-	expr))
-(define-test equalp-to-eq
-  (let* ((foo '(and (or x y) (or x y) (or x y)))
-	 (goo (copy-tree foo)))
-    (equalp-to-eq foo)
-    (assert-eq (second foo) (third foo) (fourth foo))
-    (assert-equal foo goo)))
+(defun expr-size (expr)
+  (if (atom expr) 1 
+      (reduce #'+ (args expr) :key #'expr-size :initial-value 1)))
+(defun arity (expr) (length (args expr)))
 
 ;;; decompositions of expressions by contents
 (macrolet
@@ -246,27 +230,27 @@ be proper lists. |#
 	     (assert-equal o2 o)
 	     (assert-equal ws2 ws)
 	     (assert-equal ts2 ts))))
-    (ldass '(+ 1 (* 2 x) (* 3 y z))
-	   1 '(2 3) '(x (* y z))
-	   1 '(1) '((+ (* 2 x) (* 3 y z))))
+    (ldass %(+ 1 (* 2 x) (* 3 y z))
+	   1 '(2 3) `(x ,%(* y z))
+	   1 '(1) `(,%(+ (* 2 x) (* 3 y z))))
     (ldass 42 
 	   42 nil nil
 	   42 nil nil)
-    (ldass '(+ 1 x)
+    (ldass %(+ 1 x)
 	   1 '(1) '(x)
 	   1 '(1) '(x))
-    (ldass '(+ x (* y z))
-	   0 '(1 1) '(x (* y z))
-	   1 '(0) '((+ x (* y z))))
+    (ldass %(+ x (* y z))
+	   0 '(1 1) `(x ,%(* y z))
+	   1 '(0) `(,%(+ x (* y z))))
     (ldass 'x 
 	   0 '(1) '(x)
 	   1 '(0) '(x))
-    (ldass '(sin x)
-	   0 '(1) '((sin x))
-	   1 '(0) '((sin x)))
-    (ldass '(* 2 (+ x y) (+ 3 x) (+ x y z))
-	   0 '(2) '((* (+ x y) (+ 3 x) (+ x y z)))
-	   2 '(0 3 0) '((+ x y) x (+ x y z)))
+    (ldass %(sin x)
+	   0 '(1) `(,%(sin x))
+	   1 '(0) `(,%(sin x)))
+    (ldass %(* 2 (+ x y) (+ 3 x) (+ x y z))
+	   0 '(2) `(,%(* (+ x y) (+ 3 x) (+ x y z)))
+	   2 '(0 3 0) `(,%(+ x y) x ,%(+ x y z)))
     (ldass 0
 	   0 nil nil
 	   0 nil nil)))

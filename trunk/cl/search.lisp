@@ -142,7 +142,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (print* 'kicked-to expr))))))
 (defun make-count-or-score-terminator (count score score-target)
   (lambda (expr) 
-    (print* 'nevals count)
+;    (print* 'nevals count)
     (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
 (defun make-greedy-scoring-acceptor (score)
   (lambda (from to)
@@ -161,7 +161,9 @@ Author: madscience@google.com (Moshe Looks) |#
      (scorer (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
 				      vars)))
   (mapc (bind #'bind-type context /1 'bool) vars)
-  (hillclimb 'true context 'bool (bind #'upwards #'dangling-junctors /1)
+  (hillclimb 'true context 'bool 
+	     (lambda (expr)
+	       (upwards #'clean-junctors (upwards #'dangling-junctors expr)))
 	     (make-greedy-scoring-acceptor scorer)
 	     (make-count-or-score-terminator nsteps scorer 0)))
 
@@ -170,13 +172,20 @@ Author: madscience@google.com (Moshe Looks) |#
      (targets (mapcar (bind #'papply target-fn context /1) test-values)))
 (let ((best -99999))
   (lambda (expr)
-    (let ((res
-    (- (reduce #'+ (mapcar (lambda (test target)
-			     (with-bound-symbols context args test
-			       (abs (- (peval expr context) target))))
-			   test-values targets)))))
-      (when (> res best) (setf best res) (print* 'new-best res))
-      res))))
+    (blockn
+     (let ((res
+	    (- (reduce
+		#'+ (mapcar 
+		     (lambda (test target)
+		       (with-bound-symbols context args test
+			 (abs (- (let ((res (peval expr context)))
+				   (if (eq 'nan res)
+				       (return most-negative-single-float)
+				       res))
+				 target))))
+			 test-values targets)))))
+	       (when (> res best) (setf best res) (print* 'new-best res))
+	       res)))))
 
 (defun num-hillclimb-with-target-fn 
     (target-fn test-values nsteps &aux (context (make-context))
