@@ -173,6 +173,20 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 				'(function ((function (bool) num)) num)))
     (assert-equal bool (intersection-type bool t))))
 
+;;; returns nil for (next-most-general t)
+;;; note that (next-most-general nil) is t
+(defun next-most-general-type (type) 
+  (assert (not (tuple-type-p type)) () "tuples not yet supported here")
+  (if (consp type)
+      (aif (next-most-general (cadr type)) (list (car type) it) t)
+      (if (eq type t) nil t)))
+(define-test next-most-general
+  (assert-equal t (next-most-general 'bool))
+  (assert-equal '(list t) (next-most-general '(list bool)))
+  (assert-equal t (next-most-general '(list t)))
+  (assert-equal nil (next-most-general t)))
+
+
 ;; look in svn for function-type code
 
 (defun atom-type (x) ; returns nil iff no type found

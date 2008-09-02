@@ -15,10 +15,39 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
+;;; this song-and-dance is to avoid consing and/or removing the simp tag
+;;; unnessecarily
+
+simp itself is the sum of the rules applied - when does a applying a new rule
+invalidate the simp status of an old on? in general we need to a concept
+of munging that encompasses both rewrites and knobs - knobs are reversible
+right now, need they be?
+bleh on me for perpetuating the distinction left over from cpp
+
 (defun upwards (rule expr)
+  (labels ((proc (args)
+	     (when args
+	       (let ((first (upwards rule (car args)))
+		     (rest (proc (cdr args))))
+		 (if (and (eq first (car args)) (eq rest (cdr args)))
+		     args
+		     (cons first rest))))))
   (if (consp expr)
+      (let ((args (proc (args expr))))
+	(if (eq args (args expr))
+	    (let ((result (funcall rule expr)))
+	      (if (eq result expr)
+		  expr
+		  (unmark expr simp)))
+	    (unmark (funcall rule (cons (fn expr) args))
+      expr)))
+
+	(if (eq args (args expr))
+      (dolist ((args expr) subexpr)
+	(let ((new (upwards rule subexpr)))
+	  (if (eq new subseq)
       (let ((subexprs (mapcar (lambda (subexpr) (upwards rule subexpr))
-			      (cdr expr))))
+			      (args expr))))
 	(funcall rule (blockn (mapc (lambda (x y) 
 				      (unless (eq x y)
 					(return (cons (car expr) subexprs))))
@@ -37,18 +66,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	    result))
       expr))
 
-;;; returns nil for (next-most-general t)
-;;; note that (next-most-general nil) is t
-(defun next-most-general (type) 
-  (assert (not (tuple-type-p type)) () "tuples not yet supported here")
-  (if (consp type)
-      (aif (next-most-general (cadr type)) (list (car type) it) t)
-      (if (eq type t) nil t)))
-(define-test next-most-general
-  (assert-equal t (next-most-general 'bool))
-  (assert-equal '(list t) (next-most-general '(list bool)))
-  (assert-equal t (next-most-general '(list t)))
-  (assert-equal nil (next-most-general t)))
 
 (defvar *type-to-reductions* (make-hash-table))
 (defvar *reduction-prerequisites* (make-dag))
@@ -115,31 +132,19 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;;; general-purpose reductions are defined here
 
-(define-reduction sort-commutative (expr)
-  :condition (commutativep (car expr))
-  :action (let ((sorted (nondestructive-sort (cdr expr) #'total-order)))
-	    (if (eq sorted (cdr expr)) expr (cons (car expr) sorted)))
-  :order upwards)
-
-(define-reduction flatten-associative (expr)
-  :condition (associativep (car expr))
-  :action 
-  (labels ((try-flatten (subexprs)
-	     (blockn (mapl (lambda (rest)
-			     (if (and (consp (car rest))
-				      (eq (caar rest) (car expr)))
-				 (return (nconc (copy-range subexprs rest)
-						(copy-list (cdar rest))
-						(try-flatten (cdr rest))))))
-			   subexprs))))
-    (let ((subexprs (try-flatten (cdr expr))))
-      (if (eq subexprs (cdr expr)) expr (cons (car expr) subexprs))))
+(define-reduction sort-commutative (fn args markup)
+  :condition (and (commutativep fn) (not (sortedp args #'total-order)))
+  :action (pcons fn (sort (copy-list args) #'total-order) markup)
+  :order upwards
+  :preserves all)
+(define-reduction flatten-associative (fn args markup)
+  :condition (and (associativep fn) (find fn args :key ifn))
+  :action (pcons fn
+		 (mappend (lambda (arg) 
+			    (if (eq (ifn arg) fn) (args arg) `(,arg)))
+			  args)
+		 markup)
   :order upwards)
 (define-test flatten-associative
   (assert-equal '(and x y (or q w)) 
 		(flatten-associative '(and x (and y (or q w))))))
-
-(define-reduction compress-identical-subtrees (expr)
-    :action (equalp-to-eq expr)
-    :order upwards)
-
