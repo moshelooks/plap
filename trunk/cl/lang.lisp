@@ -27,9 +27,15 @@ be proper lists. |#
 (defvar false 'false)
 
 ;;; use these accessors and predicates instead of car/cdr & friends
-(defun fn (expr) (car expr))
-(defun ifn (expr) (if (consp expr) (car expr) expr))
+(defun fn (expr) (caar expr))
+(defun ifn (expr) (if (consp expr) (fn expr) expr))
+(defun set-fn (expr v) (setf (caar expr) v))
+(defsetf fn set-fn)
+
 (defun args (expr) (cdr expr))
+(defun set-args (expr v) (setf (cdr expr) v))
+(defsetf args set-args)
+
 (defun arg0 (expr) (second expr))
 (defun arg1 (expr) (third expr))
 (defun arg2 (expr) (fourth expr))
@@ -41,8 +47,9 @@ be proper lists. |#
 (defun arg8 (expr) (tenth expr))
 
 ;;; use these constructors instead of cons/quote
-(defun pcons (fn args) (cons fn args)) 
-(defun expr2p (expr) expr)
+(defun pcons (fn args &optional markup) (cons (cons fn markup) args))
+(defun expr2p (expr) 
+  (if (atom expr) expr (pcons (car expr) (mapcar #'expr2p (cdr expr)))))
 (set-macro-character
  #\% (lambda (stream char)
        (declare (ignore char))

@@ -25,6 +25,7 @@ Author: madscience@google.com (Moshe Looks) |#
                (:file "util")
 	       (:file "dag")
 	       (:file "lang")
+	       (:file "markup")
 	       (:file "context")
 	       (:file "enum")
 	       (:file "type")

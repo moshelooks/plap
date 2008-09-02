@@ -19,7 +19,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defconstant *smallest-log-arg* 0.0001)
 
 ;;; peval-cl behaves like peval, only bools evaluate to t/nil instead
-;;; of true/false
+;;; of true/false, and doesn't do error handling
 (defun peval-cl (expr context)
   (labels ((and-op (args) (and (peval-cl (car args) context)
 			       (aif (cdr args) (and-op it) t)))
@@ -44,7 +44,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (sin (sin (peval-cl (car args) context)))
 	       (t (apply (symbol-function op) 
 			 (mapcar (bind #'peval-cl /1 context) args))))))
-    (cond ((consp expr) (call (car expr) (cdr expr)))
+    (cond ((consp expr) (call (fn expr) (args expr)))
 	  ((symbolp expr) (case expr 
 			    (true t)
 			    (false nil)
