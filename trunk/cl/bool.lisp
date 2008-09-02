@@ -67,14 +67,12 @@ Author: madscience@google.com (Moshe Looks) |#
       (and (eq (car expr) 'not) (not (consp (cadr expr))))
       (not (matches expr (true false)))))
 
+(defun danging-junctor-p (expr)
+  (and (juncorp expr) (not (args expr))))
 (define-reduction dangling-junctors (expr)
   :type bool
-  :condition (junctorp expr)
-  :action 
-  (flet ((pred (x) (and (single x) (matches (car x) (and or)))))
-    (if (find-if #'pred (cdr expr))
-	(cons (car expr) (remove-if #'pred (cdr expr)))
-	expr))
+  :condition (and (junctorp expr) (find-if #'dangling-junctor-p (args expr)))
+  :action (pcons (fn expr) (remove-if #'danling-junctor-p (args expr)) markup)
   :order upwards)
 (define-reduction clean-junctors (expr)
     :type bool
