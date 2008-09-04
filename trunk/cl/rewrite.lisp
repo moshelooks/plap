@@ -148,3 +148,85 @@ bleh on me for perpetuating the distinction left over from cpp
 (define-test flatten-associative
   (assert-equal '(and x y (or q w)) 
 		(flatten-associative '(and x (and y (or q w))))))
+
+(define-reduction eval-const (expr)
+  :condition (and (not (matches (fn expr) (list tuple lambda)))
+		  (purep (fn expr)))
+  :action
+  (cond ((commutativep fn)
+	 (bind-collectors (constants others)
+	     (mapc (lambda (arg) 
+		     (if (const-value-p arg) (constants arg) (others arg)))
+		   args)
+	   (if others 
+	       (if constants
+		   (pcons fn 
+			  (cons (peval (pcons fn constants) *empty-context*) 
+				others)
+			  markup)
+		   expr)
+	       (peval expr *empty-context*))))
+	((every #'const-value-p args) (peval expr *empty-context*))
+	(t expr))
+  :order upwards)
+		       
+      (mvbind(with-collectors (to-replace 
+      (let ((xs (mapcar (lambda (arg) (and (atom arg) (XXX arg))) args)))
+	(cond
+	  ((every #'identity xs) 
+
+
+	  ((some xs) 
+
+
+(defun eval-const (expr context)
+  (if (atom expr)
+      (or (get-value expr context) expr)
+      (if (purep (fn expr))
+	  (if (commutativep (fn expr))
+	      (let (args (mapcar (lambda (arg)
+				     (let ((x (eval-const arg context)))
+				       (if (eq x arg)
+					   (setf has-all nil)
+					   (setf has-one t))
+				       x))
+				   (args expr))))
+		(cond
+		  (has-all (peval expr context))
+		  (has-one (
+			   
+(mapcar (bind #'foo /1 context) (args expr))))
+		(
+		(if (every #'eq args (args expr))
+		    args
+		    (
+		   
+
+(defun eval-const (expr context type)
+  (if (eq (icar type) 
+
+(define-reduction eval-const (expr)
+  :condition (and (purep (fn expr)) 
+		  (or (commutativep (fn expr)) (not (free-variables expr))))
+  :action
+
+  ;;; the case of a commutative function with some 
+  (every (lambda (arg) (if (consp arg)
+			   
+
+or (find  bound
+
+  ;;; the simple case of a pure non-commutative function that isn't a lambda
+  (peval expr *empty-context*)
+  
+
+
+  (if (function-type-p type)
+      (if (eq 'lambda (fn expr))
+	  (
+
+ (if (commutativep (fn expr))
+	      (aif (collecting (mapc (bind #'collect-if))))
+	      
+
+	      (find-if 

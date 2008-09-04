@@ -42,7 +42,7 @@ Author: madscience@google.com (Moshe Looks) |#
   `(,dual (,op) ,(cons op 
 		       (decompose-bool expr
 			 (literal (ncons expr))
-			 (constant nil)
+			 (const nil)
 			 (junctor (structure-bool dual (cdr expr) context))
 			 (t (ncons (canonize-children expr context 'bool)))))))
 (define-test canonize-bool

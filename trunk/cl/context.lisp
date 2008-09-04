@@ -32,6 +32,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun get-symbols (type context) ; returns a hashmap where keys are symbols,
   (or (gethash type (context-type-map context)) ; values nil
       (setf (gethash type (context-type-map context)) (make-hash-table))))
+(defun bound-in-p (name context) 
+  (secondary (gethash name (context-symbol-bindings context))))
 
 (defun bind-type (context name type) ;fixme
   (bind-symbol context name nil type))
@@ -41,20 +43,31 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;; when binding a symbol, value must be already evaled
 (defun bind-symbol (context name value
 		    &optional (type (value-type value)))
-  (push (cons value type) (gethash name (context-symbol-bindings context)))
-  (setf (gethash name (get-symbols type context)) nil))
+  (or (awhen (get-type name context)
+	(or (eq type it) 
+	    (not (remhash name (gethash it (context-type-map context))))))
+      (setf (gethash name (get-symbols type context)) nil))
+  (push (cons value type) (gethash name (context-symbol-bindings context))))
 
 (defun unbind-symbol (context name)
   (let ((oldtype (cdr (pop (gethash name (context-symbol-bindings context)))))
 	(newtype (get-type name context)))
     (unless (eq newtype oldtype)
       (remhash name (get-symbols oldtype context))
-      (when newtype
-	(setf (gethash name (get-symbols newtype context)) nil)))))
+      (if newtype
+	  (setf (gethash name (get-symbols newtype context)) nil)
+	  (remhash name (context-symbol-bindings context))))))
 
-(defvar *empty-context* (make-context))
+(defparameter *empty-context* (make-context))
 
 (defmacro with-bound-symbols (context symbols values &body body)
-  `(prog2 (mapc (bind #'bind-symbol ,context /1 /2) ,symbols ,values)
-	  ,@body
-	  (mapc (bind #'unbind-symbol ,context /1) ,symbols)))
+  `(unwind-protect
+	(progn (mapc (bind #'bind-symbol ,context /1 /2) ,symbols ,values)
+	       ,@body)
+     (mapc (bind #'unbind-symbol ,context /1) ,symbols)))
+
+(defmacro with-nil-bound-symbols (context symbols &body body)
+  `(unwind-protect
+	(progn (mapc (bind #'bind-symbol ,context /1 nil) ,symbols)
+	       ,@body)
+     (mapc (bind #'unbind-symbol ,context /1) ,symbols)))

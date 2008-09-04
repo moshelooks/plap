@@ -61,6 +61,9 @@ Author: madscience@google.com (Moshe Looks) |#
   `(multiple-value-bind ,vars ,values ,@body))
 (defmacro dbind (llist expr &body body)
   `(destructuring-bind ,llist ,expr ,@body))
+(defmacro secondary (values)
+  `(cadr (multiple-value-list ,values)))
+(define-test secondary (assert-equal (secondary (floor 3.5)) 0.5))
 
 ;;; list iteration, comparison, manipulation, and construction
 (defun same-length-p (l1 l2)

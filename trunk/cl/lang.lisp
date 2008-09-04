@@ -49,7 +49,10 @@ be proper lists. |#
 ;;; use these constructors instead of cons/quote
 (defun pcons (fn args &optional markup) (cons (cons fn markup) args))
 (defun expr2p (expr) 
-  (if (atom expr) expr (pcons (car expr) (mapcar #'expr2p (cdr expr)))))
+  (cond ((atom expr) expr)
+	((eq (car expr) 'lambda)
+	 (pcons (car expr) (list (cadr expr) (expr2p (caddr expr)))))
+	(t (pcons (car expr) (mapcar #'expr2p (cdr expr))))))
 (set-macro-character
  #\% (lambda (stream char)
        (declare (ignore char))
@@ -151,6 +154,55 @@ be proper lists. |#
     (* 1)
     (+ 0)))
 
+;;; for now there are not side-effects - these will be introduced soon
+(defun purep (x)
+  (declare (ignore x))
+  t)
+
+;;fixme extend to non-boolean, lambda-awareness...
+(defun free-variables (expr)
+  (if (consp expr)
+      (case (car expr)
+	((and or not) (reduce (bind #'delete-adjacent-duplicates 
+				    (merge 'list /1 /2 #'string<))
+			      (cdr expr)
+			      :key #'free-variables)))
+      (list expr)))
+
+(defun fn-args (expr)
+  (assert (eqfn expr 'lambda))
+  (arg0 expr))
+(defun fn-body (expr)
+  (assert (eqfn expr 'lambda))
+  (arg1 expr))
+
+(defun const-atom-p (x &optional (context *empty-context*))
+  (or (not (symbolp x)) 
+      (matches x (true false nan nil)) 
+      (bound-in-p x context)))
+
+(defun const-expr-p (expr &optional (context *empty-context*))
+  (cond ((atom expr) (const-atom-p expr context))
+	((eq (fn expr) 'lambda)
+	 (with-bound-symbols context (fn-args expr) (fn-args expr)
+	   (const-expr-p (fn-body expr) context)))
+	(t (every (bind #'const-expr-p /1 context) (args expr)))))
+
+(defun const-value-p (expr &optional (context *empty-context*))
+  (if (atom expr) 
+      (const-atom-p expr context)
+      (case (fn expr)
+	((list tuple) (every (bind #'const-value-p /1 context) (args expr)))
+	(lambda (with-nil-bound-symbols context (fn-args expr)
+		  (const-expr-p (fn-body expr) context))))))
+(define-test const-value-p
+  (assert-false (const-value-p 'x))
+  (assert-true (const-value-p 42))
+  (assert-true (const-value-p %(lambda (x) (+ x 1))))
+  (assert-false (const-value-p %(lambda (x) (+ x y))))
+  (assert-true (const-value-p %(list 1 2 3)))
+  (assert-false (const-value-p %(list 1 2 x 3))))
+
 (defun expr-size (expr)
   (if (atom expr) 1 
       (reduce #'+ (args expr) :key #'expr-size :initial-value 1)))
@@ -172,10 +224,10 @@ be proper lists. |#
 				 `(,condition ,@body))))
 			   clauses)))))
   (mkdecomposer decompose-num
-		(constant `(numberp ,expr)))
+		(const `(numberp ,expr)))
   (mkdecomposer decompose-bool
 		(literal `(literalp ,expr))
-		(constant `(matches ,expr (true false)))
+		(const `(matches ,expr (true false)))
 		(junctor `(junctorp ,expr)))
   (mkdecomposer decompose-tuple)
   (mkdecomposer decompose-function)
@@ -187,7 +239,7 @@ be proper lists. |#
      ((matches (ifn expr) (* +)) loo)
      (t moo))
    (macroexpand-1 '(decompose-num 
-		    expr (constant foo) (/ goo) ((* +) loo) (t moo)))))
+		    expr (const foo) (/ goo) ((* +) loo) (t moo)))))
 (define-test decompose-bool
   (flet ((dectest (expr)
 	   (decompose-bool expr
@@ -272,20 +324,3 @@ be proper lists. |#
 	      (if (consp type) `(,expr ,context ,type) `(,expr ,context))))))
 
 
-;;fixme extend to non-boolean, lambda-awareness...
-(defun free-variables (expr)
-  (if (consp expr)
-      (case (car expr)
-	((and or not) (reduce (bind #'delete-adjacent-duplicates 
-				    (merge 'list /1 /2 #'string<))
-			      (cdr expr)
-			      :key #'free-variables)))
-      (list expr)))
-
-
-(defun fn-args (expr)
-  (assert (eqfn expr 'lambda))
-  (arg0 expr))
-(defun fn-body (expr)
-  (assert (eqfn expr 'lambda))
-  (arg1 expr))
