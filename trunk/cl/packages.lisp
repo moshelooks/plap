@@ -20,7 +20,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	#:lisp-unit
 	#:org.tfeb.hax.memoize
 	#:cl-utilities
-	#:statistics))
+	#:statistics
+	#:anaphora))
 ;  (:export #:reduce))
 
 ;#:type-union #:fun-type #:atom-type #:tree-type #:eval-tree))

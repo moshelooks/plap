@@ -173,19 +173,31 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 				'(function ((function (bool) num)) num)))
     (assert-equal bool (intersection-type bool t))))
 
-;;; returns nil for (next-most-general t)
+;;; a list all types T that generalize the given type such that there exists no
+;;; type both more general than the given type and less general than T
 ;;; note that (next-most-general nil) is t
-(defun next-most-general-type (type) 
-  (assert (not (tuple-type-p type)) () "tuples not yet supported here")
-  (if (consp type)
-      (aif (next-most-general (cadr type)) (list (car type) it) t)
-      (if (eq type t) nil t)))
-(define-test next-most-general
-  (assert-equal t (next-most-general 'bool))
-  (assert-equal '(list t) (next-most-general '(list bool)))
-  (assert-equal t (next-most-general '(list t)))
-  (assert-equal nil (next-most-general t)))
-
+(defun next-most-general-types (type)
+  (cond ((atom type) (unless (eq type t) (ncons t)))
+	((tuple-type-p type)
+	 (or (mapcon (lambda (xs &aux (tmp (car xs)))
+		       (prog1 (mapcar (lambda (x)
+					(rplaca xs x)
+					(copy-list type))
+				      (next-most-general-types tmp))
+			 (rplaca xs tmp)))
+		     (cdr type))
+	     (ncons t)))
+	(t (aif (next-most-general (cadr type)) (list (car type) it) t))))
+(define-test next-most-general-types
+  (assert-equal (t) (next-most-general-types 'bool))
+  (assert-equal '((list t)) (next-most-general-types '(list bool)))
+  (assert-equal (t) (next-most-general-types '(list t)))
+  (assert-equal (nil) (next-most-general-types t))
+  (assert-equal '((tuple (tuple t bool) num bool)
+		  (tuple (tuple bool t) num bool)
+		  (tuple (tuple bool bool) t bool)
+		  (tuple (tuple bool bool) num t))
+		(next-most-general-types '(tuple (tuple bool bool) num bool))))
 
 ;; look in svn for function-type code
 
@@ -196,7 +208,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 
 (defun value-type (expr) ; returns nil iff no type found
   (cond ;fixme
-    ((consp expr) `(list ,(reduce #'union-type (cdr expr) :key #'value-type)))
+    ((consp expr) `(list ,(reduce #'union-type (args expr) :key #'value-type)))
     ((arrayp expr) `(tuple ,@(map 'list #'value-type expr)))
     (t (atom-type expr))))
 
@@ -210,12 +222,12 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	  (tuple ,(lambda (fn args) `(tuple ,@(mapcar fn args))))))))
   (defun expr-type (expr &optional context)
     (if (consp expr)
-	(case (car expr)
+	(case (fn expr)
 	  ((and or not <) bool)
 	  ((+ - * / exp log sin abs) num)
-	  (t (assert (gethash (car expr) type-finders))
-	     (funcall (gethash (car expr) type-finders)
-		      (bind #'expr-type /1 context) (cdr expr))))
+	  (t (assert (gethash (fn expr) type-finders))
+	     (funcall (gethash (fn expr) type-finders)
+		      (bind #'expr-type /1 context) (fn expr))))
 	(or (atom-type expr) (get-type expr context)))))
 (define-all-equal-test expr-type
     `((bool (true false (and true false) (not (or true false))))
@@ -233,18 +245,19 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 ;;; determines the types for the children based on the structure of expr and
 ;;; its type, given the bindings in context
 (defun arg-types (expr context type)
-  (assert (not (eq 'lambda (acar expr)))) ; lamba-list are not properly typed
-  (case (car expr)
-    (< (let ((type (reduce #'union-type (cdr expr) 
+  (case (fn expr)
+    (< (let ((type (reduce #'union-type (args expr)
 			   :key (bind #'expr-type /1 context))))
 	 `(,type ,type)))
     (list (ntimes (arity expr) (cadr type)))
-    (split (let ((ttype (expr-type (cadr expr) context)))
+    (split (let ((ttype (expr-type (arg0 expr) context)))
 	     (assert (eq 'tuple (car ttype)))
 	     `(,ttype (function ,(mapcan (lambda (list-type)
 					   (list (cadr list-type) list-type))
 					 (odds (cdr ttype)))
 				,type))))
+    (lambda (assert (eq 'function (car type)))
+	    `((list symbol) ,(caddr type)))
     (t (ntimes (arity expr) type)))) ; works for most things
 
 ;fixme should typemaps be integrated into contexts?
