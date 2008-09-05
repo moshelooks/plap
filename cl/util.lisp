@@ -21,16 +21,16 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
-(defmacro aif (test then &optional else) ; onlisp
-  `(let ((it ,test))
-     (if it ,then ,else)))
 (defmacro while (test &body body)	; onlisp
   `(do ()
        ((not ,test))
      ,@body))
-(defmacro awhen (test &body body)	; onlisp
-  `(aif ,test
-        (progn ,@body)))
+;; (defmacro aif (test then &optional else) ; onlisp
+;;   `(let ((it ,test))
+;;      (if it ,then ,else)))
+;; (defmacro awhen (test &body body)	; onlisp
+;;   `(aif ,test
+;;         (progn ,@body)))
 (defmacro acase (keyform &body clauses)
   `(let ((it ,keyform))
      (case it ,@clauses)))
@@ -385,3 +385,6 @@ Author: madscience@google.com (Moshe Looks) |#
     (equalp-to-eq foo)
     (assert-eq (second foo) (third foo) (fourth foo))
     (assert-equal foo goo)))
+
+(defun fixed-point (fn expr &aux ((x (copy-tree expr)) (y (funcall fn expr))))
+  (if (equalp x y) x (fixed-point fn y)))

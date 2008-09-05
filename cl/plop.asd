@@ -16,7 +16,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (in-package :cl-user)
 (defpackage :plop-asd
-  (:use :cl :asdf :cl-utilities))
+  (:use :cl :asdf :cl-utilities :anaphora))
 
 (in-package :plop-asd)
 (defsystem :plop

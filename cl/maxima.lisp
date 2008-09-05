@@ -100,7 +100,3 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-reduction maxima-reduce (expr)
   :type num
   :action (from-maxima (reduce-maxima-expr (to-maxima (cons-cars expr)))))
-
-;; (defun fixed-point (fn expr)
-;;   (let ((x (copy-tree expr)) (y (funcall fn expr)))
-;;     (if (equalp x y) x (fixed-point fn y))))

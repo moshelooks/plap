@@ -29,6 +29,7 @@ be proper lists. |#
 ;;; use these accessors and predicates instead of car/cdr & friends
 (defun fn (expr) (caar expr))
 (defun ifn (expr) (if (consp expr) (fn expr) expr))
+(defun afn (expr) (and (consp expr) (fn expr)))
 (defun set-fn (expr v) (setf (caar expr) v))
 (defsetf fn set-fn)
 
@@ -57,6 +58,13 @@ be proper lists. |#
  #\% (lambda (stream char)
        (declare (ignore char))
        (list 'quote (expr2p (read stream t nil t)))) t)
+
+; destructure expression
+(defmacro dexpr (expr-name (fn args markup) &body body)
+  `(let ((,fn (fn ,expr-name))
+	 (,args (args ,expr-name))
+	 (,markup (markup ,expr-name)))
+     ,@body))
 
 (defun eqfn (expr fn) (and (consp expr) (eq (fn expr) fn)))
 
