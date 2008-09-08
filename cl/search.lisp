@@ -17,13 +17,16 @@ Author: madscience@google.com (Moshe Looks) |#
 
 
 ;;; generic depth-first-search that avoids repeats
-(defun dfs (action expander root &aux (visited (make-hash-table :test 'equal)))
+(defun dfs (action expander &key (root nil hasroot) (roots nil hasroots)
+	    &aux (visited (make-hash-table :test 'equal)))
+  (assert (or hasroot hasroots) () "dfs called with no root(s)")
   (labels ((visit (node)
 	     (unless (gethash node visited)
 	       (setf (gethash node visited) t)
 	       (funcall action node)
 	       (mapc #'visit (funcall expander node)))))
-    (visit root)))
+    (when hasroot (visit root))
+    (when hasroots (mapc #'visit roots))))
 
 ;; (defun map-neighbors-at (fn expr context type)
 ;;   (mapc (lambda (knob)
