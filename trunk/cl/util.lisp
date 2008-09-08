@@ -46,7 +46,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (rec rest (cons (subseq source 0 n) acc)) 
 		   (nreverse (cons source acc)))))) 
     (if source (rec source nil) nil)))
-(defun single (lst) ;onlisp
+(defun singlep (lst)
   "Test list for one element."   ; LMH
   (and (consp lst) (not (cdr lst))))
 
