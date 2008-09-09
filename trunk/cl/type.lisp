@@ -258,7 +258,8 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 				,type))))
     (lambda (assert (eq 'function (car type)))
 	    `((list symbol) ,(caddr type)))
-    (t (ntimes (arity expr) type)))) ; works for most things
+    (t (assert (closurep (fn expr)))
+       (ntimes (arity expr) type)))) ; works for most things
 
 ;fixme should typemaps be integrated into contexts?
 

@@ -47,6 +47,11 @@ be proper lists. |#
 (defun arg7 (expr) (ninth expr))
 (defun arg8 (expr) (tenth expr))
 
+(defun unary-expr-p (expr) 
+  (and (consp expr) (consp (cdr expr)) (atom (cddr expr))))
+(defun binary-expr-p (expr) 
+  (and (consp expr) (consp (cddr expr)) (atom (cdddr expr))))
+
 ;;; use these constructors instead of cons/quote
 (defun pcons (fn args &optional markup) (cons (cons fn markup) args))
 (defun expr2p (expr) 
@@ -166,6 +171,10 @@ be proper lists. |#
 (defun purep (x)
   (declare (ignore x))
   t)
+
+;;; closure in the gp sense - all args are of same type as output
+(defun closurep (x)
+  (matches (x) (and or not + * - / exp log sin)))
 
 ;;fixme extend to non-boolean, lambda-awareness...
 (defun free-variables (expr)

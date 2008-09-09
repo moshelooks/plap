@@ -55,14 +55,8 @@ Author: madscience@google.com (Moshe Looks) |#
       t))
 
 (defun dag-order-insert (x l dag)
-  (blockn (mapl (lambda (subl)
-		  (when (descendantp (car subl) x dag)
-		    (rplacd subl (cons (car subl) (cdr subl)))
-		    (rplaca subl x)
-		    (return)))
-		l)
-	  (if l (push x (cdr (last l))) (setf l (list x))))
-  l)
+  (insert-if (bind #'descendantp /1 x dag) x l))
+
 (define-test dag
   (let ((items (iota 10)) (dag (make-dag)))
     (mapc (bind #'dag-insert-node /1 dag) items)
