@@ -15,70 +15,56 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun mapargs (fn expr)
-  (mapl (lambda (args)
-	  (let ((result (funcall fn (car args))))
-	    (unless (eq result (car args))
-	      (return-from mapargs (pcons (fn expr) 
-					  (nconc (copy-range (args expr) args)
-						 (ncons result)
-						 (mapcar #'fn (cdr args)))
-					  (markup expr))))))
-	(args expr))
-  expr)
-(defun mapargs-with-types (fn expr types)
-  (mapl (lambda (args types)
-	  (let ((result (funcall fn (car args) (car types))))
-	    (unless (eq result (car args))
-	      (return-from mapargs 
-		(pcons (fn expr)
-		       (nconc (copy-range (args expr) args)
-			      (ncons result)
-			      (mapcar #'fn (cdr args) (cdr types)))
-		       (markup expr))))))
-	(args expr) types)
-  expr)
+(macrolet 
+    ((mapargs-gen (name arg-names types)
+       `(defun ,name (fn expr ,@types)
+	  (mapl (lambda ,arg-names
+		  (let ((result (funcall fn ,@(mapcar (bind #'list 'car /1)
+						      arg-names))))
+		    (unless (eq result (car args))
+		      (return-from ,name
+			(values (pcons (fn expr) 
+				       (nconc (copy-range (args expr) args)
+					      (ncons result)
+					      (mapcar #'fn 
+						      ,@(mapcar
+							 (bind #'list 'cdr /1)
+							 arg-names)))
+				       (markup expr))
+				t)))))
+		(args expr) ,@types)
+	  (values expr nil))))
+  (mapargs-gen mapargs (args) nil)
+  (mapargs-gen mapargs-with-types (args types) (types)))
 
-;;; this song-and-dance is to avoid consing and/or removing the simp tag
-;;; unnessecarily
+(defun apply-to (rule name expr preserves)
+  (when (not (simpp expr name))
+    (aprog1 (funcall rule expr)
+      (when (and (not (eq it expr)) (not (eq 'all preserves)))
+	(clear-simp expr preserves))
+      (mark-simp it name))))
 
-; simp itself is the sum of the rules applied - when does a applying a new rule
-;; invalidate the simp status of an old on? in general we need to a concept
-;; of munging that encompasses both rewrites and knobs - knobs are reversible
-;; right now, need they be?
-;; bleh on me for perpetuating the distinction left over from cpp
+(defun upwards (rule name expr preserves)
+  (when (not (simpp expr name))
+    (aprog1 (funcall rule 
+		     (mapargs (bind #'upwards rule name /1 preserves) expr))
+      (when (not (eq it expr))
+	(clear-simp it preserves)))))
+	     
 
-  (defun partial-reduce (rules expr &aux ;rules must all match the type of expr
-			 (full-rules (integrate-assumptions rules)))
-    (fixed-point (lambda (expr)
-		   (reduce (expr reduction)
-
-
-abstract out the reduce call here? same as full but
-			    without the reduce subtypes
-
-			    remember that partial-reduce doesnt handle
-			    markup either...
-		    are we loosing efficiency by not being markup-aware?
-
-
-
-
-(defun upwards (rule name expr &optional ordered-preserves-markup)
-
-     (update (if (eq preserves 'all)
-		 `(remove-simp ',name ,expr)
-		 `(remove-ordered-simps 
-		   ,(sort (list ',name ,@preserves) #'string<) ,expr)))
-     (reduce-and-update 
-      `((setf ,expr (,order (lambda ,expr
-			     (if (and (isa (expr-type ,expr) ',type)
-				      ,condition)
-				 ,action
-				 ,expr))
-			    ,expr)
-			   ,tmp-expr))
-	(unless (eq ,expr ,tmp-expr)
+;;      (update (if (eq preserves 'all)
+;; 		 `(remove-simp ',name ,expr)
+;; 		 `(remove-ordered-simps 
+;; 		   ,(sort (list ',name ,@preserves) #'string<) ,expr)))
+;;      (reduce-and-update 
+;;       `((setf ,expr (,order (lambda ,expr
+;; 			     (if (and (isa (expr-type ,expr) ',type)
+;; 				      ,condition)
+;; 				 ,action
+;; 				 ,expr))
+;; 			    ,expr)
+;; 			   ,tmp-expr))
+;; 	(unless (eq ,expr ,tmp-expr)
 
 
 ;; (defun upwards (rule expr)
@@ -115,36 +101,29 @@ abstract out the reduce call here? same as full but
 
 				     
 
-(defun downwards (rule expr)
-  (if (consp expr)
-      (let ((result (funcall rule expr)))
-	(if (consp result)
-	    (let ((subresults (mapcar (bind #'downwards rule /1) 
-				      (cdr result))))
-	      (if (and (eq result expr) (every #'eq subresults (cdr expr)))
-		  expr
-		  (cons (car result) subresults)))
-	    result))
-      expr))
-
-(defun apply-to (rule name expr) )
-
-under what circumstances will a reduction need a context argument??
+;; (defun downwards (rule expr)
+;;   (if (consp expr)
+;;       (let ((result (funcall rule expr)))
+;; 	(if (consp result)
+;; 	    (let ((subresults (mapcar (bind #'downwards rule /1) 
+;; 				      (cdr result))))
+;; 	      (if (and (eq result expr) (every #'eq subresults (cdr expr)))
+;; 		  expr
+;; 		  (cons (car result) subresults)))
+;; 	    result))
+;;       expr))
 
 
+;; under what circumstances will a reduction need a context argument??
 
 
+;;   (let ((result (blockn (reduce (lambda (expr rule) 
+;; 				  (if (consp expr)
+;; 				      (funcall rule expr)
+;; 				      (return expr)))
+;; 				rules :initial-value expr))))
+;;     (if (equalp expr result) expr (reduce-with rules result))))
 
-
-  (let ((result (blockn (reduce (lambda (expr rule) 
-				  (if (consp expr)
-				      (funcall rule expr)
-				      (return expr)))
-				rules :initial-value expr))))
-    (if (equalp expr result) expr (reduce-with rules result))))
-
-(defun full-reduce (expr &key (type (expr-type expr)))
-  (reduce-with (getreductions type) expr))
 
 (defmacro reduce-from (fn reductions expr)
   `(reduce (lambda (expr reduction)
@@ -185,13 +164,11 @@ under what circumstances will a reduction need a context argument??
 						   reductions expr)))
 		   expr)))
  ;;; returns the rules and their assumptions, sorted by dependency
-  (defun integrate-assumptions (rules &aux )
-
-    (collecting (dfs (collector)
-		     (bind #'gethash /1 reduction-to-assumes)
-		     :roots rules)
-		     )
-  
+  (defun integrate-assumptions (rules &aux assumptions)
+    (dfs (lambda (rule)
+	   (setf assumptions (dag-order-insert rule assumptions dependencies)))
+	 (bind #'gethash /1 reduction-to-assumes) :roots rules)
+    assumptions))
 
 (defmacro define-reduction 
     (name (&rest args) 
@@ -199,23 +176,29 @@ under what circumstances will a reduction need a context argument??
      &aux (expr (if (= (length args) 1)
 		    (car args)
 		    (aprog1 (gensym)
-		      (setf condition `(dexpr ,it ,args ,condition))
-		      (setf action `(dexpr ,it ,args ,action)))))
+		      (setf condition `(dexpr ,it ,args 
+					 (declare (ignorable ,@args))
+					 ,condition))
+		      (setf action `(dexpr ,it ,args 
+				      (declare (ignorable ,@args))
+				      ,action)))))
      (assumes-calls (integrate-assumptions assumes))
-     (order-call (nconc (list order action expr)
-			(unless (eq (preserves 'all))
-			  (sort (copy-list preserves) #'string<)))))
+     (order-call (list order action expr
+		       (if (eq preserves 'all) 
+			   'all
+			   (sort (copy-list preserves) #'string<)))))
   (assert action () "action key required for a reduction")
   (assert (or (= (length args) 1) (= (length args) 3)) ()
 	  "argument list for reduction must be have 1 or 3 element(s)")
+  (setf condition `(and (not (simpp ,expr ,name)) ,condition))
   `(progn
      (defun ,name (,expr)
        (setf ,expr (fixed-point (lambda (expr) 
 				  (reduce-from ,name ,assumes-calls expr))
 				,expr))
        (when (and (consp ,expr) (isa (expr-type ,expr) ',type) ,condition)
-	 ,ordercall))
-     (register-reduction ,type (lambda (,expr) (when ,condition ,ordercall))
+	 ,order-call))
+     (register-reduction ,type (lambda (,expr) (when ,condition ,order-call))
 			 ,assumes)))
 
 ;;;; general-purpose reductions are defined here
@@ -225,11 +208,17 @@ under what circumstances will a reduction need a context argument??
   :action (pcons fn (sort (copy-list args) #'total-order) markup)
   :order upwards
   :preserves all)
+(define-test sort-commutative
+  (assert-equal %(and x y z (or a b)) 
+		(sort-commutative %(and y (or b a) z x)))
+  (assert-equal %(foo zaa baa (or a b))
+		(sort-commutative %(foo zaa baa (or b a)))))
+  
 (define-reduction flatten-associative (fn args markup)
-  :condition (and (associativep fn) (find fn args :key ifn))
+  :condition (and (associativep fn) (find fn args :key #'afn))
   :action (pcons fn
 		 (mappend (lambda (arg) 
-			    (if (eq (ifn arg) fn) (args arg) `(,arg)))
+			    (if (eq (afn arg) fn) (args arg) `(,arg)))
 			  args)
 		 markup)
   :order upwards)
@@ -241,19 +230,27 @@ under what circumstances will a reduction need a context argument??
   :condition (and (not (matches (fn expr) (list tuple lambda)))
 		  (purep (fn expr)))
   :action
-  (cond ((commutativep fn)
-	 (bind-collectors (constants others)
-	     (mapc (lambda (arg) 
-		     (if (const-value-p arg) (constants arg) (others arg)))
-		   args)
-	   (if others 
-	       (if constants
-		   (pcons fn 
-			  (cons (peval (pcons fn constants) *empty-context*) 
-				others)
-			  markup)
-		   expr)
-	       (peval expr *empty-context*))))
-	((every #'const-value-p args) (peval expr *empty-context*))
-	(t expr))
+  (dexpr expr (fn args markup)
+    (cond ((and (identityp fn) (unary-expr-p expr)) (arg0 expr))
+	  ((commutativep fn)
+	   (bind-collectors (constants others)
+	       (mapc (lambda (arg) 
+		       (if (const-value-p arg) (constants arg) (others arg)))
+		     args)
+	     (if others 
+		 (if constants
+		     (pcons fn 
+			    (cons (peval (pcons fn constants) *empty-context*) 
+				  others)
+			    markup)
+		     expr)
+		 (peval expr *empty-context*))))
+	  ((every #'const-value-p args) (peval expr *empty-context*))
+	  (t expr)))
   :order upwards)
+(define-test eval-const
+  (assert-equal 42 (eval-const %(+ 1 (* 1 41))))
+  (assert-equal 42 (eval-const %(funcall (lambda (x) (+ x (* x 41))) 1)))
+  (assert-equal %(foo 42)
+		(eval-const %(foo (funcall (lambda (x) (+ x (* x 41))) 1))))
+  (assert-equal %(+ 1 x) (eval-const %(+ 1 -2 x 2))))

@@ -19,6 +19,14 @@ Author: madscience@google.com (Moshe Looks) |#
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
 ;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
+(defun shuffle (sequence)
+  (let ((temp (coerce sequence 'vector)))
+    (loop for i downfrom (1- (length temp)) to 1 do
+      (rotatef (aref temp i) (aref temp (random (1+ i)))))
+    (unless (eq temp sequence)
+      (replace sequence temp))
+    sequence))
+
 ;;; control structures
 (defmacro blockn (&body body) `(block nil (progn ,@body)))
 (defmacro while (test &body body)	; onlisp
@@ -386,5 +394,16 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-eq (second foo) (third foo) (fourth foo))
     (assert-equal foo goo)))
 
-(defun fixed-point (fn expr &aux ((x (copy-tree expr)) (y (funcall fn expr))))
+(defun fixed-point (fn expr &aux (x (copy-tree expr)) (y (funcall fn expr)))
   (if (equalp x y) x (fixed-point fn y)))
+
+(defun insert-if (pred item list)
+  (mapl (lambda (subl)
+	  (when (funcall pred (car subl))
+	    (rplacd subl (cons (car subl) (cdr subl)))
+	    (rplaca subl item)
+	    (return-from insert-if list)))
+	list)
+  (if list 
+      (progn (push item (cdr (last list))) list)
+      (list item)))
