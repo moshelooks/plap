@@ -23,107 +23,34 @@ Author: madscience@google.com (Moshe Looks) |#
 						      arg-names))))
 		    (unless (eq result (car args))
 		      (return-from ,name
-			(values (pcons (fn expr) 
-				       (nconc (copy-range (args expr) args)
-					      (ncons result)
-					      (mapcar #'fn 
-						      ,@(mapcar
-							 (bind #'list 'cdr /1)
-							 arg-names)))
-				       (markup expr))
-				t)))))
+			(pcons (fn expr) 
+			       (nconc (copy-range (args expr) args)
+				      (ncons result)
+				      (mapcar fn 
+					      ,@(mapcar
+						 (bind #'list 'cdr /1)
+						 arg-names)))
+			       (markup expr))))))
 		(args expr) ,@types)
-	  (values expr nil))))
+	  expr)))
   (mapargs-gen mapargs (args) nil)
   (mapargs-gen mapargs-with-types (args types) (types)))
 
-(defun apply-to (rule name expr preserves)
-  (when (not (simpp expr name))
-    (aprog1 (funcall rule expr)
-      (when (and (not (eq it expr)) (not (eq 'all preserves)))
-	(clear-simp expr preserves))
-      (mark-simp it name))))
-
-(defun upwards (rule name expr preserves)
-  (when (not (simpp expr name))
-    (aprog1 (funcall rule 
-		     (mapargs (bind #'upwards rule name /1 preserves) expr))
-      (when (not (eq it expr))
-	(clear-simp it preserves)))))
-	     
-
-;;      (update (if (eq preserves 'all)
-;; 		 `(remove-simp ',name ,expr)
-;; 		 `(remove-ordered-simps 
-;; 		   ,(sort (list ',name ,@preserves) #'string<) ,expr)))
-;;      (reduce-and-update 
-;;       `((setf ,expr (,order (lambda ,expr
-;; 			     (if (and (isa (expr-type ,expr) ',type)
-;; 				      ,condition)
-;; 				 ,action
-;; 				 ,expr))
-;; 			    ,expr)
-;; 			   ,tmp-expr))
-;; 	(unless (eq ,expr ,tmp-expr)
-
-
-;; (defun upwards (rule expr)
-;;   (labels ((proc (args)
-;; 	     (when args
-;; 	       (let ((first (upwards rule (car args)))
-;; 		     (rest (proc (cdr args))))
-;; 		 (if (and (eq first (car args)) (eq rest (cdr args)))
-;; 		     args
-;; 		     (cons first rest))))))
-;;   (if (consp expr)
-;;       (let ((args (proc (args expr))))
-;; 	(if (eq args (args expr))
-;; 	    (let ((result (funcall rule expr)))
-;; 	      (if (eq result expr)
-;; 		  expr
-;; 		  (unmark expr simp)))
-;; 	    (unmark (funcall rule (cons (fn expr) args))
-;;       expr)))
-
-;; 	(if (eq args (args expr))
-;;       (dolist ((args expr) subexpr)
-;; 	(let ((new (upwards rule subexpr)))
-;; 	  (if (eq new subseq)
-;;       (let ((subexprs (mapcar (lambda (subexpr) (upwards rule subexpr))
-;; 			      (args expr))))
-;; 	(funcall rule (blockn (mapc (lambda (x y) 
-;; 				      (unless (eq x y)
-;; 					(return (cons (car expr) subexprs))))
-;; 				    (cdr expr) subexprs)
-;; 			      expr)))
-;;       expr))
-
-
-				     
-
-;; (defun downwards (rule expr)
-;;   (if (consp expr)
-;;       (let ((result (funcall rule expr)))
-;; 	(if (consp result)
-;; 	    (let ((subresults (mapcar (bind #'downwards rule /1) 
-;; 				      (cdr result))))
-;; 	      (if (and (eq result expr) (every #'eq subresults (cdr expr)))
-;; 		  expr
-;; 		  (cons (car result) subresults)))
-;; 	    result))
-;;       expr))
-
-
-;; under what circumstances will a reduction need a context argument??
-
-
-;;   (let ((result (blockn (reduce (lambda (expr rule) 
-;; 				  (if (consp expr)
-;; 				      (funcall rule expr)
-;; 				      (return expr)))
-;; 				rules :initial-value expr))))
-;;     (if (equalp expr result) expr (reduce-with rules result))))
-
+(macrolet ((mkorder (ord-name transformer)
+	     `(defun ,ord-name (rule name expr preserves)
+		(if (and (consp expr) (not (simpp expr name)))
+		    (aprog1 ,transformer
+		      (when (and (not (eq it expr)) (not (eq 'all preserves)))
+			(clear-simp expr preserves))
+		      (when (consp it) (mark-simp it name)))
+		    expr))))
+  (mkorder apply-to (funcall rule expr))
+  (mkorder upwards (funcall rule (mapargs 
+				  (bind #'upwards rule name /1 preserves)
+				  expr)))
+  (mkorder downwards (mapargs 
+		      (bind #'downwards rule name /1 preserves)
+		      (funcall rule expr))))
 
 (defmacro reduce-from (fn reductions expr)
   `(reduce (lambda (expr reduction)
@@ -156,9 +83,12 @@ Author: madscience@google.com (Moshe Looks) |#
     (labels ((reduce-subtypes (expr)
 	       (cond ((atom expr) expr)
 		     ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
-		     (t (mapargs-with-types (bind #'full-reduce /1 context /2) 
-					    expr 
-					    (arg-types expr context type))))))
+		     (t (mapargs-with-types (bind #'type-check /1 /2) expr 
+					    (arg-types expr context type)))))
+	     (type-check (subexpr subexpr-type)
+	       (if (or (atom subexpr) (isa subexpr-type type))
+		   subexpr
+		   (full-reduce subexpr context subexpr-type))))
       (fixed-point (lambda (expr)
 		     (reduce-subtypes (reduce-from full-reduce 
 						   reductions expr)))
@@ -173,33 +103,26 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro define-reduction 
     (name (&rest args) 
      &key (type t) assumes (condition t) action (order 'apply-to) preserves 
-     &aux (expr (if (= (length args) 1)
-		    (car args)
-		    (aprog1 (gensym)
-		      (setf condition `(dexpr ,it ,args 
-					 (declare (ignorable ,@args))
-					 ,condition))
-		      (setf action `(dexpr ,it ,args 
-				      (declare (ignorable ,@args))
-				      ,action)))))
-     (assumes-calls (integrate-assumptions assumes))
-     (order-call (list order action expr
-		       (if (eq preserves 'all) 
-			   'all
-			   (sort (copy-list preserves) #'string<)))))
+     &aux (assumes-calls (integrate-assumptions assumes))
+     (has-decomp (ecase (length args) (3 t) (1 nil)))
+     (expr (if has-decomp (gensym) (car args)))
+     (call-body `(if ,condition ,action ,expr))
+     (order-call `(,order (lambda (,expr)
+			    ,(if has-decomp 
+				 `(dexpr ,expr ,args ,call-body)
+				 call-body))
+			  ',name ,expr
+			  ,(if (eq preserves 'all)
+			       ''all
+			       (sort (copy-list preserves) #'string<)))))
   (assert action () "action key required for a reduction")
-  (assert (or (= (length args) 1) (= (length args) 3)) ()
-	  "argument list for reduction must be have 1 or 3 element(s)")
-  (setf condition `(and (not (simpp ,expr ,name)) ,condition))
   `(progn
      (defun ,name (,expr)
        (setf ,expr (fixed-point (lambda (expr) 
 				  (reduce-from ,name ,assumes-calls expr))
 				,expr))
-       (when (and (consp ,expr) (isa (expr-type ,expr) ',type) ,condition)
-	 ,order-call))
-     (register-reduction ,type (lambda (,expr) (when ,condition ,order-call))
-			 ,assumes)))
+       ,order-call)
+     (register-reduction ,type (lambda (,expr) ,order-call) ,assumes)))
 
 ;;;; general-purpose reductions are defined here
 
@@ -209,9 +132,11 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards
   :preserves all)
 (define-test sort-commutative
-  (assert-equal %(and x y z (or a b)) 
+  (assert-equal '((and simp (sort-commutative)) 
+		  x y z ((or simp (sort-commutative)) a b))
 		(sort-commutative %(and y (or b a) z x)))
-  (assert-equal %(foo zaa baa (or a b))
+  (assert-equal '((foo simp (sort-commutative)) 
+		  zaa baa ((or simp (sort-commutative)) a b))
 		(sort-commutative %(foo zaa baa (or b a)))))
   
 (define-reduction flatten-associative (fn args markup)
@@ -223,8 +148,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		 markup)
   :order upwards)
 (define-test flatten-associative
-  (assert-equal '(and x y (or q w)) 
-		(flatten-associative '(and x (and y (or q w))))))
+  (assert-equal '((and simp (flatten-associative)) 
+		  x y ((or simp (flatten-associative)) q w))
+		(flatten-associative %(and x (and y (or q w))))))
 
 (define-reduction eval-const (expr)
   :condition (and (not (matches (fn expr) (list tuple lambda)))
