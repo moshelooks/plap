@@ -57,7 +57,8 @@ be proper lists. |#
 (defun expr2p (expr) 
   (cond ((atom expr) expr)
 	((eq (car expr) 'lambda)
-	 (pcons (car expr) (list (cadr expr) (expr2p (caddr expr)))))
+	 (pcons (car expr) (list (cons (list 'list) (cadr expr)) 
+				 (expr2p (caddr expr)))))
 	(t (pcons (car expr) (mapcar #'expr2p (cdr expr))))))
 (set-macro-character
  #\% (lambda (stream char)
@@ -174,7 +175,7 @@ be proper lists. |#
 
 ;;; closure in the gp sense - all args are of same type as output
 (defun closurep (x)
-  (matches (x) (and or not + * - / exp log sin)))
+  (matches x (and or not + * - / exp log sin)))
 
 ;;fixme extend to non-boolean, lambda-awareness...
 (defun free-variables (expr)
