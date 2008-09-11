@@ -35,6 +35,9 @@ Author: madscience@google.com (Moshe Looks) |#
 	  expr)))
   (mapargs-gen mapargs (args) nil)
   (mapargs-gen mapargs-with-types (args types) (types)))
+(define-test mapargs
+  (let ((expr %(and x y z)))
+    (assert-eq expr (mapargs #'identity expr))))
 
 (macrolet ((mkorder (ord-name transformer)
 	     `(defun ,ord-name (rule name expr preserves)
@@ -51,6 +54,9 @@ Author: madscience@google.com (Moshe Looks) |#
   (mkorder downwards (mapargs 
 		      (bind #'downwards rule name /1 preserves)
 		      (funcall rule expr))))
+(define-test upwards
+  (let ((expr %(and x y z (or p d q))))
+    (assert-eq expr (upwards #'identity 'identity expr nil))))
 
 (defmacro reduce-from (fn reductions expr)
   `(reduce (lambda (expr reduction)
@@ -59,15 +65,19 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (let ((type-to-reductions (make-hash-table))
       (reduction-to-assumes (make-hash-table))
-      (dependencies (make-dag)))
+      (dependencies (make-dag))
+      (names-to-reductions (make-hash-table)))
   ;;; important note - register-reduction does not do any handling of markup,
   ;;; which must be created/removed by the reduction function (define-reduction
   ;;; can autogenerate this code
-  (defun register-reduction (type reduction assumes)
-    (dag-insert-node reduction dependencies) ;; first, update dependencies
+  (defun register-reduction (name type reduction assumes)
+    ;; get the actual reductions for all of the assumptions and update the map
+    (setf assumes (mapcar (bind #'gethash /1 names-to-reductions) assumes))
+    (setf (gethash name names-to-reductions) reduction)
+    (dag-insert-node reduction dependencies) ;; then update dependencies
     (mapc (bind #'dag-insert-edge /1 reduction dependencies) assumes)
     (setf (gethash reduction reduction-to-assumes) assumes)
-    (or (gethash type type-to-reductions) ;; second, update the type index
+    (or (gethash type type-to-reductions) ;; then update the type index
 	(setf (gethash type type-to-reductions) nil))
     (dfs (lambda (type)	;; and all subtype indices
 	   (awhen (gethash type type-to-reductions)
@@ -93,11 +103,21 @@ Author: madscience@google.com (Moshe Looks) |#
 		     (reduce-subtypes (reduce-from full-reduce 
 						   reductions expr)))
 		   expr)))
+  (defun reduciblep (expr context type)
+    (labels ((subtypesp (expr)
+	       (cond ((atom expr) nil)
+		     ((closurep (fn expr)) (some #'subtypesp (args expr)))
+		     (t (some (bind #'reduciblep /1 context /2)
+			      (args expr) (arg-types expr context type))))))
+      (or (some (lambda (rule) (not (eq (funcall rule expr) expr)))
+		(reductions type))
+	  (subtypesp expr))))
  ;;; returns the rules and their assumptions, sorted by dependency
-  (defun integrate-assumptions (rules &aux assumptions)
+  (defun integrate-assumptions (rule-names &aux assumptions)
     (dfs (lambda (rule)
 	   (setf assumptions (dag-order-insert rule assumptions dependencies)))
-	 (bind #'gethash /1 reduction-to-assumes) :roots rules)
+	 (bind #'gethash /1 reduction-to-assumes)
+	 :roots (mapcar (bind #'gethash /1 names-to-reductions) rule-names))
     assumptions))
 
 (defmacro define-reduction 
@@ -106,7 +126,7 @@ Author: madscience@google.com (Moshe Looks) |#
      &aux (assumes-calls (integrate-assumptions assumes))
      (has-decomp (ecase (length args) (3 t) (1 nil)))
      (expr (if has-decomp (gensym) (car args)))
-     (call-body `(if ,condition ,action ,expr))
+     (call-body `(aif ,condition ,action ,expr))
      (order-call `(,order (lambda (,expr)
 			    ,(if has-decomp 
 				 `(dexpr ,expr ,args ,call-body)
@@ -119,10 +139,10 @@ Author: madscience@google.com (Moshe Looks) |#
   `(progn
      (defun ,name (,expr)
        (setf ,expr (fixed-point (lambda (expr) 
-				  (reduce-from ,name ,assumes-calls expr))
+				  (reduce-from ,name ',assumes-calls expr))
 				,expr))
        ,order-call)
-     (register-reduction ,type (lambda (,expr) ,order-call) ,assumes)))
+     (register-reduction ',name ,type (lambda (,expr) ,order-call) ',assumes)))
 
 ;;;; general-purpose reductions are defined here
 
@@ -137,7 +157,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		(sort-commutative %(and y (or b a) z x)))
   (assert-equal '((foo simp (sort-commutative)) 
 		  zaa baa ((or simp (sort-commutative)) a b))
-		(sort-commutative %(foo zaa baa (or b a)))))
+		(sort-commutative %(foo zaa baa (or b a))))
+  (let ((expr %(and x y z)))
+    (assert-eq expr (sort-commutative expr))))
   
 (define-reduction flatten-associative (fn args markup)
   :condition (and (associativep fn) (find fn args :key #'afn))
@@ -176,7 +198,10 @@ Author: madscience@google.com (Moshe Looks) |#
   :order upwards)
 (define-test eval-const
   (assert-equal 42 (eval-const %(+ 1 (* 1 41))))
-  (assert-equal 42 (eval-const %(funcall (lambda (x) (+ x (* x 41))) 1)))
-  (assert-equal %(foo 42)
-		(eval-const %(foo (funcall (lambda (x) (+ x (* x 41))) 1))))
-  (assert-equal %(+ 1 x) (eval-const %(+ 1 -2 x 2))))
+  (assert-equal '((+ simp (eval-const)) 3 x ((* simp (eval-const)) 41 x))
+		(eval-const %(+ x (* x 41 1) 1 2)))
+  (assert-equal true (eval-const %(and (or) (or))))
+  (assert-equal '((foo simp (eval-const)) 1 2 x 42)
+		(eval-const %(foo 1 2 x (+ 2 40))))
+  (assert-equal '((+ simp (eval-const)) 1 x) 
+		(eval-const %(+ 1 -2 x 2))))

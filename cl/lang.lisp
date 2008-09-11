@@ -54,16 +54,21 @@ be proper lists. |#
 
 ;;; use these constructors instead of cons/quote
 (defun pcons (fn args &optional markup) (cons (cons fn markup) args))
-(defun expr2p (expr) 
+(defun sexpr2p (expr) 
   (cond ((atom expr) expr)
 	((eq (car expr) 'lambda)
 	 (pcons (car expr) (list (cons (list 'list) (cadr expr)) 
-				 (expr2p (caddr expr)))))
-	(t (pcons (car expr) (mapcar #'expr2p (cdr expr))))))
+				 (sexpr2p (caddr expr)))))
+	(t (pcons (car expr) (mapcar #'sexpr2p (cdr expr))))))
+(defun p2sexpr (expr)
+  (cond ((atom expr) expr)
+	((eq (fn expr) 'lambda)
+	 (cons (fn expr) (list (args (arg0 expr)) (p2sexpr (arg1 expr)))))
+	(t (cons (fn expr) (mapcar #'p2sexpr (args expr))))))
 (set-macro-character
  #\% (lambda (stream char)
        (declare (ignore char))
-       (list 'quote (expr2p (read stream t nil t)))) t)
+       (list 'quote (sexpr2p (read stream t nil t)))) t)
 
 ; destructure expression
 (defmacro dexpr (expr-name (fn args markup) &body body)
@@ -195,9 +200,9 @@ be proper lists. |#
   (arg1 expr))
 
 (defun const-atom-p (x &optional (context *empty-context*))
-  (or (not (symbolp x)) 
-      (matches x (true false nan nil)) 
-      (bound-in-p x context)))
+  (and (atom x) (or (not (symbolp x)) 
+		    (matches x (true false nan nil)) 
+		    (bound-in-p x context))))
 
 (defun const-expr-p (expr &optional (context *empty-context*))
   (cond ((atom expr) (const-atom-p expr context))

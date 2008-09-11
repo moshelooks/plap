@@ -42,6 +42,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (throw 'nan 'nan)
 			  (log arg))))
 	       (sin (sin (peval-cl (car args) context)))
+
 	       (t (apply (symbol-function op) 
 			 (mapcar (bind #'peval-cl /1 context) args))))))
     (cond ((consp expr) (call (fn expr) (args expr)))
