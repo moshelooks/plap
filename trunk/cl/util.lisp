@@ -202,26 +202,19 @@ Author: madscience@google.com (Moshe Looks) |#
   (reduce (bind #'cross-prod #'cons /1 /2)
 	  lists :initial-value '(nil) :from-end t))
 
-(defun adjacent-pairs (f l)
-  (if l (mapcar f l (cdr l))))
-(define-test adjacent-pairs
-  (assert-equal '((1 . 2) (2 . 3) (3 . 4)) (adjacent-pairs #'cons '(1 2 3 4)))
-  (assert-equal nil (adjacent-pairs #'cons nil))
-  (assert-equal nil (adjacent-pairs #'cons '(32))))
-
-(defun nonidentical-pairs (fn l)
+(defun map-nonidentical-pairs (fn l1 l2)
   (mapl (lambda (l1)
 	  (mapl (lambda (l2) 
 		  (unless (eq l1 l2) (funcall fn (car l1) (car l2))))
-		l))
-	l))
-(defun upper-triangle-pairs (fn l)
+		l2))
+	l1))
+(defun map-upper-triangle-pairs (fn l)
   (mapl (lambda (sublist) (mapc (bind fn (car sublist) /1) (cdr sublist))) l))
-(define-test upper-triangle-pairs
+(define-test map-upper-triangle-pairs
   (assert-equal '((1 2) (1 3) (1 4) (2 3) (2 4) (3 4))
-		(collecting (upper-triangle-pairs (lambda (x y) (collect
-								 (list x y)))
-						  '(1 2 3 4)))))
+		(collecting (map-upper-triangle-pairs (lambda (x y) 
+							(collect (list x y)))
+						      '(1 2 3 4)))))
 
 ;;;removes adjacent eql pairs - fixme from O(n^2) to O(n)
 (defun remove-adjacent-duplicates (l &key (test #'eql))
@@ -394,8 +387,8 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-eq (second foo) (third foo) (fourth foo))
     (assert-equal foo goo)))
 
-(defun fixed-point (fn expr &aux (x (copy-tree expr)) (y (funcall fn expr)))
-  (if (equalp x y) x (fixed-point fn y)))
+(defun fixed-point (fn x &key (test #'eq) &aux (y (funcall fn x)))
+  (if (funcall test x y) x (fixed-point fn y)))
 
 (defun insert-if (pred item list)
   (mapl (lambda (subl)

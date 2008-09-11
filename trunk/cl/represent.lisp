@@ -134,10 +134,10 @@ Author: madscience@google.com (Moshe Looks) |#
 			 (collect (make-replacer-knob 
 				   (cdr at) ; a single knob for:
 				   (identity-elem (car at)) ; 1 rm
-				   (litnegation it))))))    ; 2 negate
+				   (negate it))))))    ; 2 negate
 		   (cdr expr)))
 	(maphash-keys (lambda (x)
-			(collect (make-inserter-knob expr x (litnegation x))))
+			(collect (make-inserter-knob expr x (negate x))))
 		      tovisit)))))
 
 (defknobs num (expr context)
