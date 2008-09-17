@@ -16,8 +16,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun canonize-children (expr context type)
-  (if (atom expr) expr
-      (cons (car expr) (mapcar (bind #'canonize /1 context /2)
+  (if (atom expr) expr  ;fixme
+      (pcons (fn expr) (mapcar (bind #'canonize /1 context /2)
 			       (cdr expr) (arg-types expr context type)))))
 
 (defdefbytype defcanonizer canonize)

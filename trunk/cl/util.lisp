@@ -196,6 +196,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro matches (x l) `(case ,x (,l t)))
 
 ;;; combinatorial algorithms
+(defun map-cross-prod (fn xlist ylist)
+  (mapc (lambda (x) (mapc (lambda (y) (funcall fn x y)) ylist)) xlist))
 (defun cross-prod (fn xlist ylist)
   (mapcan (lambda (x) (mapcar (lambda (y) (funcall fn x y)) ylist)) xlist))
 (defun cartesian-prod (&rest lists)
@@ -388,7 +390,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-equal foo goo)))
 
 (defun fixed-point (fn x &key (test #'eq) &aux (y (funcall fn x)))
-  (if (funcall test x y) x (fixed-point fn y)))
+  (if (funcall test x y) x (fixed-point fn y :test test)))
 
 (defun insert-if (pred item list)
   (mapl (lambda (subl)
@@ -400,3 +402,15 @@ Author: madscience@google.com (Moshe Looks) |#
   (if list 
       (progn (push item (cdr (last list))) list)
       (list item)))
+
+;;; generic depth-first-search that avoids repeats
+(defun dfs (action expander &key (root nil hasroot) (roots nil hasroots)
+	    &aux (visited (make-hash-table :test 'equal)))
+  (assert (or hasroot hasroots) () "dfs called with no root(s)")
+  (labels ((visit (node)
+	     (unless (gethash node visited)
+	       (setf (gethash node visited) t)
+	       (funcall action node)
+	       (mapc #'visit (funcall expander node)))))
+    (when hasroot (visit root))
+    (when hasroots (mapc #'visit roots))))

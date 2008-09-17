@@ -71,6 +71,7 @@ Author: madscience@google.com (Moshe Looks) |#
   ;;; which must be created/removed by the reduction function (define-reduction
   ;;; can autogenerate this code
   (defun register-reduction (name type reduction assumes)
+    (print* 'registering name)
     ;; get the actual reductions for all of the assumptions and update the map
     (setf assumes (mapcar (bind #'gethash /1 names-to-reductions) assumes))
     (setf (gethash name names-to-reductions) reduction)
@@ -79,10 +80,12 @@ Author: madscience@google.com (Moshe Looks) |#
     (setf (gethash reduction reduction-to-assumes) assumes)
     (or (gethash type type-to-reductions) ;; then update the type index
 	(setf (gethash type type-to-reductions) nil))
-    (dfs (lambda (type)	;; and all subtype indices
-	   (awhen (gethash type type-to-reductions)
-	     (setf (gethash type type-to-reductions)
-		   (dag-order-insert reduction it dependencies))))
+    ;; and all subtype indices
+    (dfs (lambda (type)
+	   (mvbind (list exists) (gethash type type-to-reductions)
+	     (when exists 
+	       (setf (gethash type type-to-reductions)
+		     (dag-order-insert reduction list dependencies)))))
 	 #'next-most-general-types :root type))
   (defun reductions (type)
     (or (gethash type type-to-reductions)
@@ -114,6 +117,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (subtypesp expr))))
  ;;; returns the rules and their assumptions, sorted by dependency
   (defun integrate-assumptions (rule-names &aux assumptions)
+    (print* 'integrating rule-names 'given dependencies)
     (dfs (lambda (rule)
 	   (setf assumptions (dag-order-insert rule assumptions dependencies)))
 	 (bind #'gethash /1 reduction-to-assumes)
@@ -123,7 +127,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro define-reduction 
     (name (&rest args) 
      &key (type t) assumes (condition t) action (order 'apply-to) preserves 
-     &aux (assumes-calls (integrate-assumptions assumes))
+     &aux (assumes-calls (gensym)) 
      (has-decomp (ecase (length args) (3 t) (1 nil)))
      (expr (if has-decomp (gensym) (car args)))
      (call-body `(aif ,condition ,action ,expr))
@@ -136,10 +140,10 @@ Author: madscience@google.com (Moshe Looks) |#
 			       ''all
 			       (sort (copy-list preserves) #'string<)))))
   (assert action () "action key required for a reduction")
-  `(progn
+  `(let ((,assumes-calls (integrate-assumptions ',assumes)))
      (defun ,name (,expr)
        (setf ,expr (fixed-point (lambda (expr) 
-				  (reduce-from ,name ',assumes-calls expr))
+				  (reduce-from ,name ,assumes-calls expr))
 				,expr))
        ,order-call)
      (register-reduction ',name ,type (lambda (,expr) ,order-call) ',assumes)))
