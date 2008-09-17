@@ -26,105 +26,73 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun dual-num-op (f) (ecase f (* '+) (+ '*)))
 
-;;; replace with identity-element removal
-(define-reduction haxx-num-1 (expr)
-  :type num
-  :condition (and (eq (car expr) '*) (eql (cadr expr) 1))
-  :action (if (longerp expr 3) (cons '* (cddr expr)) (caddr expr)))
-(define-reduction haxx-num-2 (expr)
-  :type num
-  :condition (and (eq (car expr) '+) (eql (cadr expr) 0))
-  :action (if (longerp expr 3) (cons '+ (cddr expr)) (caddr expr)))
-
 (defun ring-op-p (expr) ;true if rooted in + or * or and or or
-  (matches (acar expr) (+ * and or)))
+  (matches (fn expr) (+ * and or)))
 
 ;; (define-reduction reduce-abs (expr)
 ;;   :type num
 ;;   :condition (matches (car expr) (*
 ;;   :action
 	 
-;(defun mknums (d n) (generate n (lambda () (1- (random 2.0)))))
-
-(defun num-table (expr vars table &aux (context (make-context)))
+(defun num-table (expr vars table)
   (mapcar (lambda (values)
-	    (with-bound-symbols context vars values
+	    (with-bound-symbols *empty-context* vars values
 	      (peval expr context)))
 	  table))
 
-;; (define-reduction eliminate-division (expr)
-;;   :type num
-;;   :action
-;;   (if (eq (fn expr) '/)
-;;       (if (eq (acar (arg0 expr)) '*)
-;; 	  (if (eq (acar (arg1 expr)) '*)
-;; 	      `(* ,@(args (arg0 expr)) ,@(mapcar (lambda (subexpr)
-;; 						   `(expt ,subexpr -1))
-;; 						 (args (arg1 expr))))
-;; 	      `(* ,@(args (arg0 expr)) (expt ,(arg1 expr) -1)))
-;; 	  (if (eq (acar (arg1 expr)) '*)
-;; 	      `(* ,(arg0 expr) ,@(mapcar (lambda (subexpr)
-;; 					   `(expt ,subexpr -1))
-;; 				       (args (arg1 expr))))
-;; 	      `(* ,(arg0 expr) (expt ,(arg1 expr) -1))))
-;;       expr))
-(define-reduction eliminate-division (expr)
-  :type num
-  :action
-  (flet ((mkexp (expr) `(exp (* -1 (log ,expr)))))
-    (if (eq (fn expr) '/)
-	(if (eq (acar (arg0 expr)) '*)
-	    (if (eq (acar (arg1 expr)) '*)
-		`(* ,@(args (arg0 expr)) ,@(mapcar #'mkexp (args (arg1 expr))))
-		`(* ,@(args (arg0 expr)) ,(mkexp (arg1 expr))))
-	    (if (eq (acar (arg1 expr)) '*)
-		`(* ,(arg0 expr) ,@(mapcar #'mkexp (args (arg1 expr))))
-		`(* ,(arg0 expr) ,(mkexp (arg1 expr)))))
-	expr)))
+(labels
+    ((mkexp (expr) `(exp (* -1 (log ,expr))))
+     (eliminate-division (expr)
+       (if (eq (afn expr) '/)
+	   (pcons '* (if (eq (afn (arg0 expr)) '*)
+			 (if (eq (afn (arg1 expr)) '*)
+			     (append (args (arg0 expr))
+				     (mapcar #'mkexp (args (arg1 expr))))
+			     (append (args (arg0 expr)) (mkexp (arg1 expr))))
+			 (if (eq (afn (arg1 expr)) '*)
+			     (append (arg0 expr) 
+				     (mapcar #'mkexp (args (arg1 expr))))
+			     (append (arg0 expr) (mkexp (arg1 expr))))))
+	   expr))
+     (read-stream (fname &aux res)
+       (with-open-file (stream (concatenate 'string *plop-root-dir* fname))
+	 (do ((expr (read stream nil) (read stream nil))) ((null expr))
+	   (push expr res)))
+       res))
+  (let ((raw-sexprs (read-stream "sample_real_trees_10k"))
+	(combo-sexprs (read-stream "combo_sexprs")))
 
-(defparameter raw-sexprs nil)
-(with-open-file
-    (stream "/Users/madscience/work/plap/trunk/cl/sample_real_trees_10k")
-  (do ((expr (read stream nil) (read stream nil))) ((null expr))
-    (push expr raw-sexprs)))
+;; (defun mmtry (fn expr)
+;;   (handler-case
+;;       (catch 'maxima::raterr
+;; 	(catch 'maxima::errorsw
+;; 	  (catch 'maxima::macsyma-quit
+;; 	    (funcall fn (to-maxima (cons-cars expr))))))
+;;     (system::simple-floating-point-overflow () 'infinity)
+;;     (system::simple-arithmetic-error () 'infinity)))
 
-(defparameter combo-sexprs nil)
-(with-open-file
-    (stream "/Users/madscience/work/moses/moses2/combo_sexprs")
-  (do ((expr (read stream nil) (read stream nil))) ((null expr))
-	  (push expr combo-sexprs)))
+;; (defun mtry (fn expr)
+;;   (handler-case
+;;       (catch 'maxima::raterr
+;; 	(catch 'maxima::errorsw
+;; 	  (catch 'maxima::macsyma-quit
+;; 	    (from-maxima (funcall fn (to-maxima (cons-cars expr)))))))
+;;     (system::simple-floating-point-overflow () 'infinity)
+;;     (system::simple-arithmetic-error () 'infinity)))
+;; (defun mung (expr)
+;;   (if (atom expr) expr
+;;       (if (eq (car expr) 'maxima::mabs)
+;; 	  (mung (cadr expr))
+;; 	  (if (and (eq (car expr) 'maxima::mexpt) 
+;; 		   (or (eq (cadr expr) 'maxima::$%e)
+;; 		       (eql (cadr expr) 2.718281828459045)))
+;; 	      (list 'exp (mung (caddr expr)))
+;; 	      (cons (car expr) (mapcar #'mung (cdr expr)))))))
+;; (defun sizeme (fn)
+;;   (time (reduce #'+ raw-sexprs 
+;; 		:key (lambda (expr) (expr-size (mung (mtry fn expr)))))))
 
-(defun mmtry (fn expr)
-  (handler-case
-      (catch 'maxima::raterr
-	(catch 'maxima::errorsw
-	  (catch 'maxima::macsyma-quit
-	    (funcall fn (to-maxima (cons-cars expr))))))
-    (system::simple-floating-point-overflow () 'infinity)
-    (system::simple-arithmetic-error () 'infinity)))
-
-(defun mtry (fn expr)
-  (handler-case
-      (catch 'maxima::raterr
-	(catch 'maxima::errorsw
-	  (catch 'maxima::macsyma-quit
-	    (from-maxima (funcall fn (to-maxima (cons-cars expr)))))))
-    (system::simple-floating-point-overflow () 'infinity)
-    (system::simple-arithmetic-error () 'infinity)))
-(defun mung (expr)
-  (if (atom expr) expr
-      (if (eq (car expr) 'maxima::mabs)
-	  (mung (cadr expr))
-	  (if (and (eq (car expr) 'maxima::mexpt) 
-		   (or (eq (cadr expr) 'maxima::$%e)
-		       (eql (cadr expr) 2.718281828459045)))
-	      (list 'exp (mung (caddr expr)))
-	      (cons (car expr) (mapcar #'mung (cdr expr)))))))
-(defun sizeme (fn)
-  (time (reduce #'+ raw-sexprs 
-		:key (lambda (expr) (expr-size (mung (mtry fn expr)))))))
-
-(defparameter combo-nodiv-sexprs 
-  (mapcar (bind #'upwards #'eliminate-division /1) combo-sexprs))
+;; (defparameter combo-nodiv-sexprs 
+;;   (mapcar (bind #'upwards #'eliminate-division /1) combo-sexprs))
 
 ;(defun sexprs-size (sexprs) (reduce #'+ sexprs :key #'tree-size))

@@ -25,11 +25,19 @@ Author: madscience@google.com (Moshe Looks) |#
 (setf $numer t) ; to force evaluation of e.g. exp(sin(sin(2)))
 (in-package :plop)
 
-(defun cons-cars (expr)
-  (if (consp expr)
-      (cons (ncons (car expr)) (mapcar #'cons-cars (cdr expr)))
-      expr))
-(defun to-maxima (expr) ;;; inplace - expr should be already cons-car'ed
+;;; blocks non-numeric expressions from being munged by maxima
+(define-reduction maxima-prepare (expr)
+    :type num
+    :order upwards
+    :action (progn (mapc (lambda (x)
+			   (print* 'ppp x)
+			   (unless (or (atom x) (simpp x 'maxima-prepare))
+			     (setf (mark 'maxima::simp x) nil)))
+			 (args expr))
+		   expr)
+    :preserves all)
+
+(defun to-maxima (expr) ;; inplace
   (when (consp expr)
     (mapc #'to-maxima (cdr expr))
     (aif (case (caar expr)
@@ -43,16 +51,35 @@ Author: madscience@google.com (Moshe Looks) |#
 		'maxima::%log))
 	 (setf (caar expr) it)))
   expr)
-(defun reduce-maxima-expr (mexpr)
-  (labels ((has-expt (mexpr)
-	     (and (consp mexpr)
-		  (or (eq (caar mexpr) 'maxima::mexpt)
-		      (find-if #'has-expt (cdr mexpr)))))
-	   (reduce () 
-	     (setf mexpr (maxima::$float (maxima::simplify (copy-tree mexpr)))))
-	   (mung-expts (mexpr &aux (munged nil))
+(defun from-maxima (expr) ;; destructive
+  (unless (atom expr)
+    (case (caar expr) 
+      (maxima::rat (setf expr (float (/ (cadr expr) (caddr expr)))))
+      (maxima::mabs (setf (car expr) (caadr expr))
+		    (setf (cdr expr) (cdadr expr))
+		    (return-from from-maxima (from-maxima expr)))
+      (maxima::mexpt (assert (or (eq (cadr expr) 'maxima::$%e)
+				 (eql (cadr expr) 2.718281828459045)))
+		     (setf (caar expr) 'exp)
+		     (setf (cdr expr) (cddr expr)))
+      (maxima::mplus (setf (caar expr) '+))
+      (maxima::mtimes (setf (caar expr) '*))
+      (maxima::%sin (setf (caar expr) 'sin))
+      (maxima::mexp (setf (caar expr) 'exp))
+      (maxima::%log (setf (caar expr) 'log)))
+    (setf (cdar expr) nil)
+    (mapcar #'from-maxima (cdr expr)))
+  expr)
+
+(define-reduction maxima-reduce (expr)
+  :type num
+  :assumes (maxima-prepare)
+  :action 
+  (labels ((mreduce (mexpr) (maxima::$float (maxima::simplify mexpr)))
+	   (mung-expts (mexpr) (mung-helper mexpr) mexpr)
+	   (mung-helper (mexpr &aux (munged nil))
 	     (when (consp mexpr)
-	       (mapc (lambda (subexpr) (if (mung-expts subexpr)
+	       (mapc (lambda (subexpr) (if (mung-helper subexpr)
 					   (setf munged t)))
 		     (cdr mexpr))
 	       (when (and (eq (caar mexpr) 'maxima::mexpt)
@@ -65,38 +92,27 @@ Author: madscience@google.com (Moshe Looks) |#
 						 (cadr mexpr))))
 		 (setf (cadr mexpr) 'maxima::$%e))
 	       (when munged
-		 (setf (cdar mexpr) nil))) ;nix simp flag
-	     munged))
-    (handler-case (catch* (maxima::raterr maxima::errorsw maxima::macsyma-quit)
-		    (return-from reduce-maxima-expr
-		      (do ((x nil (copy-tree mexpr)))
-			  ((progn (reduce) (or (not (mung-expts mexpr))
-					       (equalp mexpr x))) mexpr))))
-    (system::simple-floating-point-overflow ())
-    (system::simple-arithmetic-error ()))
-    'nan))
-(defun from-maxima (expr)
-  (if (atom expr) expr
-      (let ((args (cdr expr)))
-	(mkexpr (acase (caar expr)
-		  (maxima::mplus '+)
-		  (maxima::mtimes '*)
-		  (maxima::%sin 'sin)
-		  (maxima::mexp 'exp)
-		  (maxima::%log 'log)
-		  (maxima::mabs
-		   (return-from from-maxima (from-maxima (car args))))
-		  (maxima::rat 
-		   (return-from from-maxima
-		     (float (/ (car args) (cadr args)))))
-		  (maxima::mexpt 
-		   (assert (or (eq (car args) 'maxima::$%e)
-			       (eql (car args) 2.718281828459045)))
-		   (return-from from-maxima (list 'exp 
-						  (from-maxima (cadr args)))))
-		  (t it))
-		(mapcar #'from-maxima args)))))
-
-(define-reduction maxima-reduce (expr)
-  :type num
-  :action (from-maxima (reduce-maxima-expr (to-maxima (cons-cars expr)))))
+		 (rplaca mexpr (ncons (caar mexpr))))) ;nix simp flag
+	     munged)
+	   (full-mreduce (mexpr)
+	     (handler-case (catch* (maxima::raterr 
+				    maxima::errorsw
+				    maxima::macsyma-quit)
+			     (return-from full-mreduce
+			       (fixed-point (lambda (mexpr)
+					      (print* 'xxx mexpr)
+					      (mung-expts (mreduce mexpr)))
+					    mexpr :test #'equalp)))
+	       (system::simple-floating-point-overflow ())
+	       (system::simple-arithmetic-error ()))
+	     'nan)
+	   (all-simped-p (mexpr)
+	     (or (atom mexpr) (and (eq (cadar mexpr) 'maxima::simp)
+				   (every #'all-simped-p (cdr mexpr))))))
+    (let* ((mexpr (to-maxima expr))
+	   (reduced-mexpr (full-mreduce mexpr)))
+      (assert (all-simped-p reduced-mexpr) () 
+	      "can't find simp in cadar, expr is ~S" reduced-mexpr)
+      (from-maxima (if (equalp mexpr reduced-mexpr)
+		       mexpr 
+		       (copy-tree reduced-mexpr))))))

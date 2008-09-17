@@ -17,6 +17,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :cl-user)
 (defpackage :plop-asd
   (:use :cl :asdf :cl-utilities :anaphora))
+(defparameter *plop-root-dir* "/Users/madscience/work/plap/trunk/cl")
 
 (in-package :plop-asd)
 (defsystem :plop
@@ -36,5 +37,5 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "maxima")
 	       (:file "canonize")
 	       (:file "represent")
-	       (:file "search")
+;	       (:file "search")
 	       (:file "tests")))

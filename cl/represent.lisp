@@ -158,9 +158,9 @@ Author: madscience@google.com (Moshe Looks) |#
 				       #'split-sum-of-products)
 				   expr)
 		(declare (ignore o ws))
-		(mapc (bind #'remhash /1 tovisit)
-		      (mapcar #'haxx-num-2
-			      (mapcar #'haxx-num-1 ts))))
+		(mapc (lambda (x)
+			(remhash (full-reduce x *empty-context* num) tovisit))
+		      ts))
 	(maphash-keys (lambda (x)
 			(let ((e1 (big-epsilon x))
 			      (e2 (little-epsilon x)))

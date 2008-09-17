@@ -58,6 +58,11 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (setf (gethash name (get-symbols newtype context)) nil)
 	  (remhash name (context-symbol-bindings context))))))
 
+;;; note that this is not a constant - for efficiency you are alow to add
+;;; things to the empty context prodived they are are removed afterwards
+;;; (i.e. via unwind-protect) - note that this is somewhat dangerous however as
+;;; you might inadvertantly call a function that expects the empty context to
+;;; actually be empty
 (defparameter *empty-context* (make-context))
 
 (defmacro with-bound-symbols (context symbols values &body body)
