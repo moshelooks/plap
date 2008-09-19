@@ -397,13 +397,13 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun mesh (dims mins maxes)
   (if dims
-      (mapcan (lambda (sub) 
-		(mapcar (lambda (n) (cons (+ (car mins) 
-					     (* (/ n (1- (car dims)))
-						(- (car maxes) (car mins))))
-					  sub))
-			(iota (car dims))))
-	      (mesh (cdr dims) (cdr mins) (cdr maxes)))
+      (let ((offset (car mins))
+	    (mult (/ (- (car maxes) (car mins)) (1- (car dims))))
+	    (range (iota (car dims)))
+	    (submesh (mesh (cdr dims) (cdr mins) (cdr maxes))))
+	(mapcan (lambda (sub) 
+		  (mapcar (lambda (n) (cons (+ offset (* n mult)) sub)) range))
+		submesh))
       (list nil)))
 (define-test mesh
   (assert-equal '((0.0 0.0) (0.25 0.0) (0.5 0.0) (0.75 0.0) (1.0 0.0)
