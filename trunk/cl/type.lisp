@@ -175,8 +175,9 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 
 ;;; a list all types T that generalize the given type such that there exists no
 ;;; type both more general than the given type and less general than T
-;;; note that (next-most-general nil) is t
+;;; note that (next-most-general-types nil) is an error since this is infinite
 (defun next-most-general-types (type)
+  (assert type)
   (cond ((atom type) (unless (eq type t) (ncons t)))
 	((tuple-type-p type)
 	 (or (mapcon (lambda (xs &aux (tmp (car xs)))
@@ -187,12 +188,16 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 			 (rplaca xs tmp)))
 		     (cdr type))
 	     (ncons t)))
-	(t (aif (next-most-general (cadr type)) (list (car type) it) t))))
+	((list-type-p type) (aif (next-most-general-types (cadr type))
+				 (mapcar (lambda (x) (list 'list x)) it)
+				 (list t)))
+	((function-type-p type) (assert nil))
+	(t (assert nil))))
 (define-test next-most-general-types
-  (assert-equal (t) (next-most-general-types 'bool))
+  (assert-equal '(t) (next-most-general-types 'bool))
   (assert-equal '((list t)) (next-most-general-types '(list bool)))
-  (assert-equal (t) (next-most-general-types '(list t)))
-  (assert-equal (nil) (next-most-general-types t))
+  (assert-equal '(t) (next-most-general-types '(list t)))
+  (assert-equal nil (next-most-general-types t))
   (assert-equal '((tuple (tuple t bool) num bool)
 		  (tuple (tuple bool t) num bool)
 		  (tuple (tuple bool bool) t bool)
@@ -227,20 +232,17 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	  ((+ - * / exp log sin abs) num)
 	  (t (assert (gethash (fn expr) type-finders))
 	     (funcall (gethash (fn expr) type-finders)
-		      (bind #'expr-type /1 context) (fn expr))))
+		      (bind #'expr-type /1 context) (args expr))))
 	(or (atom-type expr) (get-type expr context)))))
 (define-all-equal-test expr-type
-    `((bool (true false (and true false) (not (or true false))))
-      (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) (+ 1 2 3) (* (+ 1 0) 3)))
-      ;((function (list bool) bool) (and or))
-      ;((function bool bool) (not))
-      ;((function (list num) num) (+ *))
-      (bool ((< 2 3)))))
+    `((bool (true false ,%(and true false) ,%(not (or true false))))
+      (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) ,%(+ 1 2 3) ,%(* (+ 1 0) 3)))
+      (bool (,%(< 2 3)))))
 (define-test expr-type-with-bindings ;fixme instead of init-hash mkcontext
   (assert-equal bool (expr-type 'x (init-context '((x true)))))
   (assert-equal num (expr-type 'x (init-context '((x 42)))))
-  (assert-equal '(list num) (expr-type '(list x) (init-context '((x 3.3)))))
-  (assert-equal num (expr-type '(car (list x)) (init-context '((x 0))))))
+  (assert-equal '(list num) (expr-type %(list x) (init-context '((x 3.3)))))
+  (assert-equal num (expr-type %(car (list x)) (init-context '((x 0))))))
 
 ;;; determines the types for the children based on the structure of expr and
 ;;; its type, given the bindings in context
@@ -258,7 +260,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 				,type))))
     (lambda (assert (eq 'function (car type)))
 	    `((list symbol) ,(caddr type)))
-    (t (assert (closurep (fn expr)))
+    (t (assert (closurep (fn expr)) () "can't infer arg types for ~S" expr)
        (ntimes (arity expr) type)))) ; works for most things
 
 ;fixme should typemaps be integrated into contexts?
