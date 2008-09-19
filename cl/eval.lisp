@@ -57,7 +57,7 @@ Author: madscience@google.com (Moshe Looks) |#
 				 (t it)))))
 	  (t expr))))
 
-(defun peval (expr &optional context type)
+(defun peval (expr &optional (context *empty-context*) type)
 ;  (print* 'pev expr)
   (handler-case 
       (catch 'nan 
@@ -70,8 +70,11 @@ Author: madscience@google.com (Moshe Looks) |#
     (division-by-zero ()))
   'nan)
 (define-all-equal-test peval
-    '((false ((and true false) (or false false) (and false true)))
-      (4 ((+ 1 1 1 1) (* 2 2)))))
+    (list (list false (list %(and true false)
+			    %(or false false)
+			    %(and false true)))
+	  (list 4 (list %(+ 1 1 1 1) 
+			%(* 2 2)))))
 
 (defun pfuncall (fn context &rest args)
   (assert (eq (fn fn) 'lambda))

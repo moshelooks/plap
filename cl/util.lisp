@@ -33,15 +33,6 @@ Author: madscience@google.com (Moshe Looks) |#
   `(do ()
        ((not ,test))
      ,@body))
-;; (defmacro aif (test then &optional else) ; onlisp
-;;   `(let ((it ,test))
-;;      (if it ,then ,else)))
-;; (defmacro awhen (test &body body)	; onlisp
-;;   `(aif ,test
-;;         (progn ,@body)))
-(defmacro acase (keyform &body clauses)
-  `(let ((it ,keyform))
-     (case it ,@clauses)))
 (defmacro dorepeat (n &body body)
   (let ((var (gensym)))
     `(dotimes (,var ,n)
@@ -375,20 +366,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		 `(progn ,@body))))
     (rec tags)))
 
-(defun equalp-to-eq (expr) ;fixme - do we need/use this?
-  (mapl (lambda (expr1) (if (consp (car expr1))
-			 (mapl (lambda (expr2)
-				 (if (equalp (car expr1) (car expr2))
-				     (setf (car expr2) (car expr1))))
-			       (cdr expr1))))
-	expr))
-(define-test equalp-to-eq
-  (let* ((foo '(and (or x y) (or x y) (or x y)))
-	 (goo (copy-tree foo)))
-    (equalp-to-eq foo)
-    (assert-eq (second foo) (third foo) (fourth foo))
-    (assert-equal foo goo)))
-
 (defun fixed-point (fn x &key (test #'eq) &aux (y (funcall fn x)))
   (if (funcall test x y) x (fixed-point fn y :test test)))
 
@@ -414,3 +391,24 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (mapc #'visit (funcall expander node)))))
     (when hasroot (visit root))
     (when hasroots (mapc #'visit roots))))
+
+(defun nmapcar (fn list) 
+  (mapl (lambda (subl) (rplaca subl (funcall fn (car subl)))) list))
+
+(defun mesh (dims mins maxes)
+  (if dims
+      (mapcan (lambda (sub) 
+		(mapcar (lambda (n) (cons (+ (car mins) 
+					     (* (/ n (1- (car dims)))
+						(- (car maxes) (car mins))))
+					  sub))
+			(iota (car dims))))
+	      (mesh (cdr dims) (cdr mins) (cdr maxes)))
+      (list nil)))
+(define-test mesh
+  (assert-equal '((0.0 0.0) (0.25 0.0) (0.5 0.0) (0.75 0.0) (1.0 0.0)
+		  (0.0 0.25) (0.25 0.25) (0.5 0.25) (0.75 0.25) (1.0 0.25)
+		  (0.0 0.5) (0.25 0.5) (0.5 0.5) (0.75 0.5) (1.0 0.5) 
+		  (0.0 0.75) (0.25 0.75) (0.5 0.75) (0.75 0.75) (1.0 0.75) 
+		  (0.0 1.0) (0.25 1.0) (0.5 1.0) (0.75 1.0) (1.0 1.0))
+		(mesh '(5 5) '(0 0) '(1.0 1.0))))

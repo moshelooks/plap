@@ -49,6 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 			       (let ((depth (1+ (random 10))))
 ;; 				 (labels 
 (defmacro test-by-truth-tables (rewrite)
+  (declare (ignore rewrite));fixme
   nil)
 ;;   `(let ((vars (mapcar #'car (remove-if (lambda (x) (or (< 0 (cdr x))
 ;; 							(eq (car x) 'true)
@@ -62,11 +63,6 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 	 (return nil)))))
 
 (defun bool-dual (f) (ecase f (and 'or) (or 'and) (true false) (false true)))
-(defun junctorp (expr) (matches (afn expr) (and or)))
-(defun literalp (expr)
-  (if (consp expr)
-      (and (eq (fn expr) 'not) (not (consp (arg0 expr))))
-      (not (matches expr (true false)))))
 
 ;;; boolean reductions
 

@@ -60,7 +60,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defmacro reduce-from (fn reductions expr)
   `(reduce (lambda (expr reduction)
-	     (if (atom expr) (return-from ,fn expr) (funcall reduction expr)))
+	     (if (atom expr) (return-from ,fn expr) 
+		 (funcall reduction expr)))
 	   ,reductions :initial-value ,expr))
 
 (let ((type-to-reductions (make-hash-table))
@@ -70,28 +71,28 @@ Author: madscience@google.com (Moshe Looks) |#
   ;;; important note - register-reduction does not do any handling of markup,
   ;;; which must be created/removed by the reduction function (define-reduction
   ;;; can autogenerate this code
-  (defun register-reduction (name type reduction assumes)
-    (print* 'registering name)
-    ;; get the actual reductions for all of the assumptions and update the map
+  (defun register-reduction (name type reduction assumes obviates)
+    ;; get the actual reductions for all of the assumptions/obviations
     (setf assumes (mapcar (bind #'gethash /1 names-to-reductions) assumes))
-    (setf (gethash name names-to-reductions) reduction)
+    (setf obviates (mapcar (bind #'gethash /1 names-to-reductions) obviates))
+    (setf (gethash name names-to-reductions) reduction)  ;; update the map
     (dag-insert-node reduction dependencies) ;; then update dependencies
     (mapc (bind #'dag-insert-edge /1 reduction dependencies) assumes)
     (setf (gethash reduction reduction-to-assumes) assumes)
-    (or (gethash type type-to-reductions) ;; then update the type index
-	(setf (gethash type type-to-reductions) nil))
-    ;; and all subtype indices
-    (dfs (lambda (type)
-	   (mvbind (list exists) (gethash type type-to-reductions)
-	     (when exists 
-	       (setf (gethash type type-to-reductions)
-		     (dag-order-insert reduction list dependencies)))))
-	 #'next-most-general-types :root type))
+    (reductions type)               ;; then update the type index
+    (maphash (lambda (type2 list)   ;; and all subtype indices
+	       (when (isa type2 type)
+		 (setf (gethash type type-to-reductions)
+		       (dag-order-insert reduction
+					 (delete-if (bind #'member /1 obviates)
+						    list)
+					 dependencies))))
+	     type-to-reductions))
   (defun reductions (type)
     (or (gethash type type-to-reductions)
 	(setf (gethash type type-to-reductions)
-	      (delete-duplicates (mappend #'reductions 
-					  (next-most-general-types type))))))
+	      (delete-duplicates (mapcan (compose #'copy-list #'reductions)
+					 (next-most-general-types type))))))
   (defun full-reduce (expr context type &aux (reductions (reductions type)))
     (labels ((reduce-subtypes (expr)
 	       (cond ((atom expr) expr)
@@ -117,7 +118,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (subtypesp expr))))
  ;;; returns the rules and their assumptions, sorted by dependency
   (defun integrate-assumptions (rule-names &aux assumptions)
-    (print* 'integrating rule-names 'given dependencies)
     (dfs (lambda (rule)
 	   (setf assumptions (dag-order-insert rule assumptions dependencies)))
 	 (bind #'gethash /1 reduction-to-assumes)
@@ -125,8 +125,8 @@ Author: madscience@google.com (Moshe Looks) |#
     assumptions))
 
 (defmacro define-reduction 
-    (name (&rest args) 
-     &key (type t) assumes (condition t) action (order 'apply-to) preserves 
+    (name (&rest args) &key (type t) assumes obviates (condition t) action 
+     (order 'apply-to) preserves 
      &aux (assumes-calls (gensym)) 
      (has-decomp (ecase (length args) (3 t) (1 nil)))
      (expr (if has-decomp (gensym) (car args)))
@@ -146,7 +146,8 @@ Author: madscience@google.com (Moshe Looks) |#
 				  (reduce-from ,name ,assumes-calls expr))
 				,expr))
        ,order-call)
-     (register-reduction ',name ,type (lambda (,expr) ,order-call) ',assumes)))
+     (register-reduction ',name ,type (lambda (,expr) ,order-call) 
+			 ',assumes ',obviates)))
 
 ;;;; general-purpose reductions are defined here
 
