@@ -17,6 +17,16 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defvar *semantic-sampling-max-cache-size* 65536)
 
+
+(defparameter *n-random-trees-for-testing* 10000)
+(labels ((randtree (depth)
+	   (if (eql (depth 0)
+
+(nconc (collecting
+			     (dotimes (n *n-random-trees-for-testing*)
+			       (let ((depth (1+ (random 10))))
+				 (labels 
+
 (defun make-semantic-sampler (sampler)
   (let ((cache (make-hash-table))) ;cache : type -> (nat -> (seq of trees))
     (labels 
