@@ -16,6 +16,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun make-dag () (make-hash-table))
+(defun clrdag (dag) (clrhash dag))
 (defun dag-insert-node (node dag) 
   (setf (gethash node dag) (cons (make-hash-table) (make-hash-table))))
 (defmacro dag-ancestors (node dag) 

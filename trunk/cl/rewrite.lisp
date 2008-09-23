@@ -68,6 +68,11 @@ Author: madscience@google.com (Moshe Looks) |#
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
       (names-to-reductions (make-hash-table)))
+  (defun clear-all-reductions ()
+    (mapc #'clrhash (list type-to-reductions
+			  reduction-to-assumes
+			  names-to-reductions))
+    (clrdag dependencies))
   ;;; important note - register-reduction does not do any handling of markup,
   ;;; which must be created/removed by the reduction function (define-reduction
   ;;; can autogenerate this code
@@ -124,30 +129,66 @@ Author: madscience@google.com (Moshe Looks) |#
 	 :roots (mapcar (bind #'gethash /1 names-to-reductions) rule-names))
     assumptions))
 
-(defmacro define-reduction 
-    (name (&rest args) &key (type t) assumes obviates (condition t) action 
-     (order 'apply-to) preserves 
-     &aux (assumes-calls (gensym)) 
-     (has-decomp (ecase (length args) (3 t) (1 nil)))
-     (expr (if has-decomp (gensym) (car args)))
-     (call-body `(aif ,condition ,action ,expr))
-     (order-call `(,order (lambda (,expr)
-			    ,(if has-decomp 
-				 `(dexpr ,expr ,args ,call-body)
-				 call-body))
-			  ',name ,expr
-			  ,(if (eq preserves 'all)
-			       ''all
-			       (sort (copy-list preserves) #'string<)))))
-  (assert action () "action key required for a reduction")
-  `(let ((,assumes-calls (integrate-assumptions ',assumes)))
-     (defun ,name (,expr)
-       (setf ,expr (fixed-point (lambda (expr) 
-				  (reduce-from ,name ,assumes-calls expr))
-				,expr))
-       ,order-call)
-     (register-reduction ',name ,type (lambda (,expr) ,order-call) 
-			 ',assumes ',obviates)))
+
+(defmacro define-reduction (name &rest dr-args)
+  (acond
+    ((assoc name *reduction-registry*)
+     (rplacd it dr-args)
+     `(progn (clear-all-reductions)
+	     ,@(mapcar (lambda (args) `(define-reduction ,@args))
+		       (reverse *reduction-registry*))))
+    (t
+     (setf *reduction-registry* (acons name dr-args *reduction-registry*))
+     (dbind ((&rest args) &key (type t) assumes obviates (condition t) 
+	     action (order 'apply-to) preserves 
+	     &aux (assumes-calls (gensym)) 
+	     (has-decomp (ecase (length args) (3 t) (1 nil)))
+	     (expr (if has-decomp (gensym) (car args)))
+	     (call-body `(aif ,condition ,action ,expr))
+	     (order-call 
+	      `(,order (lambda (,expr)
+			 ,(if has-decomp 
+			      `(dexpr ,expr ,args ,call-body)
+			      call-body))
+		       ',name ,expr
+		       ,(if (eq preserves 'all)
+			    ''all
+			    (sort (copy-list preserves) #'string<))))) 
+	 dr-args
+       (assert action () "action key required for a reduction")
+       `(let ((,assumes-calls (integrate-assumptions ',assumes)))
+	  (defun ,name (,expr)
+	    (setf ,expr (fixed-point (lambda (expr) 
+				       (reduce-from ,name ,assumes-calls expr))
+				     ,expr))
+	    ,order-call)
+	  (register-reduction ',name ,type (lambda (,expr) ,order-call) 
+			      ',assumes ',obviates))))))
+
+;;       (dbind ((&rest args) &key (type t) assumes obviates (condition t) action 
+;; 	      (order 'apply-to) preserves 
+;; 	      &aux (assumes-calls (gensym)) 
+;; 	      (has-decomp (ecase (length args) (3 t) (1 nil)))
+;; 	      (expr (if has-decomp (gensym) (car args)))
+;; 	      (call-body `(aif ,condition ,action ,expr))
+;; 	      (order-call
+;; 	       `(,order (lambda (,expr)
+;; 			  ,(if has-decomp 
+;; 			       `(dexpr ,expr ,args ,call-body)
+;; 			       call-body))
+;; 			',name ,expr
+;; 			,(if (eq preserves 'all)
+;; 			     ''all
+;; 			     (sort (copy-list preserves) #'string<))))) ,args
+;; 	(assert action () "action key required for a reduction")
+;; 	`(let ((,assumes-calls (integrate-assumptions ',assumes)))
+;; 	   (defun ,name (,expr)
+;; 	     (setf ,expr (fixed-point (lambda (expr) 
+;; 					(reduce-from ,name ,assumes-calls expr))
+;; 				      ,expr))
+;; 	     ,order-call)
+;; 	   (register-reduction ',name ,type (lambda (,expr) ,order-call) 
+;; 			       ',assumes ',obviates))))))
 
 ;;;; general-purpose reductions are defined here
 
