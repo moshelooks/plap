@@ -27,7 +27,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "context")
 	       (:file "lang")
 	       (:file "markup")
-;	       (:file "enum")
+	       (:file "enum")
 	       (:file "type")
 	       (:file "eval")
 	       (:file "rewrite")
