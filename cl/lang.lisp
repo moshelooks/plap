@@ -353,4 +353,4 @@ be proper lists. |#
        (apply (cdr (assoc (icar type) ,name))
 	      (if (consp type) `(,expr ,context ,type) `(,expr ,context))))))
 
-
+(defvar *reduction-registry* nil)

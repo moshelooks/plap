@@ -72,17 +72,17 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal  '(and (not x) (not y)) (p2sexpr (push-nots %(not (or x y)))))
   (test-by-truth-tables #'push-nots))
 
-;; (defmacro define-bool-dual-reductions (and-name or-name
-;; 				       (operator identity complement expr)
-;; 				       &body body)
-;;   (flet ((dosub (x y z)
-;; 	   (subst x operator (subst y identity (subst z complement body)))))
-;;     `(progn (define-reduction ,and-name (,expr)
-;; 	      :type bool
-;; 	      ,@(dosub ''and ''true ''false))
-;; 	    (define-reduction ,or-name (,expr)
-;; 	      :type bool
-;; 	      ,@(dosub ''or ''false ''true)))))
+(defmacro define-bool-dual-reductions (and-name or-name
+				       (operator identity complement expr)
+				       &body body)
+  (flet ((dosub (x y z)
+	   (subst x operator (subst y identity (subst z complement body)))))
+    `(progn (define-reduction ,and-name (,expr)
+	      :type bool
+	      ,@(dosub ''and ''true ''false))
+	    (define-reduction ,or-name (,expr)
+	      :type bool
+	      ,@(dosub ''or ''false ''true)))))
 
 ;; ;; (and true x y)  -> (and x y)  (or true x y)  -> true
 ;; ;; (and false x y) -> false      (or false x y) -> x
