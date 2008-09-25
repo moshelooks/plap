@@ -19,19 +19,21 @@ Author: madscience@google.com (Moshe Looks) |#
   (:use :cl :asdf :cl-utilities :anaphora))
 
 (in-package :plop-asd)
-(defsystem :plop
+(defsystem "plop"
   :serial t
   :components ((:file "packages")
                (:file "util")
 	       (:file "dag")
 	       (:file "context")
+	       (:file "quote")
+ 	       (:file "markup")
 	       (:file "lang")
-	       (:file "markup")
 	       (:file "enum")
 	       (:file "type")
 	       (:file "eval")
+	       (:file "reduct-core")
+	       (:file "reductions")
 ;	       (:file "sampling")
-	       (:file "rewrite")
 	       (:file "bool")
 	       (:file "num")
 	       (:file "maxima")
