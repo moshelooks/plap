@@ -13,14 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Author: madscience@google.com (Moshe Looks) |#
-(in-package :cl-user)
+(in-package :plop)
 
-(defpackage :plop
-  (:use #:cl
-	#:lisp-unit
-	#:cl-utilities
-;	#:statistics
-	#:anaphora))
-;  (:export #:reduce))
-
-;#:type-union #:fun-type #:atom-type #:tree-type #:eval-tree))
+(defun sexpr2p (expr) 
+  (cond ((atom expr) expr)
+	((eq (car expr) 'lambda)
+	 (cons (cons (car expr) nil) (list (cons (list 'list) (cadr expr)) 
+					   (sexpr2p (caddr expr)))))
+	(t (cons (cons (car expr) nil) (mapcar #'sexpr2p (cdr expr))))))
+(set-macro-character
+ #\% (lambda (stream char)
+       (declare (ignore char))
+       (list 'quote (sexpr2p (read stream t nil t)))) t)

@@ -87,32 +87,32 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; ;; (and true x y)  -> (and x y)  (or true x y)  -> true
 ;; ;; (and false x y) -> false      (or false x y) -> x
 ;; ;; (and x)         -> x          (or x)         -> x 
-;; (define-bool-dual-reductions bool-and-identities bool-or-identities 
-;;   (operator identity complement expr)
-;;   :condition (and (eq operator (fn expr))
-;; 		  (find-if #'const-atom-p (args expr)))
-;;   :action (let ((result (loop for x in (args expr)
-;; 			   if (eq x complement) return (list complement)
-;; 			   unless (eq x identity) collect x)))
-;; 	    (cond ((null result) identity)
-;; 		  ((null (cdr result)) (car result))
-;; 		  (t (pcons (fn expr) result (markup expr)))))
-;;   :order upwards)
-;; (define-test bool-and-identities
-;;   (assert-equal '(and x y) (p2sexpr (bool-and-identities %(and x true y))))
-;;    (assert-for-all (compose (bind #'eq 'false /1) #'bool-and-identities)
-;; 		   (mapcar #'sexpr2p 
-;; 			   '((and false x y) (and x false y) (and x y false))))
-;;    (assert-equal 'x  (eval-const (bool-and-identities %(and x))))
-;;    (test-by-truth-tables #'bool-and-identities))
-;; (define-test bool-or-identities
-;;   (assert-equal true (bool-or-identities %(or x true y)))
-;;   (mapc (lambda (expr) 
-;; 	  (assert-equal '(or x y) 
-;; 			(p2sexpr (bool-or-identities (sexpr2p expr)))))
-;; 	'((or false x y) (or x false y) (or x y false)))
-;;   (assert-equal 'x  (eval-const (bool-or-identities %(or x))))
-;;   (test-by-truth-tables #'bool-or-identities))
+(define-bool-dual-reductions bool-and-identities bool-or-identities 
+  (operator identity complement expr)
+  :condition (and (eq operator (fn expr))
+		  (find-if #'const-atom-p (args expr)))
+  :action (let ((result (loop for x in (args expr)
+			   if (eq x complement) return (list complement)
+			   unless (eq x identity) collect x)))
+	    (cond ((null result) identity)
+		  ((null (cdr result)) (car result))
+		  (t (pcons (fn expr) result (markup expr)))))
+  :order upwards)
+(define-test bool-and-identities
+  (assert-equal '(and x y) (p2sexpr (bool-and-identities %(and x true y))))
+   (assert-for-all (compose (bind #'eq 'false /1) #'bool-and-identities)
+		   (mapcar #'sexpr2p 
+			   '((and false x y) (and x false y) (and x y false))))
+   (assert-equal 'x  (eval-const (bool-and-identities %(and x))))
+   (test-by-truth-tables #'bool-and-identities))
+(define-test bool-or-identities
+  (assert-equal true (bool-or-identities %(or x true y)))
+  (mapc (lambda (expr) 
+	  (assert-equal '(or x y) 
+			(p2sexpr (bool-or-identities (sexpr2p expr)))))
+	'((or false x y) (or x false y) (or x y false)))
+  (assert-equal 'x  (eval-const (bool-or-identities %(or x))))
+  (test-by-truth-tables #'bool-or-identities))
 
 (defun negate (expr)
   (if (eq (afn expr) 'not) (arg0 expr) (pcons 'not expr)))
@@ -143,25 +143,25 @@ Author: madscience@google.com (Moshe Looks) |#
     (and 'bool-and-identities)
     (or 'bool-or-identities)))
 
-;; (define-bool-dual-reductions identify-contradictions identify-tautologies 
-;;   (operator identity complement expr)
-;;   :assumes (sort-commutative)
-;;   :condition (eq operator (fn expr))
-;;   :action (if (var-and-negation-p (args expr)) complement expr)
-;;   :order upwards)
-;; (define-test identify-contradictions
-;;   (flet ((mung (expr) (p2sexpr (identify-contradictions expr))))
-;;     (assert-equal 'false (mung %(and x (not x))))
-;;     (assert-equal '(and x (not y)) (mung %(and x (not y))))
-;;     (assert-equal 'z (mung '(or z (and x (not x)))))
-;;     (test-by-truth-tables #'identify-contradictions)))
-;; (define-test identify-tautologies
-;;   (flet ((mung (expr) (p2sexpr (identify-tautologies expr))))
-;;     (assert-equal 'true (mung %(or x (not x))))
-;;     (assert-equal '(or x (not y)) (mung %(or x (not y))))
-;;     (assert-equal 'z (p2sexpr (bool-and-identities (identify-tautologies
-;; 						    %(and z (or x (not x)))))))
-;;     (test-by-truth-tables #'identify-tautologies)))
+(define-bool-dual-reductions identify-contradictions identify-tautologies 
+  (operator identity complement expr)
+  :assumes (sort-commutative)
+  :condition (eq operator (fn expr))
+  :action (if (var-and-negation-p (args expr)) complement expr)
+  :order upwards)
+(define-test identify-contradictions
+  (flet ((mung (expr) (p2sexpr (identify-contradictions expr))))
+    (assert-equal 'false (mung %(and x (not x))))
+    (assert-equal '(and x (not y)) (mung %(and x (not y))))
+    (assert-equal '(or z false) (mung %(or z (and x (not x)))))
+    (test-by-truth-tables #'identify-contradictions)))
+(define-test identify-tautologies
+  (flet ((mung (expr) (p2sexpr (identify-tautologies expr))))
+    (assert-equal 'true (mung %(or x (not x))))
+    (assert-equal '(or x (not y)) (mung %(or x (not y))))
+    (assert-equal 'z (p2sexpr (bool-and-identities (identify-tautologies
+						    %(and z (or x (not x)))))))
+    (test-by-truth-tables #'identify-tautologies)))
 
 (define-reduction remove-bool-duplicates (expr)
   :type bool
@@ -176,55 +176,86 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((expr %(and x y z)))
     (assert-eq expr (remove-bool-duplicates expr))))
 
-;; (defun mkclause (expr)
-;;   (if (junctorp expr) (args expr) `(,expr)))
+(defun mkclause (expr)
+  (if (junctorp expr) (args expr) `(,expr)))
 
 ;; ;(or (eq 'not (car x)) (cddr x)) x (cadr x)))
 
-;; (define-reduction remove-superset-clauses (expr)
-;;   :type bool
-;;   :assumes (sort-commutative flatten-associative remove-bool-duplicates
-;; 	    identify-contradictions identify-tautologies
-;; 	    bool-and-identities bool-or-identities)
-;;   :condition (junctorp expr)
-;;   :action 
-;;   (let* ((clause-map (make-array 0 :adjustable t))
+(define-reduction remove-superset-clauses (expr)
+  :type bool
+  :assumes (sort-commutative flatten-associative remove-bool-duplicates
+	    identify-contradictions identify-tautologies
+	    bool-and-identities bool-or-identities)
+  :order upwards
+  :condition (junctorp expr)
+  :action 
+  (let* ((clause-max-length 0)
+	 (clause-length-pairs
+	  (mapcar (lambda (x &aux (c (mkclause x)) (l (1- (length c))))
+		   (setf clause-max-length (max clause-max-length l))
+		   (cons c l))
+		  (args expr)))
+	 (clause-map (make-array (1+ clause-max-length))))
+    (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
+	  clause-length-pairs)
+    (let ((keepers 
+	   (collecting
+	     (mapc (lambda (arg pair)
+		     (when (dotimes (i (cdr pair) t)
+			     (mapc (lambda (smaller) 
+				     (when (includesp (car pair) smaller
+						      #'total-order)
+				       (return)))
+				   (elt clause-map i)))
+		       (collect arg)))
+		   (args expr) clause-length-pairs))))
+      (if (eql (length keepers) (length (args expr)))
+	  expr
+	  (pcons (fn expr) keepers (markup expr))))))
+
+;;     (delete-if (lambda (pair)
+;; 		 (dotimes (i (cdr pair) nil)
+;; 		   (mapc (lambda (smaller-clause)
+;; 			   (when (includesp (car cpair) smaller-clause 
+;; 					    #'total-order)
+;; 			     (return t))
+;; 			   (elt clause-map i)))))
+;; 	       clause-length-pairs)
+;; 		     (collect arg)))
+		 
+    
+    
+      
+      
+      
+;; clause-
+	 
+;; (cons 
+;; 	 (clause-to-len (
+
+;; (clause-map (make-array 0 :adjustable t))
 ;; 	 (cpairs (mapcar (lambda (subexpr)
 ;; 			   (let* ((clause (mkclause subexpr))
 ;; 				  (l (1- (length clause))))
 ;; 			     (when (>= l (length clause-map))
-;; 			       (adjust-array clause-map l))
+;; 			       (adjust-array clause-map (1+ l)))
 ;; 			     (push clause (elt clause-map l))
 ;; 			     (cons clause l)))
-;; 			 (args expr)))
-;; 	 (keepers 
-;; 	  (collecting
-;; 	    (mapc (lambda (arg cpair)
-;; 		    (blockn 
-;; 		     (dotimes (i (cdr cpair))
-;; 		       (mapc (lambda (smaller-clause)
-;; 			       (when (includesp (car cpair) smaller-clause 
-;; 						#'total-order)
-;; 				 (return)))
-;; 			     (elt clause-map i)))
-;; 		     (collect arg)))
-;; 		  (args expr) cpairs))))
-;;     (if (eql (length keepers) (length (args expr)))
-;; 	expr
-;; 	(pcons (fn expr) keepers (markup expr))))
-;;   :order upwards)
+;; 			 (args expr))))
+;;     (print* clause-map cpairs))
 
 
-;; (define-test remove-superset-clauses
-;;   (flet ((assert-reduces-to (target exprs)
-;; 	   (dolist (expr exprs)
-;; 	     (assert-equal target (remove-superset-clauses
-;; 				   (sort-commutative expr))))))
-;;     (assert-reduces-to '(and x z) '((and (or x y) x z)
-;; 				    (and (or x y) x z (or x y) (or x y z))))
-;;     (assert-reduces-to '(or x z) '((or (and x y) x z)
-;; 				   (or (and x y z) x z (and x y) (and x y z))))
-;;     (test-by-truth-tables #'remove-superset-clauses)))
+
+(define-test remove-superset-clauses
+  (flet ((assert-reduces-to (target exprs)
+	   (dolist (expr exprs)
+	     (assert-equal target (p2sexpr (remove-superset-clauses 
+					    (sexpr2p expr)))))))
+    (assert-reduces-to '(and x z) '((and (or x y) x z)
+				    (and (or x y) x z (or x y) (or x y z))))
+    (assert-reduces-to '(or x z) '((or (and x y) x z)
+				   (or (and x y z) x z (and x y) (and x y z))))
+    (test-by-truth-tables #'remove-superset-clauses)))
 
 (defun implications (clause1 clause2)
   (let ((result nil))

@@ -53,22 +53,13 @@ be proper lists. |#
   (and (consp expr) (consp (cddr expr)) (atom (cdddr expr))))
 
 ;;; use these constructors instead of cons/quote
-(defun pcons (fn args &optional markup) (cons (cons fn markup) args))
-(defun sexpr2p (expr) 
-  (cond ((atom expr) expr)
-	((eq (car expr) 'lambda)
-	 (pcons (car expr) (list (cons (list 'list) (cadr expr)) 
-				 (sexpr2p (caddr expr)))))
-	(t (pcons (car expr) (mapcar #'sexpr2p (cdr expr))))))
+(defun pcons (fn args &optional markup) 
+  (cons (cons fn (copy-list markup)) args))
 (defun p2sexpr (expr)
   (cond ((atom expr) expr)
 	((eq (fn expr) 'lambda)
 	 (cons (fn expr) (list (args (arg0 expr)) (p2sexpr (arg1 expr)))))
 	(t (cons (fn expr) (mapcar #'p2sexpr (args expr))))))
-(set-macro-character
- #\% (lambda (stream char)
-       (declare (ignore char))
-       (list 'quote (sexpr2p (read stream t nil t)))) t)
 
 ; destructure expression
 (defmacro dexpr (expr-name (fn args markup) &body body)
@@ -352,5 +343,3 @@ be proper lists. |#
      (defun ,name (expr context type)
        (apply (cdr (assoc (icar type) ,name))
 	      (if (consp type) `(,expr ,context ,type) `(,expr ,context))))))
-
-(defvar *reduction-registry* nil)
