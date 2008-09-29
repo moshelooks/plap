@@ -24,7 +24,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (labels ((and-op (args) (and (peval-cl (car args) context)
 			       (aif (cdr args) (and-op it) t)))
 	   (or-op (args) (or (peval-cl (car args) context)
-			     (aif (cdr args) (and-op it) nil)))
+			     (aif (cdr args) (or-op it) nil)))
 	   (call (op args)
 	     (case op
 	       (and (and-op args))

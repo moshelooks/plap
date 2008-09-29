@@ -176,12 +176,16 @@ be proper lists. |#
 ;;fixme extend to non-boolean, lambda-awareness...
 (defun free-variables (expr)
   (if (consp expr)
-      (case (car expr)
+      (case (fn expr)
 	((and or not) (reduce (bind #'delete-adjacent-duplicates 
 				    (merge 'list /1 /2 #'string<))
-			      (cdr expr)
+			      (args expr)
 			      :key #'free-variables)))
       (list expr)))
+(define-test free-variables
+  (assert-equal '(x y z)
+		(sort (free-variables %(and (or x y) (or (not x) z) y)) 
+		      #'string<)))
 
 (defun fn-args (expr)
   (assert (eqfn expr 'lambda))
