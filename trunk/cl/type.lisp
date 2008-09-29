@@ -247,7 +247,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 ;;; determines the types for the children based on the structure of expr and
 ;;; its type, given the bindings in context
 (defun arg-types (expr context type)
-  (case (fn expr)
+  (acase (fn expr)
     (< (let ((type (reduce #'union-type (args expr)
 			   :key (bind #'expr-type /1 context))))
 	 `(,type ,type)))
@@ -260,8 +260,14 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 				,type))))
     (lambda (assert (eq 'function (car type)))
 	    `((list symbol) ,(caddr type)))
-    (t (assert (closurep (fn expr)) () "can't infer arg types for ~S" expr)
-       (ntimes (arity expr) type)))) ; works for most things
+    (t (if (closurep it) 
+	   (ntimes (arity expr) type)
+	   (let ((fn-type (get-type it context)))
+	     (assert (function-type-p fn-type)
+		     () "can't infer arg types for ~S" expr)
+	     (assert (eql (length (cadr fn-type)) (arity expr))
+		     () "arg length mismatch - ~S vs. ~S" fn-type expr)
+	     (cadr fn-type))))))
 
 ;fixme should typemaps be integrated into contexts?
 

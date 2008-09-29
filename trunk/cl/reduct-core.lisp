@@ -61,11 +61,19 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((expr %(and x y z (or p d q))))
     (assert-eq expr (upwards #'identity 'identity expr nil))))
 
+(defun reduce-range (begin end expr)
+  (if (or (eq begin end) (atom expr)) expr 
+      (reduce-range (cdr begin) end (funcall (car begin) expr))))
+
 (defmacro reduce-from (fn reductions expr)
-  `(reduce (lambda (expr reduction)
-	     (if (atom expr) (return-from ,fn expr) 
-		 (funcall reduction expr)))
-	   ,reductions :initial-value ,expr))
+  `(progn 
+     (mapl (lambda (end)
+	     (setf ,expr (fixed-point (bind #'reduce-range ,reductions end /1)
+				      ,expr))
+	     (setf ,expr (if (atom ,expr) (return-from ,fn ,expr)
+			     (funcall (car end) ,expr))))
+	   ,reductions)
+     ,expr))
 
 (defparameter *reduction-registry* nil)
 (let ((type-to-reductions (make-hash-table))
@@ -166,7 +174,8 @@ Author: madscience@google.com (Moshe Looks) |#
 				       (reduce-from ,name ,assumes-calls expr))
 				     ,expr))
 	    ,order-call)
-	  (register-reduction ',name ,type (lambda (,expr) ,order-call) 
+	  (register-reduction ',name ,type 
+			      (lambda (,expr) (block ,name ,order-call)) 
 			      ',assumes ',obviates))))))
 (define-test reduction-registry
   (assert-equal (remove-duplicates (mapcar #'car *reduction-registry*))
