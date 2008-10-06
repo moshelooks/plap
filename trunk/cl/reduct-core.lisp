@@ -142,6 +142,10 @@ Author: madscience@google.com (Moshe Looks) |#
 	 :roots (mapcar (bind #'gethash /1 names-to-reductions) rule-names))
     assumptions))
 
+;; for convenience
+(defun q-full-reduce (expr) 
+  (full-reduce expr *empty-context* (expr-type expr *empty-context*)))
+
 (defmacro define-reduction (name &rest dr-args)
   (acond
     ((assoc name *reduction-registry*)
