@@ -25,3 +25,11 @@ Author: madscience@google.com (Moshe Looks) |#
  #\% (lambda (stream char)
        (declare (ignore char))
        (list 'quote (sexpr2p (read stream t nil t)))) t)
+(set-macro-character
+ #\~ (lambda (stream char)
+       (declare (ignore char))
+       `(apply #'canonize-from-template
+	       ,(read (make-concatenated-stream (make-string-input-stream "`")
+						stream)
+		      t nil t))) t)
+

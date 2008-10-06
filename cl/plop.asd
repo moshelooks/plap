@@ -17,6 +17,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :cl-user)
 (defpackage :plop-asd
   (:use :cl :asdf :cl-utilities :anaphora))
+(setf *print-circle* t) ; markup may contain circular references to parents
 
 (in-package :plop-asd)
 (defsystem "plop"
@@ -37,7 +38,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "bool")
 	       (:file "num")
 	       (:file "maxima")
-;	       (:file "canonize")
+	       (:file "canonize")
 ;	       (:file "represent")
 ;	       (:file "search")
 	       (:file "tests")))

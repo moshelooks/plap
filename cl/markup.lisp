@@ -16,6 +16,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defconstant simp 'simp) ; for simplified subexpressions
+(defconstant canon 'canon) ; for canonical form subexpressions
 
 (defun markup (expr) (cdar expr))
 
@@ -50,3 +51,22 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun simpp (expr rule)
   (awhen (mark simp expr)
     (find rule it)))
+
+
+(defun canon-expr (cexpr) (car (mark canon cexpr)))
+(defun set-canon-expr (cexpr expr) (rplaca (mark canon cexpr) expr))
+(defsetf canon-expr set-canon-expr)
+
+(defun canon-parent (cexpr) (cdr (mark canon cexpr)))
+(defun set-canon-parent (cexpr expr) (rplacd (mark canon cexpr) expr))
+(defsetf canon-parent set-canon-parent)
+
+;; cons in canonical form
+(defun ccons (fn args expr)
+  (aprog1 (pcons fn args (list canon (ncons expr)))
+    (mapc (lambda (arg) (when (consp arg)
+			  (if (mark canon arg)
+			      (set-canon-parent arg it)
+			      (setf (mark canon arg) (cons arg it)))))
+	  (args it))))
+
