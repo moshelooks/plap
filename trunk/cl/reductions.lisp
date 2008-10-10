@@ -45,6 +45,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		  x y ((or simp (flatten-associative)) q w))
 		(flatten-associative %(and x (and y (or q w))))))
 
+(defun pfuncall-const (fn args)
+  (peval (pcons fn args) *empty-context*)) ;fixme - much faster
+
 (define-reduction eval-const (expr)
   :condition (and (not (matches (fn expr) (list tuple lambda)))
 		  (purep (fn expr)))
@@ -58,13 +61,11 @@ Author: madscience@google.com (Moshe Looks) |#
 		     args)
 	     (if others 
 		 (if constants
-		     (pcons fn 
-			    (cons (peval (pcons fn constants) *empty-context*)
-				  others)
+		     (pcons fn (cons (pfuncall-const fn constants) others)
 			    markup)
 		     expr)
-		 (peval expr *empty-context*))))
-	  ((every #'const-value-p args) (peval expr *empty-context*))
+		 (pfuncall-const fn args))))
+	  ((every #'const-value-p args) (pfuncall-const fn args))
 	  (t expr)))
   :order upwards)
 (define-test eval-const
@@ -75,4 +76,11 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal '((foo simp (eval-const)) 1 2 x 42)
 		(eval-const %(foo 1 2 x (+ 2 40))))
   (assert-equal '((+ simp (eval-const)) 1 x) 
-		(eval-const %(+ 1 -2 x 2))))
+		(eval-const %(+ 1 -2 x 2)))
+  (assert-equal '((list simp (eval-const)) 42)
+		(eval-const %(if true (list 42) nil)))
+  (assert-equal '((list simp (eval-const)) 42 42)
+		(eval-const %(append (list 42) (list 42)))))
+
+;; (if true x y) -> x, (if false x y) -> y
+;;(define-reduction if-identities (expr) fixme - complete
