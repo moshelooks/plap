@@ -310,14 +310,6 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 		     () "arg length mismatch - ~S vs. ~S" fn-type expr)
 	     (cadr fn-type))))))
 
-;fixme should typemaps be integrated into contexts?
-
-;;; a typemap is a hashtable of types mapping to hashset of var names
-(defun make-type-map () (make-hash-table))
-(defun init-type-map (contents)
-  (init-hash-table (mapcar (bind #'list (car /1) (init-hash-set (cadr /1)))
-			   contents)))
-
 (defun default-value (type)
   (ecase (icar type)
     (bool false)

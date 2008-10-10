@@ -18,7 +18,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun sexpr2p (expr) 
   (cond ((atom expr) expr)
 	((eq (car expr) 'lambda)
-	 (cons (cons (car expr) nil) (list (cadr expr)
+	 (cons (cons (car expr) nil) (list (apply #'vector (cadr expr))
 					   (sexpr2p (caddr expr)))))
 	((consp (car expr)) expr)
 	(t (cons (cons (car expr) nil) (mapcar #'sexpr2p (cdr expr))))))
@@ -33,4 +33,3 @@ Author: madscience@google.com (Moshe Looks) |#
 	       ,(read (make-concatenated-stream (make-string-input-stream "`")
 						stream)
 		      t nil t))) t)
-
