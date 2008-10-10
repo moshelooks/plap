@@ -84,10 +84,10 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun iota (n) (loop for i from 0 to (- n 1) collect i))
 (defun sort-copy (l cmp) (sort (copy-seq l) cmp))
 
-;;; interleave copies of elem between elements of l, with elem iteself as
+;;; interleave (copies of) elem between elements of l, with elem itself as
 ;;; the last element
-(defun interleave (elem l)
-  (reduce (lambda (x sofar) (cons (copy-tree elem) (cons x sofar)))
+(defun interleave (elem l &optional (copier #'identity))
+  (reduce (lambda (x sofar) (cons (funcall copier elem) (cons x sofar)))
 	  l :from-end t :initial-value (ncons elem)))
 
 (defmacro bind-collectors (collectors collectors-body &body body)
@@ -414,3 +414,13 @@ Author: madscience@google.com (Moshe Looks) |#
 		(mesh '(5 5) '(0 0) '(1.0 1.0))))
 
 (defun rplac (dst src) (rplaca dst (car src)) (rplacd dst (cdr src)))
+
+(defun pad (list length &optional value &aux (list-length (length list)))
+  (if (<= length list-length) 
+      list
+      (append list (ntimes (- length list-length) value))))
+(define-test pad
+  (assert-equal '(a b c) (pad '(a b c) 2))
+  (assert-equal '(a b c) (pad '(a b c) 3))
+  (assert-equal '(a b c nil nil) (pad '(a b c) 5))
+  (assert-equal '(a b c z z) (pad '(a b c) 5 'z)))

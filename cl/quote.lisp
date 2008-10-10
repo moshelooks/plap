@@ -18,8 +18,9 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun sexpr2p (expr) 
   (cond ((atom expr) expr)
 	((eq (car expr) 'lambda)
-	 (cons (cons (car expr) nil) (list (cons (list 'list) (cadr expr)) 
+	 (cons (cons (car expr) nil) (list (cadr expr)
 					   (sexpr2p (caddr expr)))))
+	((consp (car expr)) expr)
 	(t (cons (cons (car expr) nil) (mapcar #'sexpr2p (cdr expr))))))
 (set-macro-character
  #\% (lambda (stream char)

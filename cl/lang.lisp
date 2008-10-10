@@ -171,7 +171,7 @@ be proper lists. |#
 
 ;;; closure in the gp sense - all args are of same type as output
 (defun closurep (x)
-  (matches x (and or not + * - / exp log sin)))
+  (matches x (and or not + * - / exp log sin append)))
 
 ;;fixme extend to non-boolean, lambda-awareness...
 (defun free-variables (expr)
@@ -214,6 +214,7 @@ be proper lists. |#
 	(lambda (with-nil-bound-symbols context (fn-args expr)
 		  (const-expr-p (fn-body expr) context))))))
 (define-test const-value-p
+  (print* 'xxx *empty-context*)
   (assert-false (const-value-p 'x))
   (assert-true (const-value-p 42))
   (assert-true (const-value-p %(lambda (x) (+ x 1))))

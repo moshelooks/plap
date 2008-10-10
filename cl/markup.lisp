@@ -61,7 +61,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun set-canon-parent (cexpr expr) (rplacd (mark canon cexpr) expr))
 (defsetf canon-parent set-canon-parent)
 
-;; cons in canonical form
+;; cons in canonical form - doesn't work for lambdas
 (defun ccons (fn args expr)
   (aprog1 (pcons fn args (list canon (ncons expr)))
     (mapc (lambda (arg) (when (consp arg)
@@ -70,3 +70,10 @@ Author: madscience@google.com (Moshe Looks) |#
 			      (setf (mark canon arg) (cons arg it)))))
 	  (args it))))
 
+(defun ccons-lambda (body expr)
+  (aprog1 (pcons 'lambda (list (fn-args expr) body) (list canon (ncons expr)))
+    (mapc (lambda (arg) (when (consp arg)
+			  (if (mark canon arg)
+			      (set-canon-parent arg it)
+			      (setf (mark canon arg) (cons arg it)))))
+	  (args it))))
