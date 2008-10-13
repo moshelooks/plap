@@ -118,15 +118,22 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (mapcar #'reductions (next-most-general-types type)))
 		      :key #'copy-list :initial-value nil))))
   (defun full-reduce (expr context type &aux (reductions (reductions type)))
-    (labels ((reduce-subtypes (expr)
-	       (cond ((atom expr) expr)
-		     ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
-		     (t (mapargs-with-types (bind #'type-check /1 /2) expr 
-					    (arg-types expr context type)))))
-	     (type-check (subexpr subexpr-type)
-	       (if (or (atom subexpr) (isa subexpr-type type))
-		   subexpr
-		   (full-reduce subexpr context subexpr-type))))
+    (labels
+	((reduce-subtypes (expr)
+	   (cond ((atom expr) expr)
+		 ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
+		 ((eq 'lambda (fn expr)) 
+		  (with-bound-symbol-types context (fn-args expr) (cadr type)
+		    (let ((res (full-reduce (fn-body expr) context 
+					    (caddr type))))
+		      (if (eq res (fn-body expr)) expr 
+			  (mklambda (fn-args expr) res (markup expr))))))
+		 (t (mapargs-with-types (bind #'type-check /1 /2) expr 
+					(arg-types expr context type)))))
+	 (type-check (subexpr subexpr-type)
+	   (if (or (atom subexpr) (isa subexpr-type type))
+	       subexpr
+	       (full-reduce subexpr context subexpr-type))))
       (fixed-point (lambda (expr)
 		     (reduce-subtypes (reduce-from full-reduce 
 						   reductions expr)))

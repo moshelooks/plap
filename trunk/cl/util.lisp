@@ -109,25 +109,25 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;; to be empty, returns the value di. If no lists are empty, then fn is called
 ;;; with argument list (first1 rest1 first2 rest2 ... firstN restN), where 
 ;;; firsti is (car li) and resti is (cdr li)
-(defun split (lists defaults fn &aux (listmap (make-hash-table)))
-  (bind-collectors (cars cdrs)
-      (mapc (lambda (list default)
-	      (aif (and list (mvbind (v exists) (gethash list listmap)
-			       (if exists v list)))
-		   (progn (cars (car it))
-			  (cdrs (setf (gethash list listmap) (cdr it))))
-		   (return-from split default)))
-	    lists defaults)
-    (apply fn (nconc cars cdrs))))
-(define-test split
-  (let ((x '(1 2 3))
-	(y '(a b c))
-	(z '(q)))
-    (assert-equal '(1 a 2 3 b (2 3) (b c) (3) nil (c))
-		  (split (list x y x x y) '(nil nil nil nil nil)
-			 (lambda (&rest args) args)))
-    (assert-equal 42 (split (list x y z z x) '(nil nil nil 42 nil)
-			    (lambda (&rest args) args)))))
+;; (defun split (lists defaults fn &aux (listmap (make-hash-table)))
+;;   (bind-collectors (cars cdrs)
+;;       (mapc (lambda (list default)
+;; 	      (aif (and list (mvbind (v exists) (gethash list listmap)
+;; 			       (if exists v list)))
+;; 		   (progn (cars (car it))
+;; 			  (cdrs (setf (gethash list listmap) (cdr it))))
+;; 		   (return-from split default)))
+;; 	    lists defaults)
+;;     (apply fn (nconc cars cdrs))))
+;; (define-test split
+;;   (let ((x '(1 2 3))
+;; 	(y '(a b c))
+;; 	(z '(q)))
+;;     (assert-equal '(1 a 2 3 b (2 3) (b c) (3) nil (c))
+;; 		  (split (list x y x x y) '(nil nil nil nil nil)
+;; 			 (lambda (&rest args) args)))
+;;     (assert-equal 42 (split (list x y z z x) '(nil nil nil 42 nil)
+;; 			    (lambda (&rest args) args)))))
 
 ;;; generalized argument-binding construct
 (defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9
@@ -251,7 +251,6 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-equal '(1 2 3 4 9) l2)
     (assert-eq l2 (nondestructive-sort l2 #'<))))
 
-
 (defun copy-range (l r) ; this is modern C++ - maybe there's a more lispy way?
   (cond 
     ((eq l r) nil)
@@ -298,7 +297,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun maphash-keys (fn table)
   (maphash (bind fn /1) table))
 (defun hash-table-empty-p (table) ;;could be faster
-  (eql (hash-table-size table) 0))
+  (eql (hash-table-count table) 0))
 (defun keys-to-list (table)
   (collecting (maphash-keys (collector) table)))
 

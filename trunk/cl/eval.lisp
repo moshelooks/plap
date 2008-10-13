@@ -18,68 +18,79 @@ Author: madscience@google.com (Moshe Looks) |#
 (defconstant *largest-exp-arg* 80.0)
 (defconstant *smallest-log-arg* 0.0001)
 
-;;; peval-cl behaves like peval, only bools evaluate to t/nil instead
-;;; of true/false, and doesn't do error handling
-(defun peval-cl (expr context)
-  (labels ((and-op (args) (and (peval-cl (car args) context)
-			       (aif (cdr args) (and-op it) t)))
-	   (or-op (args) (or (peval-cl (car args) context)
-			     (aif (cdr args) (or-op it) nil)))
-	   (call (op args)
-	     (case op
-	       (and (and-op args))
-	       (or (or (not args) (or-op args)))
-	       (not (not (peval-cl (car args) context)))
+(macrolet 
+    ((eval-with (eval-name others &body body)
+       `(let ((eval-fn ,eval-name))
+	  (labels ((and-op (args) (and (funcall eval-fn (car args))
+				       (aif (cdr args) (and-op it) t)))
+		   (or-op (args) (or (funcall eval-fn (car args))
+				     (aif (cdr args) (or-op it) nil)))
+		   (call (op args)
+		     (case op
+		       (and (and-op args))
+		       (or (or (not args) (or-op args)))
+		       (not (not (funcall eval-fn (car args))))
 
-	       (+ (reduce #'+ args :key (bind #'peval-cl /1 context)))
-	       (* (reduce #'* args :key (bind #'peval-cl /1 context)))
-	       (exp (let ((result (peval-cl (car args) context)))
-		      (if (> result *largest-exp-arg*)
-			  (throw 'nan 'nan)
-			  (exp result))))
-	       (log (let ((arg (abs (peval-cl (car args) context))))
-		      (if (< arg *smallest-log-arg*) 
-			  (throw 'nan 'nan)
-			  (log arg))))
-	       (sin (sin (peval-cl (car args) context)))
+		       (+ (reduce #'+ args :key eval-fn))
+		       (* (reduce #'* args :key eval-fn))
+		       (exp (let ((result (funcall eval-fn (car args))))
+			      (if (> result *largest-exp-arg*)
+				  (throw 'nan 'nan)
+				  (exp result))))
+		       (log (let ((arg (abs (funcall eval-fn (car args)))))
+			      (if (< arg *smallest-log-arg*) 
+				  (throw 'nan 'nan)
+				  (log arg))))
+		       (sin (sin (funcall eval-fn (car args))))
+
+		       (tuple (apply #'vector args))
 	       
-	       (if (peval-cl (if (peval-cl (car args) context) 
-				 (cadr args)
-				 (caddr args))
-			     context))
+		       (if (funcall eval-fn (if (funcall eval-fn (car args))
+					      (cadr args)
+					      (caddr args))))
 
-	       (list (pcons 'list (mapcar (bind #'peval-cl /1 context) args)))
-	       (append (pcons 'list 
-			      (reduce #'append args :key 
-				      (compose #'cdr 
-					       (bind #'peval-cl /1 context)))))
-
-	       (t (apply op ;(symbol-function op) 
-			 (mapcar (bind #'peval-cl /1 context) args))))))
-    (cond ((consp expr) (call (fn expr) (args expr)))
-	  ((symbolp expr) (case expr 
-			    (true t)
-			    (false nil)
-			    (nan 'nan)
-			    (nil nil)
-			    (t (acase (get-value expr context)
-				 (true t)
-				 (false nil)
-				 (t it)))))
-	  (t expr))))
-
-(defun peval (expr &optional (context *empty-context*) type)
-;  (print* 'pev expr)
-  (handler-case 
-      (catch 'nan 
-	(return-from peval
-	  (aif (peval-cl expr context)
-	       (if (eq it t) 'true it)
-	       (if (eq (or type (expr-type expr context)) bool) 'false))))
-    (system::simple-floating-point-overflow ())
-    (system::simple-arithmetic-error ())
-    (division-by-zero ()))
-  'nan)
+		       ,@others)))
+	    ,@body)))
+     (with-error-handling (name result type)
+       `(progn
+	  (handler-case 
+	      (catch 'nan 
+		(return-from ,name
+		  (aif ,result
+		       (if (eq it t) 'true it)
+		       (when (eq ,type bool)
+			 'false))))
+	    (system::simple-floating-point-overflow ())
+	    (system::simple-arithmetic-error ())
+	    (division-by-zero ()))
+	  'nan)))
+  ;;; peval-cl behaves like peval, only bools evaluate to t/nil instead
+  ;;; of true/false, and doesn't do error handling
+  (defun peval-cl (expr context)
+    (eval-with (bind #'peval-cl /1 context)
+	       ((list (mapcar eval-fn args))
+		(append (apply #'nconc (mapcar eval-fn args)))
+		(lambda expr)
+		(t (apply op (mapcar eval-fn args))))
+	       (cond ((consp expr) (call (fn expr) (args expr)))
+		     ((symbolp expr) (case expr 
+				       (true t)
+				       (false nil)
+				       (nan 'nan)
+				       (nil nil)
+				       (t (acase (get-value expr context)
+						 (true t)
+						 (false nil)
+						 (t it)))))
+		     (t expr))))
+  (defun pfuncall (fn args)
+    (eval-with (lambda (value) (unless (eq value 'false) value))
+	       ((list args) (t (apply fn args)))
+	       (with-error-handling pfuncall (call fn args) 
+				    (funcall-type fn args))))
+  (defun peval (expr &optional (context *empty-context*) type)
+    (with-error-handling peval (peval-cl expr context)
+			 (or type (expr-type expr context)))))
 (define-all-equal-test peval
     (list (list false (list %(and true false)
 			    %(or false false)
@@ -87,9 +98,9 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (list 4 (list %(+ 1 1 1 1) 
 			%(* 2 2)))))
 
-(defun pfuncall (fn context &rest args)
-  (assert (eq (fn fn) 'lambda))
-  (with-bound-symbols context (fn-args fn) args
-    (peval (fn-body fn) context)))
+;; (defun pfuncall (fn context &rest args)
+;;   (assert (eq (fn fn) 'lambda))
+;;   (with-bound-symbols context (fn-args fn) args
+;;     (peval (fn-body fn) context)))
 (defun papply (fn context &rest args)
   (apply #'apply #'pfuncall fn context args)) ;just beautiful...

@@ -70,3 +70,17 @@ get rid of make-normal form, just use make-reduction and have a normal form tag
 / prereqs
 
 constantly
+
+
+;;   (let ((exprs (randremove 0.9 (enum-trees *enum-trees-test-symbols* 2))))
+;;     (block enumerative-test
+;;       (flet ((opp (x) (case x
+;; 			(less 'greater)
+;; 			(greater 'less)
+;; 		      (nil nil))))
+;; 	(dolist (expr1 exprs)
+;; 	  (dolist (expr2 exprs)
+;; 	    (unless (assert-equal (total-cmp expr1 expr2)
+;; 				  (opp (total-cmp expr2 expr1))
+;; 				  expr1 expr2)
+;; 	      (return-from enumerative-test nil)))))))) fixme
