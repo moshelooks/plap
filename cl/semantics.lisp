@@ -12,76 +12,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Author: madscience@google.com (Moshe Looks)
+Author: madscience@google.com (Moshe Looks) 
 
-This defines the basic language used to represent evolved programs.
-
-Expressions in plop are either lisp atoms or function applications. Function
-applications are ((fn . markup) . args) where args are the arguments to the
-function fn, and markup is arbitrary metadata. Note that args and markup must
-be proper lists. |#
+This defines various basic semantic operations for the language used to
+represent evolved programs. |#
 (in-package :plop)
 
-;;; for convenice - the plop language uses these instead of t and nil
+;;; for convenice - the language uses these instead of t and nil
 (defvar true 'true)
 (defvar false 'false)
-
-;;; use these accessors and predicates instead of car/cdr & friends
-(defun fn (expr) (caar expr))
-(defun ifn (expr) (if (consp expr) (fn expr) expr))
-(defun afn (expr) (and (consp expr) (fn expr)))
-(defun set-fn (expr v) (setf (caar expr) v))
-(defsetf fn set-fn)
-
-(defun args (expr) (cdr expr))
-(defun set-args (expr v) (setf (cdr expr) v))
-(defsetf args set-args)
-
-(defun arg0 (expr) (second expr))
-(defun arg1 (expr) (third expr))
-(defun arg2 (expr) (fourth expr))
-(defun arg3 (expr) (fifth expr))
-(defun arg4 (expr) (sixth expr))
-(defun arg5 (expr) (seventh expr))
-(defun arg6 (expr) (eighth expr))
-(defun arg7 (expr) (ninth expr))
-(defun arg8 (expr) (tenth expr))
-
-(defun unary-expr-p (expr) 
-  (and (consp expr) (consp (cdr expr)) (atom (cddr expr))))
-(defun binary-expr-p (expr) 
-  (and (consp expr) (consp (cddr expr)) (atom (cdddr expr))))
-
-;;; use these constructors instead of cons/quote
-(defun pcons (fn args &optional markup) 
-  (cons (cons fn (copy-list markup)) args))
-(defun p2sexpr (expr)
-  (cond ((atom expr) expr)
-	((eq (fn expr) 'lambda)
-	 (cons (fn expr) (list (args (arg0 expr)) (p2sexpr (arg1 expr)))))
-	(t (cons (fn expr) (mapcar #'p2sexpr (args expr))))))
-
-; destructure expression
-(defmacro dexpr (expr-name (fn args markup) &body body)
-  `(let ((,fn (fn ,expr-name))
-	 (,args (args ,expr-name))
-	 (,markup (markup ,expr-name)))
-     ,@body))
-
-(defun eqfn (expr fn) (and (consp expr) (eq (fn expr) fn)))
-
-;;; use to test equality sans markup
-(defun pequal (expr1 expr2)
-  (if (atom expr1) 
-      (and (atom expr2) (eql expr1 expr2))
-      (and (consp expr2)
-	   (eq (fn expr1) (fn expr2))
-	   (let ((a1 (args expr1)) (a2 (args expr2)))
-	     (when (eql (length a1) (length a2))
-	       (mapc (lambda (sub1 sub2) (unless (pequal sub1 sub2)
-					   (return-from pequal)))
-		     a1 a2)
-	       t)))))
 
 ;; a total ordering on all plop expressions
 ;; returns less, nil, or greater, with the important property that (not symbol)
@@ -138,19 +77,7 @@ be proper lists. |#
    (assert-equal `(a ,%(not a) b ,%(not b) c)
 		 (sort-copy `(,%(not a) ,%(not b) c b a) #'total-order)))
 
-;;   (let ((exprs (randremove 0.9 (enum-trees *enum-trees-test-symbols* 2))))
-;;     (block enumerative-test
-;;       (flet ((opp (x) (case x
-;; 			(less 'greater)
-;; 			(greater 'less)
-;; 		      (nil nil))))
-;; 	(dolist (expr1 exprs)
-;; 	  (dolist (expr2 exprs)
-;; 	    (unless (assert-equal (total-cmp expr1 expr2)
-;; 				  (opp (total-cmp expr2 expr1))
-;; 				  expr1 expr2)
-;; 	      (return-from enumerative-test nil)))))))) fixme
-
+;;; properties of functions
 (defun commutativep (x)
   (matches x (and or * +)))
 (defun associativep (x)
@@ -163,18 +90,34 @@ be proper lists. |#
     (or 'false)
     (* 1)
     (+ 0)))
-
-;;; for now there are not side-effects - these will be introduced soon
-(defun purep (x)
+(defun purep (x) ; for now no side-effects - these will be introduced soon
   (declare (ignore x))
   t)
-
-;;; closure in the gp sense - all args are of same type as output
-(defun closurep (x)
+(defun closurep (x) ; gp closure - all args are of same type as the output
   (matches x (and or not + * - / exp log sin append)))
 
-;;fixme extend to non-boolean, lambda-awareness...
-(defun free-variables (expr)
+;;; properties of expressions
+(defun junctorp (expr) (matches (afn expr) (and or)))
+(defun literalp (expr)
+  (if (consp expr)
+      (and (eq (fn expr) 'not) (not (consp (arg0 expr))))
+      (not (matches expr (true false)))))
+(defun pequal (expr1 expr2) ;;; tests equality sans markup
+  (if (atom expr1) 
+      (and (atom expr2) (eql expr1 expr2))
+      (and (consp expr2)
+	   (eq (fn expr1) (fn expr2))
+	   (let ((a1 (args expr1)) (a2 (args expr2)))
+	     (when (eql (length a1) (length a2))
+	       (mapc (lambda (sub1 sub2) (unless (pequal sub1 sub2)
+					   (return-from pequal)))
+		     a1 a2)
+	       t)))))
+(defun expr-size (expr)
+  (if (atom expr) 1 
+      (reduce #'+ (args expr) :key #'expr-size :initial-value 1)))
+(defun arity (expr) (length (args expr)))
+(defun free-variables (expr) ;;fixme extend to non-boolean, lambda-awareness...
   (if (consp expr)
       (case (fn expr)
 	((and or not) (reduce (bind #'delete-adjacent-duplicates 
@@ -186,14 +129,11 @@ be proper lists. |#
   (assert-equal '(x y z)
 		(sort (free-variables %(and (or x y) (or (not x) z) y)) 
 		      #'string<)))
+(defun lambdap (value) 
+  (and (consp value) (consp (car value)) (eq (caar value) 'lambda)))
+(defun tuple-value-p (expr) (arrayp expr))
 
-(defun fn-args (expr)
-  (assert (eqfn expr 'lambda))
-  (arg0 expr))
-(defun fn-body (expr)
-  (assert (eqfn expr 'lambda))
-  (arg1 expr))
-
+;;; constness
 (defun const-atom-p (x &optional (context *empty-context*))
   (and (atom x) (or (not (symbolp x)) 
 		    (matches x (true false nan nil)) 
@@ -202,19 +142,16 @@ be proper lists. |#
 (defun const-expr-p (expr &optional (context *empty-context*))
   (cond ((atom expr) (const-atom-p expr context))
 	((eq (fn expr) 'lambda)
-	 (with-bound-symbols context (fn-args expr) (fn-args expr)
+	 (with-nil-bound-symbols context (fn-args expr)
 	   (const-expr-p (fn-body expr) context)))
 	(t (every (bind #'const-expr-p /1 context) (args expr)))))
-
 (defun const-value-p (expr &optional (context *empty-context*))
-  (if (atom expr) 
-      (const-atom-p expr context)
-      (case (fn expr)
-	((list tuple) (every (bind #'const-value-p /1 context) (args expr)))
-	(lambda (with-nil-bound-symbols context (fn-args expr)
-		  (const-expr-p (fn-body expr) context))))))
+  (cond
+    ((atom expr) (const-atom-p expr context))
+    ((eq (fn expr) 'lambda) (with-nil-bound-symbols context (fn-args expr)
+			      (const-expr-p (fn-body expr) context)))
+    ((purep (fn expr)) (every (bind #'const-value-p /1 context) (args expr)))))
 (define-test const-value-p
-  (print* 'xxx *empty-context*)
   (assert-false (const-value-p 'x))
   (assert-true (const-value-p 42))
   (assert-true (const-value-p %(lambda (x) (+ x 1))))
@@ -222,19 +159,19 @@ be proper lists. |#
   (assert-true (const-value-p %(list 1 2 3)))
   (assert-false (const-value-p %(list 1 2 x 3))))
 
-(defun expr-size (expr)
-  (if (atom expr) 1 
-      (reduce #'+ (args expr) :key #'expr-size :initial-value 1)))
-(defun arity (expr) (length (args expr)))
+;;; converting values to expressions (like quote)
+(defun value-to-expr (value)
+  (cond ((and (consp value) (not (lambdap value))) (pcons 'list value))
+	((tuple-value-p value) (pcons 'tuple (coerce value 'list)))
+	(t value)))
 
-(defun junctorp (expr) (matches (afn expr) (and or)))
-(defun literalp (expr)
-  (if (consp expr)
-      (and (eq (fn expr) 'not) (not (consp (arg0 expr))))
-      (not (matches expr (true false)))))
-
-;;; decompositions of expressions by contents
-(macrolet
+;;; breaking apart expressions
+(defmacro dexpr (expr-name (fn args markup) &body body) ;;; destructure expr
+  `(let ((,fn (fn ,expr-name))
+	 (,args (args ,expr-name))
+	 (,markup (markup ,expr-name)))
+     ,@body))
+(macrolet ;;; decompositions of expressions by contents
     ((mkdecomposer (name &body conditions)
        `(defmacro ,name (expr &body clauses)
 	  `(cond ,@(mapcar (lambda (clause)
@@ -340,6 +277,8 @@ be proper lists. |#
 	   0 nil nil
 	   0 nil nil)))
 
+;;; macro-writing macro for defining functions as sets of toplevel forms,
+;;; each one acting on a different type
 (defmacro defdefbytype (defname name)
   `(progn 
      (defvar ,name nil)

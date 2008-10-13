@@ -65,6 +65,9 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;; actually be empty
 (defparameter *empty-context* (make-context))
 
+(defun context-empty-p (context) 
+  (hash-table-empty-p (context-symbol-bindings context)))
+
 (defmacro with-bound-symbols (context symbols values &body body)
   `(unwind-protect
 	(progn (mapc (bind #'bind-symbol ,context /1 /2) ,symbols ,values)
@@ -76,3 +79,9 @@ Author: madscience@google.com (Moshe Looks) |#
 	(progn (mapc (bind #'bind-symbol ,context /1 nil) ,symbols)
 	       ,@body)
      (mapc (bind #'unbind-symbol ,context /1) ,symbols)))
+
+(defmacro with-bound-symbol-types (context symbols types &body body)
+  `(unwind-protect
+	(progn (mapc (bind #'bind-type ,context /1 /2) ,symbols ,types)
+	       ,@body)
+     (mapc (bind #'unbind-type ,context /1) ,symbols)))

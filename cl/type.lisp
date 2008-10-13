@@ -23,18 +23,20 @@ types are as follows:
  * (list type)
  * (tuple type1 type2 type3 .... typeN) with N>1
  * (function (arg-type1 arg-type2 ... arg-typeN) result-type) with N>=0
+ * lambda-list
  * (enum name) where name may be any symbol
  * (act-result name) where name may be any symbol
  * t
 Note that the type nil corresponds to the empty set (no values), whereas t 
 corresponds to the universal set (all values). The type of nil is (list nil).
-|# 
 
-;;;todo (maybe): add symbol, atom(?) types
+as of 10/10/08, enum and act-result types are not yet implemented
+|# 
 
 ;;; for convenience
 (defvar bool 'bool)
 (defvar num 'num)
+(defvar lambda-list 'lambda-list)
 
 (defun list-type-p (type) (eq (acar type) 'list))
 (defun tuple-type-p (type) (eq (acar type) 'tuple))
@@ -191,15 +193,6 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 	((list-type-p type) (aif (next-most-general-types (cadr type))
 				 (mapcar (lambda (x) (list 'list x)) it)
 				 (list t)))
-	((function-type-p type) (assert nil))
-;; 	 (mapcar (bind #'cons 'function /1)
-;; 		 (nconc
-;; 		  (mapcar (bind #'list /1 (caddr type))
-;; 			  (apply #'cartesian-prod 
-;; 				 (mapcar #'next-most-specific-types 
-;; 					 (cadr type))))
-;; 		  (mapcar (bind #'list (cadr type) /1)
-;; 			  (next-most-general-types (caddr type))))))
 	(t (assert nil))))
 (define-test next-most-general-types
   (assert-equal '(t) (next-most-general-types 'bool))
@@ -212,45 +205,32 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 		  (tuple (tuple bool bool) num t))
 		(next-most-general-types '(tuple (tuple bool bool) num bool))))
 
-;; (defun next-most-specific-types (type)
-;;   (assert (not (eq type t)))
-;;   (cond ((atom type) (when type (list nil)))
-;; 	((tuple-type-p type)
-;; 	 (or (mapcon (lambda (xs &aux (tmp (car xs)))
-;; 		       (prog1 (mapcar (lambda (x)
-;; 					(rplaca xs x)
-;; 					(copy-list type))
-;; 				      (next-most-general-types tmp))
-;; 			 (rplaca xs tmp)))
-;; 		     (cdr type))
-;; 	     (list t)))
-;; 	((list-type-p type) (aif (next-most-general-types (cadr type))
-;; 				 (mapcar (lambda (x) (list 'list x)) it)
-;; 				 (list t)))
-;; 	((function-type-p type)
-;; 	 (mapcar (bind #'cons 'function /1)
-;; 		 (nconc
-;; 		  (mapcar (bind #'list /1 (caddr type))
-;; 			  (apply #'cartesian-prod 
-;; 				 (mapcar #'next-most-general-types 
-;; 					 (cadr type))))
-;; 		  (mapcar (bind #'list (cadr type) /1)
-;; 			  (next-most-specific-types (caddr type))))))
-;; 	(t (assert nil))))
-
-;; look in svn for function-type code
-
-(defun atom-type (x) ; returns nil iff no type found
+(defun lookup-atom-type (x) ; returns nil iff no type found
   (cond ((or (eq x true) (eq x false)) bool)
 	((numberp x) num)
+	((lambda-list-p x) lambda-list)
 	((null x) '(list nil))))
+(defun atom-type (x) ; error if no type found
+  (assert (lookup-atom-type x) () "no type found for atom ~S" x)
+  (lookup-atom-type x))
 
-(defun value-type (expr) ; returns nil iff no type found
-  (cond ;fixme
-    ((consp expr) `(list ,(reduce #'union-type (args expr) :key #'value-type)))
-    ((arrayp expr) `(tuple ,@(map 'list #'value-type expr)))
-    (t (atom-type expr))))
+(defun lookup-lambda-type (args body)
+  (when (emptyp args) `(function () ,(expr-type body))))
+(defun lambda-type (args body)
+  (assert (lookup-lambda-type args body) 
+	  () "no type found for lambda ~S ~S" args body)
+  (lookup-lambda-type args body))
 
+(defun lookup-value-type (value) ; returns nil iff no type found
+  (cond
+    ((lambdap value) (lookup-lambda-type (arg0 value) (arg1 value)))
+    ((consp value) `(list ,(reduce #'union-type value :key #'value-type)))
+    ((arrayp value) `(tuple ,@(map 'list #'value-type value)))
+    (t (lookup-atom-type value))))
+(defun value-type (value) ; error if no type found
+  (assert (lookup-value-type value) () "no type found for value ~S" value)
+  (lookup-value-type value))
+  
 (let ((type-finders 
        (init-hash-table
 	`((car ,(lambda (fn args) (cadr (funcall fn (car args)))))
@@ -259,18 +239,26 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 			 `(list ,(reduce #'union-type args :key fn))))
 	  (append ,(lambda (fn args) (reduce #'union-type args :key fn)))
 	  (tuple ,(lambda (fn args) `(tuple ,@(mapcar fn args))))
+	  (lambda ,(lambda (fn args)
+		     (declare (ignore fn))
+		     (lambda-type (car args) (cadr args))))
 	  (if ,(lambda (fn args) (union-type (funcall fn (cadr args))
 					     (funcall fn (caddr args)))))))))
-  (defun expr-type (expr &optional context)
-    (if (consp expr)
-	(case (fn expr)
-	  ((and or not <) bool)
-	  ((+ - * / exp log sin abs) num)
-	  (t (assert (gethash (fn expr) type-finders)
-		     () "can't find a type for fn in ~S" expr)
-	     (funcall (gethash (fn expr) type-finders)
-		      (bind #'expr-type /1 context) (args expr))))
-	(or (atom-type expr) (get-type expr context)))))
+  (flet ((lookup-fn (fn args lookup)
+	   (case fn
+	     ((and or not <) bool)
+	     ((+ - * / exp log sin abs) num)
+	     (t (assert (gethash fn type-finders)
+			() "can't find a type for fn ~S" fn)
+		(funcall (gethash fn type-finders) lookup args)))))
+    (defun funcall-type (fn args) (lookup-fn fn args #'value-type))
+    (defun expr-type (expr &optional context)
+      (if (consp expr)
+	  (lookup-fn (fn expr) (args expr) (bind #'expr-type /1 context))
+	  (or (lookup-atom-type expr) 
+	      (progn (assert (get-type expr context) 
+			     () "can't find a type for expression ~S" expr)
+		     (get-type expr context)))))))
 (define-all-equal-test expr-type
     `((bool (true false ,%(and true false) ,%(not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) ,%(+ 1 2 3) ,%(* (+ 1 0) 3)))
@@ -296,7 +284,7 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 					 (odds (cdr ttype)))
 				,type))))
     (lambda (assert (eq 'function (car type)))
-	    `((list symbol) ,(caddr type)))
+	    `(lambda-list ,(caddr type)))
     (tuple (assert (eql (length (cdr type)) (arity expr)) 
 		   () "tuple length type mismatch - ~S for ~S" type expr)
 	   (cdr type))
@@ -310,12 +298,11 @@ corresponds to the universal set (all values). The type of nil is (list nil).
 		     () "arg length mismatch - ~S vs. ~S" fn-type expr)
 	     (cadr fn-type))))))
 
-(defun default-value (type)
+(defun default-expr (type)
   (ecase (icar type)
     (bool false)
     (num 0)
-    (tuple (cons 'tuple (mapcar #'default-value (cdr type))))
-    (function (assert nil));`(lambda ,(
+    (tuple (cons 'tuple (mapcar #'default-expr (cdr type))))
     (list nil)))
 
 (defun genname (type)

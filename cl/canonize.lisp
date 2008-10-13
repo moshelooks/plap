@@ -44,18 +44,21 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun qcanonize (expr) ;;;useful for testing
   (canonize expr *empty-context* (expr-type expr *empty-context*)))
 ;;useful for testing; returns an unmarked version of the expr
-(defun validate-canonized (cexpr &optional (type (expr-type cexpr)) parent)
+(defun validate-canonized (cexpr &optional
+			   (type (expr-type cexpr)) context parent)
   (assert-true (consp cexpr))
   (assert-true (mark canon cexpr))
-  (assert-equalp (p2sexpr (full-reduce cexpr *empty-context* type)) 
+;  (print* 'zzz cexpr type)
+  (assert-equalp (p2sexpr (full-reduce cexpr context type))
 		 (p2sexpr (canon-expr cexpr))
-		 cexpr)
+ 		 cexpr)
   (assert-eq parent (canon-parent cexpr))
   (mapc (lambda (arg type) (unless (atom arg) 
-			     (validate-canonized arg type cexpr)))
+			     (validate-canonized arg type context cexpr)))
 	(args cexpr) (arg-types cexpr *empty-context* type)))
-(defun validate-canonize (target expr &optional (type (expr-type expr)))
-;  (validate-canonized expr type)
+(defun validate-canonize (target expr &optional 
+			  (type (expr-type expr)) (context *empty-context*))
+  (validate-canonized expr type context)
   (assert-equal (if (consp (acar target)) (p2sexpr target) target)
 		(p2sexpr expr)))
 
@@ -183,10 +186,11 @@ Author: madscience@google.com (Moshe Looks) |#
 			    (and (< (+ 2 ,@add-blocks ,mult-block) 
 				    (+ 0 ,@add-blocks ,mult-block
 				       (* 1 ,@(cddr mult-block) (+ 0 x))))))
-		       (qcanonize %(< 2 x)))
+		       (canonize %(< 2 x) (init-context '((x 0))) bool)
+		       bool (init-context '((x 0))))
     (validate-canonize `(+ 0 ,@add-blocks ,mult-block
 			   (* 1 ,@(cddr mult-block) (+ 0 x)))
-		       (canonize 'x *empty-context* 'num))
+		       (canonize 'x *empty-context* num))
     (validate-canonize 
      `(+ 0 ,@add-blocks ,mult-block
 	 (* 1 (+ 1 ,exp-block) (+ 1 ,log-block)
@@ -265,7 +269,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (interleave elem (mapcar #'sub-structure list) #'copy-canon)
 	   expr)))
 (defcanonizer list (expr context type &aux (subtype (cadr type))
-		    (default (default-value subtype)))
+		    (default (default-expr subtype)))
   (structure-list expr 
 		  (decompose-list expr (append (args expr)) (t (list expr)))
 		  ~((if false (list ,(canonize default context subtype)) nil)
@@ -278,76 +282,59 @@ Author: madscience@google.com (Moshe Looks) |#
 			      (if false (list ,(p2sexpr (qcanonize 0))) nil))
 		(qcanonize %(list 42))))
 
-(defcanonizer function (expr context type)
-  (ccons 
-   'lambda
-   (let ((rez (dbind (arg-types return-type) (cdr type)
-     (decompose-function expr
-       (lambda
-	(dbind (arg-names body) (args expr)
-	  ; first, bind arg names to their types in the context
-	 (print* 'wtf context arg-names body)
-	  (mapcar (bind #'bind-type context /1 /2) arg-names arg-types)
-	 (print* 'wtf2 context)
-	  (prog1
-	      (list arg-names		; now build the body of the lambda
-		    (if (find-if #'list-type-p arg-types)
-			(cons 'split 
-			      (if (not (eq (acar body) 'split))
-				  `((tuple) (lambda () 
-					      ,(canonize body context 
-							 return-type)))
-				  (dbind (tuple function) (cdr body)
-				    (dbind (ttype ftype)
-					(arg-types body context return-type)
-				      `(,(canonize tuple context ttype)
-					,(canonize function context ftype))))))
-			(canonize body context return-type)))
-	    (print* 'yyy context)
-	    (mapcar (bind #'unbind-type context /1) arg-names)
-(print* 'zzz context))))
-       (t (let ((arg-names (mapcar #'genname arg-types)))
-	    (assert (not (consp expr)))
-	    (list arg-names 
-		  (let ((subexpr (cons expr
-				       (mapcar (bind #'canonize /1 context /2)
-					       arg-names arg-types))))
-		    (if arg-names
-			(nsubst subexpr (car arg-names)
-				(canonize (car arg-names) 
-					  context return-type))
-			subexpr)))))))))
-(print* 'rez rez) rez)
-
-
-   expr))
-
+(defcanonizer function (expr context type &aux arg-names body)
+  (dbind (arg-types return-type) (cdr type)
+    (if (lambdap expr)
+	(setf arg-names (fn-args expr)
+	      body (fn-body expr))
+	(setf arg-names (mapcar #'genname arg-types)
+	      body (pcons expr arg-names)))
+    (with-bound-symbol-types context arg-names arg-types
+      (ccons-lambda 
+       arg-names
+       (if (find-if #'list-type-p arg-types)
+	   (ccons 'split 
+		  (if (eq (afn body) 'split)
+		      (mapcar (bind #'canonize /1 context /2)
+			      (args body) (arg-types body context return-type))
+		      (list (canonize %(tuple) *empty-context* '(tuple))
+			    (ccons-lambda 
+			     nil (canonize body context return-type)
+			     (mklambda nil body))))
+		  body)
+	   (canonize body context return-type))
+       expr))))
 (define-test canonize-function
+  (validate-canonize '(lambda () (and (or) (or)))
+		     (canonize %(lambda () true) *empty-context* 
+			       '(function () bool)))
   (validate-canonize '(lambda (x) (or (and) (and (not x))))
 		     (canonize %(lambda (x) (not x)) *empty-context*
 			       '(function (bool) bool))
-		     '(function (bool) bool)))
-;;   (validate-canonize '(lambda (l x) (split (tuple) (lambda () 
-;; 						     (or (and) (and x)))))
-;; 		     (canonize %(lambda (l x) x) *empty-context*
-;; 			       '(function ((list bool) bool) bool))))
+		     '(function (bool) bool))
+  (validate-canonize '(lambda (l x) (split (tuple) (lambda () 
+						     (or (and) (and x)))))
+		     (canonize %(lambda (l x) x) *empty-context*
+			       '(function ((list bool) bool) bool))
+		     '(function ((list bool) bool) bool))
 
-;;   (validate-canonize `(lambda (first rest)
-;; 			(split (tuple) (lambda ()
-;; 					 (or (and) (and (or) (or first)
-;; 							(or x))))))
-;; 		     (canonize '(lambda (first rest) (and first x))
-;; 			       *empty-context* '(function (bool (list bool))
-;; 						 bool)))
-;;   (validate-canonize `(lambda (l x)
-;; 	(split (tuple ,(canonize 'l *empty-context* '(list bool))
-;; 				      (and (or) (or)))
-;; 			       (lambda (first rest)
-;; 				 (split (tuple) (lambda ()
-;; 				  (or (and) (and (or) (or first)
-;; 								 (or x))))))))
-;; 		     (canonize '(lambda (l x)
-;; 				 (split (tuple l true)
-;; 				  (lambda (first rest) (and first x))))
-;; 			       *empty-context* '(function ((list bool) bool)
-;; 						 bool))))
+  (validate-canonize `(lambda (first rest)
+			(split (tuple) (lambda ()
+					 (or (and) (and (or) (or first)
+							(or x))))))
+		     (canonize %(lambda (first rest) (and first x))
+			       *empty-context* 
+			       '(function (bool (list bool)) bool))
+		     '(function (bool (list bool)) bool))
+  (validate-canonize 
+   `(lambda (l x)
+      (split (tuple ,(canonize 'l *empty-context* '(list bool))
+		    (and (or) (or)))
+	     (lambda (first rest)
+	       (split (tuple) (lambda ()
+				(or (and) (and (or) (or first)
+					       (or x))))))))
+   (canonize %(lambda (l x) (split (tuple l true) 
+				   (lambda (first rest) (and first x))))
+	     *empty-context* '(function ((list bool) bool) bool))
+   '(function ((list bool) bool) bool)))

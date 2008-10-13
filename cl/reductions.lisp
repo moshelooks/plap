@@ -45,29 +45,26 @@ Author: madscience@google.com (Moshe Looks) |#
 		  x y ((or simp (flatten-associative)) q w))
 		(flatten-associative %(and x (and y (or q w))))))
 
-(defun pfuncall-const (fn args)
-  (peval (pcons fn args) *empty-context*)) ;fixme - much faster
-
 (define-reduction eval-const (expr)
-  :condition (and (not (matches (fn expr) (list tuple lambda)))
-		  (purep (fn expr)))
-  :action
-  (dexpr expr (fn args markup)
-    (cond ((and (identityp fn) (unary-expr-p expr)) (arg0 expr))
-	  ((commutativep fn)
-	   (bind-collectors (constants others)
-	       (mapc (lambda (arg) 
-		       (if (const-value-p arg) (constants arg) (others arg)))
-		     args)
-	     (if others 
-		 (if constants
-		     (pcons fn (cons (pfuncall-const fn constants) others)
-			    markup)
-		     expr)
-		 (pfuncall-const fn args))))
-	  ((every #'const-value-p args) (pfuncall-const fn args))
-	  (t expr)))
-  :order upwards)
+  :condition (and (purep expr)
+		  (or (const-expr-p expr)
+		      (and (commutativep (fn expr))
+			   (member-if #'const-expr-p (args expr)))))
+  :action 
+  (if (eq it t) 
+      (value-to-expr (peval expr))
+      (bind-collectors (constants others)
+	  (progn (constants (car it))
+		 (mapc (lambda (arg) 
+			 (if (const-expr-p arg) (constants arg) (others arg)))
+		       (cdr it)))
+	(setf others (nconc (copy-range (args expr) it) others))
+	(assert others)
+	(pcons (fn expr)
+	       (cons (value-to-expr (peval (pcons (fn expr) constants))) 
+		     others)
+	       (markup expr))))
+  :order downwards)
 (define-test eval-const
   (assert-equal 42 (eval-const %(+ 1 (* 1 41))))
   (assert-equal '((+ simp (eval-const)) 3 x ((* simp (eval-const)) 41 x))
