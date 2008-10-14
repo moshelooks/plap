@@ -105,9 +105,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (if (eqfn expr 'lambda)
       (dbind (arg-names body) (args expr)
 	(dbind (arg-types return-type) (cdr type)
-	  (mapc (bind #'bind-type context /1 /2) arg-names arg-types)
-	  (map-knobs fn body context return-type)
-	  (mapc (bind #'unbind-type context /1) arg-names)))
+	  (with-bound-types context arg-names arg-types
+	    (map-knobs fn body context return-type))))
       (progn (mapc fn (knobs-at expr context type))
 	     (when (consp expr)
 	       (mapc (bind #'map-knobs fn /1 context /2)

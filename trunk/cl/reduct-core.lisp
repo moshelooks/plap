@@ -123,7 +123,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (cond ((atom expr) expr)
 		 ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
 		 ((eq 'lambda (fn expr)) 
-		  (with-bound-symbol-types context (fn-args expr) (cadr type)
+		  (with-bound-types context (fn-args expr) (cadr type)
 		    (let ((res (full-reduce (fn-body expr) context 
 					    (caddr type))))
 		      (if (eq res (fn-body expr)) expr 

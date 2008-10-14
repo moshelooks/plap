@@ -38,6 +38,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "bool")
 	       (:file "num")
 	       (:file "maxima")
+	       (:file "list")
 	       (:file "canonize")
 ;	       (:file "represent")
 ;	       (:file "search")

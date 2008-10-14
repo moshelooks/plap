@@ -77,7 +77,7 @@ constantly
 ;;       (flet ((opp (x) (case x
 ;; 			(less 'greater)
 ;; 			(greater 'less)
-;; 		      (nil nil))))
+;; 		      ((nil) nil))))
 ;; 	(dolist (expr1 exprs)
 ;; 	  (dolist (expr2 exprs)
 ;; 	    (unless (assert-equal (total-cmp expr1 expr2)
