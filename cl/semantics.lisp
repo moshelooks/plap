@@ -137,18 +137,18 @@ represent evolved programs. |#
 (defun const-atom-p (x &optional (context *empty-context*))
   (and (atom x) (or (not (symbolp x)) 
 		    (matches x (true false nan nil)) 
-		    (bound-in-p x context))))
+		    (valuedp x context))))
 
 (defun const-expr-p (expr &optional (context *empty-context*))
   (cond ((atom expr) (const-atom-p expr context))
 	((eq (fn expr) 'lambda)
-	 (with-nil-bound-symbols context (fn-args expr)
+	 (with-nil-bound-values context (fn-args expr)
 	   (const-expr-p (fn-body expr) context)))
 	(t (every (bind #'const-expr-p /1 context) (args expr)))))
 (defun const-value-p (expr &optional (context *empty-context*))
   (cond
     ((atom expr) (const-atom-p expr context))
-    ((eq (fn expr) 'lambda) (with-nil-bound-symbols context (fn-args expr)
+    ((eq (fn expr) 'lambda) (with-nil-bound-values context (fn-args expr)
 			      (const-expr-p (fn-body expr) context)))
     ((purep (fn expr)) (every (bind #'const-value-p /1 context) (args expr)))))
 (define-test const-value-p

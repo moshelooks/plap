@@ -103,31 +103,28 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun evens (l)
   (odds (cdr l)))
 
-;;; (split (vector l1 d1 l2 d2 ... lN dN) fn)
+;;; (split fn (vector l1 d1) (vector l2 d2) ... (vector lN dN))
 ;;; li are lists, fn is a function of 2N arguments
 ;;; Sequentially tests lists l1 ... lN for emptiness - if some list li is found
 ;;; to be empty, returns the value di. If no lists are empty, then fn is called
 ;;; with argument list (first1 rest1 first2 rest2 ... firstN restN), where 
 ;;; firsti is (car li) and resti is (cdr li)
-;; (defun split (lists defaults fn &aux (listmap (make-hash-table)))
-;;   (bind-collectors (cars cdrs)
-;;       (mapc (lambda (list default)
-;; 	      (aif (and list (mvbind (v exists) (gethash list listmap)
-;; 			       (if exists v list)))
-;; 		   (progn (cars (car it))
-;; 			  (cdrs (setf (gethash list listmap) (cdr it))))
-;; 		   (return-from split default)))
-;; 	    lists defaults)
-;;     (apply fn (nconc cars cdrs))))
-;; (define-test split
-;;   (let ((x '(1 2 3))
-;; 	(y '(a b c))
-;; 	(z '(q)))
-;;     (assert-equal '(1 a 2 3 b (2 3) (b c) (3) nil (c))
-;; 		  (split (list x y x x y) '(nil nil nil nil nil)
-;; 			 (lambda (&rest args) args)))
-;;     (assert-equal 42 (split (list x y z z x) '(nil nil nil 42 nil)
-;; 			    (lambda (&rest args) args)))))
+(defun split (fn &rest pairs)
+  (apply fn (mapcan (lambda (pair) (aif (elt pair 0)
+					(list (car it) (cdr it))
+					(return-from split (elt pair 1))))
+		    pairs)))
+(define-test split
+  (assert-equal '(1 (2) x (y))
+		(split (lambda (a b c d) (list a b c d)) 
+		       (vector '(1 2) 3) (vector '(x y) 'z)))
+  (assert-equal '(1 (2 7) x (y a))
+		(split (lambda (a b c d) (list a b c d))
+		       (vector '(1 2 7) 3) (vector '(x y a) 'z)))
+  (assert-equal 'z (split (lambda (a b c d) (values a b c d)) 
+			  (vector '(1 2 7) 3) (vector nil 'z)))
+  (assert-equal 3 (split (lambda (a b c d) (values a b c d))
+			 (vector nil 3) (vector nil 'z))))
 
 ;;; generalized argument-binding construct
 (defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9

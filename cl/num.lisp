@@ -36,7 +36,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	 
 (defun num-table (expr vars table)
   (mapcar (lambda (values)
-	    (with-bound-symbols *empty-context* vars values
+	    (with-bound-values *empty-context* vars values
 	      (peval expr *empty-context*)))
 	  table))
 

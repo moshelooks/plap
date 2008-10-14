@@ -21,12 +21,12 @@ Author: madscience@google.com (Moshe Looks) |#
     (labels ((enum-bindings (vs)
 	       (if vs
 		   (dbind (v &rest vs) vs
-		     (setf (get-value v context) 'true)
+		     (setf (getvalue v context) 'true)
 		     (enum-bindings vs)
-		     (setf (get-value v context) 'false)
+		     (setf (getvalue v context) 'false)
 		     (enum-bindings vs))
 		   (collect (peval-cl expr context)))))
-      (mapc (bind #'bind-symbol context /1 nil 'bool) vs)
+      (mapc (bind #'bind-type /1 context 'bool) vs)
       (enum-bindings vs))))
 (defun truth-table-hamming-distance (tt1 tt2)
   (let ((i 0))
