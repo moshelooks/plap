@@ -18,6 +18,18 @@ Author: madscience@google.com (Moshe Looks) |#
 (defconstant *largest-exp-arg* 80.0)
 (defconstant *smallest-log-arg* 0.0001)
 
+(defun convert-bool-atom (atom) (ecase atom ((t) true) ((nil) false)))
+(labels ((find-mapper (type)
+	   (if (atom type)
+	       (if (eq type bool) #'convert-bool-atom nil)
+	       (when (eq (car type) 'list) 
+		 (awhen (find-mapper (cadr type))
+		   (bind #'mapcar it /1))))))
+  (defun convert-bools (value type-fn)
+    (if (lambdap value) 
+	value
+	(aif (find-mapper (funcall type-fn)) (funcall it value) value))))
+
 (macrolet 
     ((eval-with (eval-name others &body body)
        `(let ((eval-fn ,eval-name))
@@ -51,15 +63,11 @@ Author: madscience@google.com (Moshe Looks) |#
 
 		       ,@others)))
 	    ,@body)))
-     (with-error-handling (name result type)
+     (with-error-handling (name result type-fn)
        `(progn
 	  (handler-case 
 	      (catch 'nan 
-		(return-from ,name
-		  (aif ,result
-		       (if (eq it t) 'true it)
-		       (when (eq ,type bool)
-			 'false))))
+		(return-from ,name (convert-bools ,result ,type-fn)))
 	    (system::simple-floating-point-overflow ())
 	    (system::simple-arithmetic-error ())
 	    (division-by-zero ()))
@@ -90,7 +98,7 @@ Author: madscience@google.com (Moshe Looks) |#
 				    (funcall-type fn args))))
   (defun peval (expr &optional (context *empty-context*) type)
     (with-error-handling peval (peval-cl expr context)
-			 (or type (expr-type expr context)))))
+			 (lambda () (or type (expr-type expr context))))))
 (define-all-equal-test peval
     (list (list false (list %(and true false)
 			    %(or false false)

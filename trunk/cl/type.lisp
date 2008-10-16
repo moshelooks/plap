@@ -214,6 +214,8 @@ as of 10/10/08, enum and act-result types are not yet implemented
   (assert (lookup-atom-type x) () "no type found for atom ~S" x)
   (lookup-atom-type x))
 
+;fixme - it would be nice to do clever type inference to find the arguments
+;types for lambda-exprs, but this isn't strictly needed
 (defun lookup-lambda-type (args body)
   (when (emptyp (lambda-list-argnames args)) `(function () ,(expr-type body))))
 (defun lambda-type (args body)
