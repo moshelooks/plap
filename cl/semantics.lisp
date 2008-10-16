@@ -82,14 +82,14 @@ represent evolved programs. |#
   (matches x (and or * +)))
 (defun associativep (x)
   (matches x (and or * +)))
-(defun identityp (x)
-  (matches x (and or * +)))
-(defun identity-elem (x)
-  (ecase x
-    (and 'true)
-    (or 'false)
-    (* 1)
-    (+ 0)))
+(macrolet ((build-identity-functions (items)
+	     `(progn
+		(defun identityp (x)
+		  (matches x ,(mapcar #'car items)))
+		(defun identity-elem (x)
+		  (ecase x ,@items)))))
+  (build-identity-functions
+   ((and 'true) (or 'false) (* 1) (+ 0) (append nil))))
 (defun purep (x) ; for now no side-effects - these will be introduced soon
   (declare (ignore x))
   t)

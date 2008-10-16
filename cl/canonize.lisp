@@ -28,6 +28,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;; cons with args in canonical form
 (defun canonize-args (expr context type)
+;  (print* 'ca expr context type)
   (if (atom expr) expr
       (ccons (fn expr)
 	     (mapcar (bind #'canonize /1 context /2)
@@ -48,7 +49,6 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (type (expr-type cexpr)) context parent)
   (assert-true (consp cexpr))
   (assert-true (mark canon cexpr))
-;  (print* 'zzz cexpr type)
   (assert-equalp (p2sexpr (full-reduce cexpr context type))
 		 (p2sexpr (canon-expr cexpr))
  		 cexpr)
@@ -64,7 +64,8 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (type (expr-type expr)) (context *empty-context*))
   (validate-canonized expr type context)
   (assert-equal (if (consp (acar target)) (p2sexpr target) target)
-		(p2sexpr expr)))
+		(p2sexpr expr)
+		target expr))
 
 (defun structure-bool (op args context &aux (dual (bool-dual op)))
   (flet ((substructure (expr)
@@ -165,7 +166,7 @@ Author: madscience@google.com (Moshe Looks) |#
       (mvbind (o ws ts) (funcall splitter expr)
 	(funcall builder expr o ws ts t)))))
 
-(define-test canonize-numeric
+(define-test canonize-num
   (let* ((exp-block '(* 0 (exp (+ 0
 				(* 0 (exp (+ 0)))
 				(* 0 (log (+ 1)))
@@ -221,32 +222,32 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (+ 1 ,@add-blocks ,mult-block
 			      (* 1 ,@(cddr mult-block) (+ 0 x))
 			      (* 1 ,@(cddr mult-block) (+ 0 y))))
-		       (qcanonize %(+ 1 x y)))))
-    ;; f is a (function (bool (list bool)) num)
-    ;;fixme- add this back in when functions/lists are redone
-;;     (let ((lhs `(+ 0 ,@add-blocks ,mult-block
-;; 		   (* 1 ,@(cddr mult-block) 
-;; 		      (+ 0 (split 
-;; 			    (tuple ,(canonize 'l *empty-context*
-;; 					      '(list bool))
-;; 				   ,(qcanonize true))
-;; 			    (lambda (? ?)
-;; 			      (+ 0 ,@add-blocks ,mult-block
-;; 				 (* 1 ,@(cddr mult-block) 
-;; 				    (+ 0 (f (or (and) (and ?))
-;; 					    (append 
-;; 					     (if false 
-;; 						 (list (or (and) (and)))
-;; 						 nil)
-;; 					     (if true ? nil)
-;; 					     (if false
-;; 						 (list (or (and) (and)))
-;; 						 nil))))))))))))
-;; 	  (rhs (canonize %(split (tuple l true) f)
-;; 			 (init-context `((l ,%(list true))))
-;; 			 'num)))
-;;       (assert-true (tree-matches lhs rhs) lhs rhs))))
-		   
+		       (qcanonize %(+ 1 x y)))
+    (let ((lhs `(+ 0 ,@add-blocks ,mult-block
+		   (* 1 ,@(cddr mult-block) 
+		      (+ 0 (split 
+			    (lambda (? ?)
+			      (split 
+			       (lambda ()
+				 (+ 0 ,@add-blocks ,mult-block
+				    (* 1 ,@(cddr mult-block) 
+				       (+ 0 (f (or (and) (and ?))
+					       (append 
+						(if false 
+						    (list (or (and) (and)))
+						    nil)
+						(if true ? nil)
+						(if false
+						    (list (or (and) (and)))
+						    nil)))))))))
+			    (tuple ,(p2sexpr (canonize 'l *empty-context*
+						       '(list bool)))
+				   ,(p2sexpr (qcanonize true))))))))
+	  (rhs (p2sexpr
+		(with-bound-types *empty-context* '(l f) 
+		    '((list bool) (function (bool (list bool)) num))
+		  (canonize %(split f (tuple l true)) *empty-context* 'num)))))
+      (assert-true (tree-matches lhs rhs) lhs rhs))))
 
 (defcanonizer tuple (expr context type)
   (decompose-tuple expr
@@ -334,7 +335,7 @@ Author: madscience@google.com (Moshe Looks) |#
       (split (lambda (first rest)
 	       (split (lambda () 
 			(or (and) (and (or) (or first) (or x))))))
-	     (tuple ,(canonize 'l *empty-context* '(list bool))
+	     (tuple ,(p2sexpr (canonize 'l *empty-context* '(list bool)))
 		    (and (or) (or)))))
    (canonize %(lambda (l x) (split (lambda (first rest) (and first x))
 				   (tuple l true)))

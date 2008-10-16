@@ -76,10 +76,11 @@ Author: madscience@google.com (Moshe Looks) |#
      ,expr))
 
 (defparameter *reduction-registry* nil)
-(let ((type-to-reductions (make-hash-table))
+(let ((type-to-reductions (make-hash-table :test 'equal))
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
       (names-to-reductions (make-hash-table)))
+  (defun ttrs () type-to-reductions)
   (defun clear-all-reductions ()
     (mapc #'clrhash (list type-to-reductions
 			  reduction-to-assumes
@@ -100,7 +101,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (reductions type)               ;; then update the type index
     (maphash (lambda (type2 list)   ;; and all subtype indices
 	       (when (isa type2 type)
-		 (setf (gethash type type-to-reductions)
+		 (setf (gethash type2 type-to-reductions)
 		       (dag-order-insert reduction
 					 (delete-if (bind #'member /1 obviates)
 						    list)
@@ -191,7 +192,7 @@ Author: madscience@google.com (Moshe Looks) |#
 				       (reduce-from ,name ,assumes-calls expr))
 				     ,expr))
 	    ,order-call)
-	  (register-reduction ',name ,type 
+	  (register-reduction ',name ',type 
 			      (lambda (,expr) (block ,name ,order-call)) 
 			      ',assumes ',obviates))))))
 (define-test reduction-registry
