@@ -146,6 +146,10 @@ Author: madscience@google.com (Moshe Looks) |#
 			       (fixed-point (lambda (mexpr)
 					      (mung-expts (mreduce mexpr)))
 					    (maxima::simplify mexpr)
+; fixme try various other maxima simplification routines
+;					    (maxima::factor
+;					     (maxima::ratsimp
+;					      (maxima::simplify mexpr)))
 					    :test #'equalp)))
 	       (system::simple-floating-point-overflow ())
 	       (system::simple-arithmetic-error ()))

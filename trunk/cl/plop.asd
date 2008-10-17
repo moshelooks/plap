@@ -40,6 +40,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "maxima")
 	       (:file "list")
 	       (:file "canonize")
-;	       (:file "represent")
-;	       (:file "search")
+	       (:file "represent")
+	       (:file "search")
 	       (:file "tests")))

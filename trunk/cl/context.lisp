@@ -78,18 +78,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		    pair))
 	    (remhash name (context-symbol-bindings context))))))
 
-; (defun get-symbols (type context) ; returns a hashmap where keys are symbols,
-;;   (or (gethash type (context-type-map context)) ; values nil
-;;       (setf (gethash type (context-type-map context)) (make-hash-table))))
-;; (defun bound-in-p (name context) 
-;;   (secondary (gethash name (context-symbol-bindings context))))
-
-;; (defun bind-type (context name type) ;fixme
-;;   (bind-symbol context name nil type))
-;; (defun unbind-type (context name) ;fixme
-;;   (unbind-symbol context name))
-
-
 (defun init-context (bindings &aux (context (make-context)))
   (mapc (bind #'bind-value (car /1) context (cadr /1)) bindings) context)
 
@@ -120,3 +108,19 @@ Author: madscience@google.com (Moshe Looks) |#
 	(progn (mapc (bind #'bind-type /1 ,context /2) ,symbols ,types)
 	       ,@body)
      (mapc (bind #'unbind-symbol /1 ,context) ,symbols)))
+
+
+(define-test symbol-binding
+  (let ((c (make-context)))
+    (flet ((syms (type) (keys-to-list (symbols-with-type type c))))
+      (with-bound-types c '(x y) '(bool num)
+	(assert-equal '(x) (syms bool))
+	(assert-equal '(y) (syms num))
+	(assert-equal nil (syms '(list bool)))
+	(assert-false (context-empty-p c))
+	(with-bound-values c '(y x) '(true 42)
+	  (assert-equal '(y) (syms bool))
+	  (assert-equal '(x) (syms num))
+	  (assert-equal nil (syms '(list bool)))
+	  (assert-false (context-empty-p c))))
+      (assert-true (context-empty-p c)))))
