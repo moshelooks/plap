@@ -109,7 +109,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	       ,@body)
      (mapc (bind #'unbind-symbol /1 ,context) ,symbols)))
 
-
 (define-test symbol-binding
   (let ((c (make-context)))
     (flet ((syms (type) (keys-to-list (symbols-with-type type c))))

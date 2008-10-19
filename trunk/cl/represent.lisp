@@ -15,12 +15,23 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
+(defun mung (expr) ; must be canonized
+  (unless (mark munged expr)
+    (setf (mark munged expr) t)
+    (awhen (canon-parent expr) (mung it))))
+(defun unmung (expr)
+  (unless (some (bind #'mark munged) (args expr))
+    (unmark munged expr)
+    (awhen (canon-parent expr) (unmung it))))
+
 (defun make-replacer-knob (at &rest settings)
-  (apply 
-   #'vector 
-   (cons (let ((original (car at))) (lambda () (rplaca at original)))
-	 (mapcar (lambda (setting) (lambda () (rplaca at setting)))
-		 settings))))
+  (apply #'vector 
+	 (let ((original (car at)))
+	   (lambda () (unmung at) (rplaca at original)))
+	 (mapcar (lambda (setting) 
+		   (lambda () (mung at) (rplaca at setting)))
+		 settings)))
+
 (defun make-inserter-knob (at &rest settings)
   (apply  
    #'vector
@@ -99,25 +110,26 @@ Author: madscience@google.com (Moshe Looks) |#
        (subseq knob 1))
   (funcall (elt knob 0)))
 
-(defknobs bool (expr context)
+(defknobs bool (expr context &aux vars)
   (when (junctorp expr)
-    (collecting
-      (with-bound-types 
-      (let ((tovisit (copy-hash-table (get-symbols 'bool context))))
-	(aif (extract-literal expr)
-	     (remhash (litvariable it) tovisit)
-	     (mapl (lambda (l &aux (at (car l)))
-		     (awhen (extract-literal at)
-		       (assert (junctorp at))
-		       (remhash (litvariable it) tovisit)
-		       (collect (make-replacer-knob 
-				 (cdr at)		 ; a single knob for:
-				 (identity-elem (fn at)) ; 1 rm
-				 (negate it)))))	 ; 2 negate
-		   (args expr)))
-	(maphash-keys (lambda (x)
-			(collect (make-inserter-knob expr x (negate x))))
-		      tovisit)))))
+    (collecting 
+      (aif (extract-literal expr)
+	   (push (litvariable it) vars)
+	   (mapc (lambda (x)
+		   (awhen (extract-literal x)
+		     (assert (and (junctorp x) (singlep (args x))))
+		     (push it vars)
+		     (print* 'xx expr x
+			     (args x) (identity-elem (fn x)) (negate it))
+		     (collect 
+		      (make-replacer-knob (args x)
+					  (bool-dual (identity-elem (fn x)))
+					  (negate it)))))
+		 (args expr))))))
+;;       (with-nil-bound-values context vars ; to prevent vars from being visited
+;; 	(maphash-keys (lambda (x) 
+;; 			(collect (make-inserter-knob expr x (negate x))))
+;; 		      (symbols-with-type bool context))))))
 
 ;; (defknobs num (expr context)
 ;;   (when (ring-op-p expr)
