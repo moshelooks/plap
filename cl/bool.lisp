@@ -125,7 +125,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (test-by-truth-tables #'bool-or-identities))
 
 (defun negate (expr)
-  (if (eq (afn expr) 'not) (arg0 expr) (pcons 'not expr)))
+  (if (eq (afn expr) 'not) (arg0 expr) (pcons 'not (list expr))))
 (defun litvariable (x) (if (consp x) (arg0 x) x))
 (defun negatesp (x y &key (pred #'eq))
   (flet ((check (neg other) 

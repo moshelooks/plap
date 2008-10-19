@@ -25,7 +25,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			     expr context type)))
 (define-test enum-neighbors
   (flet ((test (against expr type vars &optional nocanon &aux tmp)
-	   (setf expr (p2sexpr expr) 
+	   (setf expr (sexpr2p expr) 
 		 expr (if nocanon expr (canonize expr *empty-context* type))
 		 tmp (copy-tree expr))
 	   (with-bound-types *empty-context* vars (ntimes (length vars) type)
