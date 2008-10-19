@@ -117,5 +117,5 @@ Author: madscience@google.com (Moshe Looks) |#
     (defparameter raww-nodiv raw-nodiv-sexprs)))
 ;;     (mapcar (lambda (x) 
 ;; 	      (print* 'foobash x) 
-;; 	      (full-reduce x *empty-context* num))
+;; 	      (reduct x *empty-context* num))
 ;; 	    raw-sexprs)))
