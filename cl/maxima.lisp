@@ -29,8 +29,11 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-reduction maxima-prepare (expr)
     :type num
     :order upwards
-    :action (progn (mapc (lambda (x)
-			   (unless (or (atom x) (simpp x 'maxima-prepare))
+    :action 
+    (progn (mapc (lambda (x)
+		   (when (and (consp x) (or (not (simpp x 'maxima-prepare))
+					    (and (mark canon expr)
+						 (not (mark mung expr)))))
 			     (setf (mark 'maxima::simp x) nil)))
 			 (args expr))
 		   expr)

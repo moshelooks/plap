@@ -118,15 +118,15 @@ Author: madscience@google.com (Moshe Looks) |#
 					       type-to-reductions))
 			  (mapcar #'reductions (next-most-general-types type)))
 		      :key #'copy-list :initial-value nil))))
-  (defun full-reduce (expr context type &aux (reductions (reductions type)))
+  (defun reduct (expr context type &aux (reductions (reductions type)))
     (labels
 	((reduce-subtypes (expr)
 	   (cond ((atom expr) expr)
 		 ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
 		 ((eq 'lambda (fn expr)) 
 		  (with-bound-types context (fn-args expr) (cadr type)
-		    (let ((res (full-reduce (fn-body expr) context 
-					    (caddr type))))
+		    (let ((res (reduct (fn-body expr) context 
+				       (caddr type))))
 		      (if (eq res (fn-body expr)) expr 
 			  (mklambda (fn-args expr) res (markup expr))))))
 		 (t (mapargs-with-types (bind #'type-check /1 /2) expr 
@@ -134,9 +134,9 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (type-check (subexpr subexpr-type)
 	   (if (or (atom subexpr) (isa subexpr-type type))
 	       subexpr
-	       (full-reduce subexpr context subexpr-type))))
+	       (reduct subexpr context subexpr-type))))
       (fixed-point (lambda (expr)
-		     (reduce-subtypes (reduce-from full-reduce 
+		     (reduce-subtypes (reduce-from reduct 
 						   reductions expr)))
 		   expr)))
   (defun reduciblep (expr context type)
@@ -157,8 +157,8 @@ Author: madscience@google.com (Moshe Looks) |#
     assumptions))
 
 ;; for convenience
-(defun q-full-reduce (expr) 
-  (full-reduce expr *empty-context* (expr-type expr *empty-context*)))
+(defun q-reduct (expr) 
+  (reduct expr *empty-context* (expr-type expr *empty-context*)))
 
 (defmacro define-reduction (name &rest dr-args)
   (acond

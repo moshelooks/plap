@@ -16,12 +16,12 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defun mung (expr) ; must be canonized
-  (unless (mark munged expr)
-    (setf (mark munged expr) t)
+  (unless (mark mung expr)
+    (setf (mark mung expr) t)
     (awhen (canon-parent expr) (mung it))))
 (defun unmung (expr)
-  (unless (some (bind #'mark munged) (args expr))
-    (unmark munged expr)
+  (unless (some (bind #'mark mung) (args expr))
+    (unmark mung expr)
     (awhen (canon-parent expr) (unmung it))))
 
 (defun make-replacer-knob (at &rest settings)
@@ -150,7 +150,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; 				   expr)
 ;; 		(declare (ignore o ws))
 ;; 		(mapc (lambda (x)
-;; 			(remhash (full-reduce x *empty-context* num) tovisit))
+;; 			(remhash (reduct x *empty-context* num) tovisit))
 ;; 		      ts))
 ;; 	(maphash-keys (lambda (x)
 ;; 			(let ((e1 (big-epsilon x))

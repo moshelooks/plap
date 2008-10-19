@@ -49,7 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (type (expr-type cexpr)) context parent)
   (assert-true (consp cexpr))
   (assert-true (mark canon cexpr))
-  (assert-equalp (p2sexpr (full-reduce cexpr context type))
+  (assert-equalp (p2sexpr (reduct cexpr context type))
 		 (p2sexpr (canon-expr cexpr))
  		 cexpr)
   (assert-eq parent (canon-parent cexpr))

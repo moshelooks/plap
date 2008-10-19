@@ -17,8 +17,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defconstant simp 'simp) ; for simplified subexpressions
 (defconstant canon 'canon) ; for canonical form subexpressions
-(defconstant munged 'munged) ; for subexpressions that have been destuctively
-			     ; modified, possibly invalidating their markup
+(defconstant mung 'mung) ; for subexpressions that have been destuctively
+		         ; modified, possibly invalidating their markup
 
 (defun markup (expr) (cdar expr))
 
