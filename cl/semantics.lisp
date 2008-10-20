@@ -241,6 +241,11 @@ represent evolved programs. |#
 
 (defun split-sum-of-products (expr) (dual-decompose expr '+ 0 '* 1))
 (defun split-product-of-sums (expr) (dual-decompose expr '* 1 '+ 0))
+(defun split-by-op (expr) 
+  (funcall (ecase (fn expr) 
+	     (+ #'split-sum-of-products)
+	     (* #'split-product-of-sums))
+	   expr))
 
 (define-test dual-decompose
   (flet ((ldass (expr o1 ws1 ts1 o2 ws2 ts2)
