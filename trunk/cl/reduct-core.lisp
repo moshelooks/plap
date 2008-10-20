@@ -135,9 +135,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (if (or (atom subexpr) (isa subexpr-type type))
 	       subexpr
 	       (reduct subexpr context subexpr-type))))
-      (fixed-point (lambda (expr)
-		     (reduce-subtypes (reduce-from reduct 
-						   reductions expr)))
+      (fixed-point (lambda (expr) (reduce-subtypes 
+				   (reduce-from reduct reductions expr)))
 		   expr)))
   (defun reduciblep (expr context type)
     (labels ((subtypesp (expr)
@@ -158,7 +157,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;; for convenience
 (defun q-reduct (expr) 
-  (reduct expr *empty-context* (expr-type expr *empty-context*)))
+  (if (atom expr) expr 
+      (reduct expr *empty-context* (expr-type expr *empty-context*))))
 
 (defmacro define-reduction (name &rest dr-args)
   (acond

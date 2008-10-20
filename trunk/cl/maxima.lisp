@@ -29,11 +29,12 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-reduction maxima-prepare (expr)
     :type num
     :order upwards
-    :action 
-    (progn (mapc (lambda (x)
-		   (when (and (consp x) (or (not (simpp x 'maxima-prepare))
-					    (and (mark canon expr)
-						 (not (mark mung expr)))))
+    :action (progn (mapc (lambda (x)
+                          (unless (or (atom x) (simpp x 'maxima-prepare))
+;;     (progn (mapc (lambda (x)
+;; 		   (when (and (consp x) (or (not (simpp x 'maxima-prepare))
+;; 					    (and (mark canon expr)
+;; 						 (not (mark mung expr)))))
 			     (setf (mark 'maxima::simp x) nil)))
 			 (args expr))
 		   expr)
@@ -165,6 +166,10 @@ Author: madscience@google.com (Moshe Looks) |#
       (if (pequal mexpr reduced)
 	  expr
 	  (from-maxima reduced)))))
+(define-test maxima-reduce
+  (assert-equal '(sin x) (p2sexpr (maxima-reduce %(* 1 (sin (* 1 x))))))
+;  (assert-equal %(sin x) (maxima-reduce %(* 1.0 (sin (* 1.0 x))))))
+  (assert-equal 4.4 (maxima-reduce %(+ 2.0 2.4))))
     
 
 

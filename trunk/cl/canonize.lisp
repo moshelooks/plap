@@ -94,6 +94,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (validate-canonize %(and (or) (or)) (qcanonize true))
   (validate-canonize %(or (and) (and x1))
 		     (canonize 'x1 *empty-context* 'bool))
+  (validate-canonize %(or (and) (and (not x))) (qcanonize %(not x)))
   (validate-canonize %(or (and) (and (or) (or x1) (or (not x4)))) 
 		     (qcanonize %(and x1 (not x4))))
   (validate-canonize %(and (or) (or (and) (and x1) (and (not x4))))
