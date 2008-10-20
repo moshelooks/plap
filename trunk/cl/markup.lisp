@@ -64,7 +64,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defsetf canon-parent set-canon-parent)
 
 (defun canon-clean (cexpr)
-  (cond ((not (canonp cexpr)) cexpr)
+  (cond ((not (canonp cexpr)) (copy-tree cexpr))
 	((mark mung cexpr) (aprog1 (pcons (fn cexpr) 
 					  (mapcar #'canon-clean (args cexpr))
 					  (when (consp (canon-expr cexpr))

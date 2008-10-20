@@ -23,11 +23,21 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun big-epsilon (x)
   (let* ((x (if (numberp x) x 0)))
     (if (eql x 0) 1 (/ (+ 1 (abs x)) 2))))
+(defun numarg-settings (expr context &aux (x (arg0 expr))
+			(e1 (big-epsilon x)) (e2 (little-epsilon x)))
+  (declare (ignore context))
+  (list (+ x e1) (- x e1) (- x e2) (+ x e2)))
+(defun numarg-terms (expr var context &aux 
+		     (e1 (big-epsilon var)) (e2 (little-epsilon var)))
+  (declare (ignore context))
+  (flet ((builder (num &aux (term (pcons '* (list num var))))
+	   (ecase (fn expr) (* (pcons '+ (list 1 term))) (+ term))))
+    (mapcar #'builder (list e1 (- e1) (- e2) e2))))
 
 (defun dual-num-op (f) (ecase f (* '+) (+ '*)))
 
 (defun ring-op-p (expr) ;true if rooted in + or * or and or or
-  (matches (fn expr) (+ * and or)))
+  (matches (ifn expr) (+ * and or)))
 
 ;; (define-reduction reduce-abs (expr)
 ;;   :type num

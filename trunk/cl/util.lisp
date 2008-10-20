@@ -63,6 +63,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro secondary (values)
   `(cadr (multiple-value-list ,values)))
 (define-test secondary (assert-equal (secondary (floor 3.5)) 0.5))
+(defmacro ternary (values)
+  `(caddr (multiple-value-list ,values)))
 
 ;;; list iteration, comparison, manipulation, and construction
 (defun same-length-p (l1 l2)
@@ -291,7 +293,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (maphash (lambda (key value) (setf (gethash key copy) value))
 	     table)
     copy))
-(defun maphash-keys (fn table)
+(defun maphash-keys (fn table) mapcar
   (maphash (bind fn /1) table))
 (defun hash-table-empty-p (table) ;;could be faster
   (eql (hash-table-count table) 0))
