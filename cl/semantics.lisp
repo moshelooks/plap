@@ -60,6 +60,7 @@ represent evolved programs. |#
 		'less)
 	    (elem-cmp l r)))))
 (defun total-order (l r)
+  (print* 'to l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order
    (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))
@@ -124,7 +125,7 @@ represent evolved programs. |#
 				    (merge 'list /1 /2 #'string<))
 			      (args expr)
 			      :key #'free-variables)))
-      (list expr)))
+      (unless (const-atom-p expr) (list expr))))
 (define-test free-variables
   (assert-equal '(x y z)
 		(sort (free-variables %(and (or x y) (or (not x) z) y)) 

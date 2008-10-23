@@ -93,7 +93,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;; remove local variables from the context
 (defun map-knobs (fn expr context type)
   (if (eqfn expr 'lambda)
-      (dbind (arg-names body) (args expr)
+      (dbind (arg-names body) (args expr) ;fimxe -probably not right
 	(dbind (arg-types return-type) (cdr type)
 	  (with-bound-types context arg-names arg-types
 	    (map-knobs fn body context return-type))))
@@ -116,7 +116,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (push (litvariable it) vars)
 	   (mapc (lambda (x)
 		   (awhen (extract-literal x)
-		     (assert (and (junctorp x) (singlep (args x))))
+		     (assert (and (junctorp x) (singlep (args x)))
+			     () "uncanonical expr ~S with arg ~S" expr x)
 		     (push (litvariable it) vars)
 		     (collect 
 		      (make-replacer-knob 
@@ -124,6 +125,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (bool-dual (identity-elem (fn x))) (negate it)))))
 		 (args expr)))
       (with-nil-bound-values context vars ; to prevent vars from being visited
+	(print* 'vars vars (keys-to-list (symbols-with-type bool context)))
 	(maphash-keys (lambda (x) 
 			(collect (make-inserter-knob expr expr x (negate x))))
 		      (symbols-with-type bool context))))))

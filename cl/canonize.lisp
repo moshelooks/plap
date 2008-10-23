@@ -67,28 +67,27 @@ Author: madscience@google.com (Moshe Looks) |#
 		(p2sexpr expr)
 		target expr))
 
-(defun structure-bool (op args context &aux (dual (bool-dual op)))
-  (flet ((substructure (expr)
-	   (ccons op
-		  (decompose-bool expr
-		    (literal (ncons expr))
-		    (junctor (structure-bool dual (args expr) context))
-		    (t (ncons (canonize-args expr context 'bool))))
-		  expr)))
-    (cons (ccons op nil (identity-elem dual)) (mapcar #'substructure args))))
 (defcanonizer bool (expr context &aux 
 		    (op (if (matches (ifn expr) (true or)) 'or 'and))
 		    (dual (bool-dual op)))
-  (ccons dual (list
-	       (ccons op nil (identity-elem dual))
-	       (ccons op (decompose-bool expr
-			   (literal (list (if (atom expr) expr
-					      (ccons 'not (args expr) expr))))
-			   (const nil)
-			   (junctor (structure-bool dual (args expr) context))
-			   (t (list (canonize-args expr context 'bool))))
-		      expr))
-	 expr))
+
+  (labels ((substructure (op expr dual)
+	     (ccons op
+		    (decompose-bool expr
+		      (literal (list (if (atom expr) expr
+					 (ccons 'not (list (arg0 expr))
+						expr))))
+		      (const nil)
+		      (junctor (structure dual (args expr)))
+		      (t (list (canonize-args expr context 'bool))))
+		    expr))
+	   (structure (op args &aux (dual (bool-dual op)))
+	     (cons (ccons op nil (identity-elem dual))
+		   (mapcar (bind #'substructure op /1 dual) args))))
+    (ccons dual 
+	   (list (ccons op nil (identity-elem dual)) 
+		 (substructure op expr dual))
+	   expr)))
 (define-test canonize-bool
   (validate-canonize %(or (and) (and)) (qcanonize false))
   (validate-canonize %(and (or) (or)) (qcanonize true))
@@ -101,7 +100,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		     (qcanonize %(or x1 (not x4))))
   (validate-canonize  
    %(and (or) (or (and) (and x3) (and (or) (or x1) (or x2))))
-   (qcanonize %(or x3 (and x1 x2)))))
+   (qcanonize %(or x3 (and x1 x2))))
+  (validate-canonize
+   %(and (or) (or (and) (and (not x)) (and (or) (or x) (or y))))
+   (qcanonize %(or (not x) (and x y)))))
 
 (defconstant *num-canonical-ops* '(exp log sin))
 (defconstant *num-canonical-offsets* '(0 1 0))

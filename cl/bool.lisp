@@ -224,10 +224,12 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (initial-size (reduce #'+ (args expr) :key 
 			       (lambda (x) (if (atom x) 1 (length x)))))
 	 core-clauses implications)
+    (print* 'gottt expr)
     ;; populate the clause-length-pairs array
     (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
 	  clause-length-pairs)
     ;; populate core-clauses with the clauses which are not supersets of others
+    (print 'zeb)
     (mapc (lambda (pair)
 	    (when (dotimes (i (cdr pair) t)
 		    (mapc (lambda (smaller) 
@@ -254,6 +256,7 @@ Author: madscience@google.com (Moshe Looks) |#
     
     ;; find subclauses that are negated and see if they match non-negated ones,
     ;; generating implications (shinking matching clauses when possible)
+    (print* 'zar expr core-clauses)
     (mapc 
      (lambda (cl)
        (mapc (lambda (subcl &aux (neg (shrink-by-negation subcl)))
@@ -273,7 +276,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		       it)))
 	     cl))
      core-clauses)
-    
+        (print 'zad)
     ;; use implications to delete redundant third clauses
     (mapc (lambda (impl &aux (length (length (car impl))))
 	    (dotimes (i length)

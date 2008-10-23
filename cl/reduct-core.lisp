@@ -156,7 +156,7 @@ Author: madscience@google.com (Moshe Looks) |#
     assumptions))
 
 ;; for convenience
-(defun q-reduct (expr) 
+(defun qreduct (expr) 
   (if (atom expr) expr 
       (reduct expr *empty-context* (expr-type expr *empty-context*))))
 
@@ -174,7 +174,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	     &aux (assumes-calls (gensym)) 
 	     (has-decomp (ecase (length args) (3 t) (1 nil)))
 	     (expr (if has-decomp (gensym) (car args)))
-	     (call-body `(aif ,condition ,action ,expr))
+	     (call-body `(aif ,condition (aprog1 ,action (print* ',name it)) ,expr))
 	     (order-call 
 	      `(,order (lambda (,expr)
 			 ,(if has-decomp 
