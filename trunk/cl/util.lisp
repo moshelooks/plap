@@ -293,7 +293,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (maphash (lambda (key value) (setf (gethash key copy) value))
 	     table)
     copy))
-(defun maphash-keys (fn table) mapcar
+(defun maphash-keys (fn table)
   (maphash (bind fn /1) table))
 (defun hash-table-empty-p (table) ;;could be faster
   (eql (hash-table-count table) 0))
@@ -422,3 +422,17 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal '(a b c) (pad '(a b c) 3))
   (assert-equal '(a b c nil nil) (pad '(a b c) 5))
   (assert-equal '(a b c z z) (pad '(a b c) 5 'z)))
+
+;;; knuth's algorithm s
+(defun random-sample (n items &aux (l (length items)) (m (min n l)) result)
+  (do () ((<= m 0) (nreverse result))
+    (when (< (random l) m)
+      (push (car items) result)
+      (decf m))
+    (decf l)
+    (setf items (cdr items))))
+(define-test random-sample
+  (let* ((count 50) (repeat 500) (items (iota count)) data)
+    (dorepeat repeat 
+      (setf data (nconc (random-sample (/ count 4) items) data)))
+  (dotimes (x count) (assert-true (< (count x data) (* repeat (/ count 3)))))))

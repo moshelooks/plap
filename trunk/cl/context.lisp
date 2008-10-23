@@ -49,6 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun bind-value (name context value &optional (type (value-type value)) &aux
 		    (pair (gethash name (context-symbol-bindings context)))
 		    same-type)
+  (assert type)
   (if pair
       (if (eq type (cadr pair))
 	  (setf same-type t)
@@ -73,8 +74,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	(pop (cdr pair))
 	(if (car pair)
 	    (progn 
-	      (assert (cdr pair))
-	      (setf (gethash name (symbols-with-type (caddr pair) context))
+	      (assert (cadr pair) () "bad pair ~S" pair)
+	      (setf (gethash name (symbols-with-type (cadr pair) context))
 		    pair))
 	    (remhash name (context-symbol-bindings context))))))
 
@@ -108,6 +109,13 @@ Author: madscience@google.com (Moshe Looks) |#
 	(progn (mapc (bind #'bind-type /1 ,context /2) ,symbols ,types)
 	       ,@body)
      (mapc (bind #'unbind-symbol /1 ,context) ,symbols)))
+
+(defmacro with-bound-type (context symbols type &body body)
+  `(unwind-protect
+	(progn (mapc (bind #'bind-type /1 ,context ,type) ,symbols)
+	       ,@body)
+     (mapc (bind #'unbind-symbol /1 ,context) ,symbols)))
+
 
 (define-test symbol-binding
   (let ((c (make-context)))
