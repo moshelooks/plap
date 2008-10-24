@@ -174,16 +174,14 @@ Author: madscience@google.com (Moshe Looks) |#
 	     &aux (assumes-calls (gensym)) 
 	     (has-decomp (ecase (length args) (3 t) (1 nil)))
 	     (expr (if has-decomp (gensym) (car args)))
-	     (call-body `(aif ,condition (aprog1 ,action (print* ',name it)) ,expr))
+	     (call-body (let ((core `(aif ,condition ,action ,expr)))
+			  (if has-decomp `(dexpr ,expr ,args ,core) core)))
+	     (preserves-list (if (eq preserves 'all)
+				 'all
+				 (sort (copy-list preserves) #'string<)))
 	     (order-call 
-	      `(,order (lambda (,expr)
-			 ,(if has-decomp 
-			      `(dexpr ,expr ,args ,call-body)
-			      call-body))
-		       ',name ,expr
-		       ,(if (eq preserves 'all)
-			    ''all
-			    (sort (copy-list preserves) #'string<))))) 
+	      `(,order (lambda (,expr) ,call-body)
+		       ',name ,expr ',preserves-list)))
 	 dr-args
        (assert action () "action key required for a reduction")
        `(let ((,assumes-calls (integrate-assumptions ',assumes)))
