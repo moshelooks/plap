@@ -125,7 +125,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (bool-dual (identity-elem (fn x))) (negate it)))))
 		 (args expr)))
       (with-nil-bound-values context vars ; to prevent vars from being visited
-	(print* 'vars vars (keys-to-list (symbols-with-type bool context)))
 	(maphash-keys (lambda (x) 
 			(collect (make-inserter-knob expr expr x (negate x))))
 		      (symbols-with-type bool context))))))

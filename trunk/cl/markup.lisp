@@ -19,6 +19,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defconstant canon 'canon) ; for canonical form subexpressions
 (defconstant mung 'mung) ; for subexpressions that have been destuctively
 		         ; modified, possibly invalidating their markup
+(defconstant fully-reduced "")
 
 (defun markup (expr) (cdar expr))
 
@@ -52,7 +53,11 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun simpp (expr rule)
   (awhen (mark simp expr)
-    (find rule it)))
+    (or (eq (car it) fully-reduced) (find rule it))))
+(defun fully-reduced-p (expr)   
+  (awhen (mark simp expr) (eq (car it) fully-reduced)))
+(defun exact-simp-p (expr rule)
+  (awhen (mark simp expr) (find rule it)))
 
 (defun canonp (expr) (and (consp expr) (mark canon expr)))
 (defun canon-expr (cexpr) (car (mark canon cexpr)))

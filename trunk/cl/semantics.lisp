@@ -60,7 +60,6 @@ represent evolved programs. |#
 		'less)
 	    (elem-cmp l r)))))
 (defun total-order (l r)
-  (print* 'to l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order
    (assert-equal '(1 2 3) (sort-copy '(3 1 2) #'total-order))

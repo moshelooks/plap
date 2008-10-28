@@ -40,26 +40,36 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-eq expr (mapargs #'identity expr))))
 
 (macrolet ((mkorder (ord-name transformer)
-	     `(defun ,ord-name (rule name expr preserves)
-		(if (and (consp expr) (not (simpp expr name)))
-		    (aprog1 ,transformer
-		      (when (consp it)
-			(when (and (not (eq it expr))
-				   (not (eq 'all preserves)))
-			  (clear-simp it preserves))
-			(mark-simp it name)))		      
-		    expr))))
-  (mkorder apply-to (funcall rule expr))
-  (mkorder upwards (funcall rule (mapargs 
-				  (bind #'upwards rule name /1 preserves)
-				  expr)))
-  (mkorder downwards (mapargs 
-		      (bind #'downwards rule name /1 preserves)
-		      (aprog1 (funcall rule expr)
-			(when (atom it) (return-from downwards it))))))
+	     `(defun ,ord-name (rule name expr preserves cleanup)
+		(fixed-point
+		 (lambda (expr)
+		   (if (and (consp expr) (not (simpp expr name)))
+		       (let ((res ,transformer))
+			 (when (consp res)
+			   (if (eq res expr)
+			       (mark-simp expr name)
+			       (progn (unless (eq 'all preserves) 
+					(clear-simp res preserves))
+				      (mark-simp res name)
+				      (setf res (funcall cleanup res)))))
+			 res)
+		       expr))
+		 expr))))
+  (mkorder apply-to (labels ((rec (x) 
+			       (when (and (consp x) (not (fully-reduced-p x)))
+				 (mapc #'rec (args x))
+				 (mark-simp x name))))
+		      (aprog1 (funcall rule expr) (rec it))))
+  (mkorder upwards (funcall rule (mapargs (bind #'upwards rule name /1
+						preserves cleanup)
+					  expr)))
+  (mkorder downwards (mapargs (bind #'downwards rule name /1 preserves cleanup)
+			      (aprog1 (funcall rule expr)
+				      (when (atom it)
+					(return-from downwards it))))))
 (define-test upwards
   (let ((expr %(and x y z (or p d q))))
-    (assert-eq expr (upwards #'identity 'identity expr nil))))
+    (assert-eq expr (upwards #'identity 'identity expr nil #'identity))))
 
 (defun reduce-range (begin end expr)
   (if (or (eq begin end) (atom expr)) expr 
@@ -80,7 +90,7 @@ Author: madscience@google.com (Moshe Looks) |#
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
       (names-to-reductions (make-hash-table)))
-  (defun ttrs () type-to-reductions)
+  (defun ttrs () type-to-reductions) ; for debugging
   (defun clear-all-reductions ()
     (mapc #'clrhash (list type-to-reductions
 			  reduction-to-assumes
@@ -119,6 +129,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (mapcar #'reductions (next-most-general-types type)))
 		      :key #'copy-list :initial-value nil))))
   (defun reduct (expr context type &aux (reductions (reductions type)))
+    (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
     (labels
 	((reduce-subtypes (expr)
 	   (cond ((atom expr) expr)
@@ -129,15 +140,17 @@ Author: madscience@google.com (Moshe Looks) |#
 				       (caddr type))))
 		      (if (eq res (fn-body expr)) expr 
 			  (mklambda (fn-args expr) res (markup expr))))))
-		 (t (mapargs-with-types (bind #'type-check /1 /2) expr 
-					(arg-types expr context type)))))
-	 (type-check (subexpr subexpr-type)
-	   (if (or (atom subexpr) (isa subexpr-type type))
-	       subexpr
-	       (reduct subexpr context subexpr-type))))
-      (fixed-point (lambda (expr) (reduce-subtypes 
-				   (reduce-from reduct reductions expr)))
-		   expr)))
+		 (t (mapargs-with-types 
+		     (lambda (arg type2)
+		       (if (or (atom arg) (equal type type2)) arg
+			   (reduct arg context type2)))
+		     expr (arg-types expr context type))))))
+      (if (or (atom expr) (eq (car (mark simp expr)) fully-reduced)) expr
+	  (aprog1 (fixed-point (lambda (expr)
+				 (setf expr (reduce-subtypes expr))
+				 (reduce-from reduct reductions expr))
+			       expr)
+		  (push fully-reduced (mark simp it))))))
   (defun reduciblep (expr context type)
     (labels ((subtypesp (expr)
 	       (cond ((atom expr) nil)
@@ -154,6 +167,29 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (bind #'gethash /1 reduction-to-assumes)
 	 :roots (mapcar (bind #'gethash /1 names-to-reductions) rule-names))
     assumptions))
+(define-test reduct
+  (with-bound-types *empty-context* '(f g) 
+      '((function (num num) bool) (function (bool) num))
+    (let* ((expr (copy-tree %(and (f 42 (+ (g (or a b)) m)) (or x y))))
+	   (r (reduct expr *empty-context* bool))
+	   (bool-subexprs (list r (arg0 r) (arg1 r)
+				(arg0 (arg0 (arg1 (arg0 r))))))
+	   (num-subexprs (list (arg1 (arg0 r)) (arg0 (arg1 (arg0 r)))))
+	   (subexprs (append bool-subexprs num-subexprs)))
+	     
+      (assert-equal (p2sexpr expr) (p2sexpr r))
+      (assert-equal expr r)
+      (assert-eq expr r)
+      (assert-for-all (bind #'exact-simp-p /1 'flatten-associative) subexprs)
+      
+      (assert-for-all (bind #'exact-simp-p /1 'push-nots) bool-subexprs)
+      (assert-for-all (bind #'exact-simp-p /1 'sort-commutative) bool-subexprs)
+      (assert-for-none (bind #'exact-simp-p /1 'maxima-reduce) bool-subexprs)
+
+      (assert-for-none (bind #'exact-simp-p /1 'push-nots) num-subexprs)
+      (assert-for-none (bind #'exact-simp-p /1 'sort-commutative) num-subexprs)
+      (assert-for-all (bind #'exact-simp-p /1 'maxima-reduce) num-subexprs))))
+
 
 ;; for convenience
 (defun qreduct (expr) 
@@ -174,14 +210,15 @@ Author: madscience@google.com (Moshe Looks) |#
 	     &aux (assumes-calls (gensym)) 
 	     (has-decomp (ecase (length args) (3 t) (1 nil)))
 	     (expr (if has-decomp (gensym) (car args)))
-	     (call-body (let ((core `(aif ,condition ,action ,expr)))
-			  (if has-decomp `(dexpr ,expr ,args ,core) core)))
-	     (preserves-list (if (eq preserves 'all)
-				 'all
+	     (ccore `(aif ,condition ,action ,expr))
+	     (call-body (if has-decomp `(dexpr ,expr ,args ,ccore) ccore))
+	     (preserves-list (if (eq preserves 'all) 'all
 				 (sort (copy-list preserves) #'string<)))
-	     (order-call 
-	      `(,order (lambda (,expr) ,call-body)
-		       ',name ,expr ',preserves-list)))
+	     (cleanup `(lambda (expr) 
+			 (reduce-from ,name ,assumes-calls expr)))
+						    
+	     (order-call `(,order (lambda (,expr) ,call-body)
+				  ',name ,expr ',preserves-list ,cleanup)))
 	 dr-args
        (assert action () "action key required for a reduction")
        `(let ((,assumes-calls (integrate-assumptions ',assumes)))

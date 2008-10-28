@@ -163,7 +163,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (flet ((mung (expr) (p2sexpr (identify-contradictions expr))))
     (assert-equal 'false (mung %(and x (not x))))
     (assert-equal '(and x (not y)) (mung %(and x (not y))))
-    (assert-equal '(or z false) (mung %(or z (and x (not x)))))
+    (assert-equal '(or false z) (mung %(or (and x (not x)) z)))
     (test-by-truth-tables #'identify-contradictions)))
 (define-test identify-tautologies
   (flet ((mung (expr) (p2sexpr (identify-tautologies expr))))
@@ -187,7 +187,9 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-eq expr (remove-bool-duplicates expr))))
 
 (defun mkclause (expr)
-  (if (junctorp expr) (args expr) `(,expr)))
+  (if (junctorp expr) 
+      (cons (car (args expr)) (cdr (args expr)))
+      (list expr)))
 
 (defun invert (expr) ; note - doesn't touch markup
   (case (afn expr)
@@ -204,6 +206,12 @@ Author: madscience@google.com (Moshe Looks) |#
     (not (arg0 expr))
     (or (invert expr))))
 (defun shrinkable-by-negation-p (expr) (matches (afn expr) (not or)))
+(defun make-impls (cl subcl cl2 neg)
+  (delete-adjacent-duplicates (merge 'list (delete subcl (copy-list cl))
+				     (delete neg (copy-list cl2) :test #'equal)
+				     #'total-order)
+			      :test #'equal))
+(defun clause-size (x) (if (junctorp x) (length (args x)) 1))
 
 (define-reduction reduce-bool-by-clauses (expr)
   :type bool
@@ -221,15 +229,12 @@ Author: madscience@google.com (Moshe Looks) |#
 		  (args expr)))
 	 (clause-map (make-array (1+ clause-max-length)))
 	 (subs-to-clauses (make-hash-table :test 'equal)) ;watch out
-	 (initial-size (reduce #'+ (args expr) :key 
-			       (lambda (x) (if (atom x) 1 (length x)))))
+	 (initial-size (reduce #'+ (args expr) :key #'clause-size))
 	 core-clauses implications)
-    (print* 'gottt expr)
-    ;; populate the clause-length-pairs array
+    ;; populate the clause-map array (clauses indexed by length
     (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
 	  clause-length-pairs)
     ;; populate core-clauses with the clauses which are not supersets of others
-    (print 'zeb)
     (mapc (lambda (pair)
 	    (when (dotimes (i (cdr pair) t)
 		    (mapc (lambda (smaller) 
@@ -247,36 +252,37 @@ Author: madscience@google.com (Moshe Looks) |#
 				    (push it negations)
 				    (push cl (gethash subcl subs-to-clauses))))
 			     cl)
-		       (and (some (lambda (subcl)
-				    (eq cl 
-					(car (gethash subcl subs-to-clauses))))
-				  negations)
-			    (rplaca cl nil)))
+		       (when (some (lambda (subcl)
+				     (eq cl (car (gethash subcl 
+							  subs-to-clauses))))
+				   negations)
+			 (push nil cl)))
 		     core-clauses))
     
-    ;; find subclauses that are negated and see if they match non-negated ones,
-    ;; generating implications (shinking matching clauses when possible)
-    (print* 'zar expr core-clauses)
-    (mapc 
-     (lambda (cl)
-       (mapc (lambda (subcl &aux (neg (shrink-by-negation subcl)))
-	       (awhen (and neg (gethash neg subs-to-clauses))
-		 (mapc (lambda (cl2)
-			 (assert (not (eq cl cl2))) ;should have removed
-			 (when (car cl2) ; tautology/contradictions by now
-			   (let ((impl (merge 'list (remove subcl cl) 
-					      (remove neg cl2 :test #'equal)
-					      #'total-order)))
-			     (push (list impl cl cl2) implications)
-			     (let ((i1 (includesp cl impl #'total-order))
-				   (i2 (includesp cl2 impl #'total-order)))
-			       (when i1 
-				 (rplac cl (if i2 (copy-tree impl) impl)))
-			       (when i2 (rplac it impl))))))
-		       it)))
-	     cl))
-     core-clauses)
-        (print 'zad)
+    ;; find clauses containing negated subclauses and see if they match 
+    ;; any non-negated subclauses of other clauses - when a match is found,
+    ;; use it to generating implications
+    (mapc (lambda (cl)
+	    (mapc (lambda (subcl &aux (neg (shrink-by-negation subcl)))
+		    (awhen (and neg (gethash neg subs-to-clauses))
+		      (mapc (lambda (cl2)
+			      (when (car cl2) ; to avoid using a tautology
+				(push 
+				 (list (make-impls cl subcl cl2 neg) cl cl2)
+				 implications)))
+			    it)))
+		  cl))
+	  core-clauses)
+
+    ;; when possible, shinking matching clauses for any implications found
+    (mapc (lambda (i)
+	    (dbind (impls cl cl2) i
+	      (let ((i1 (includesp cl impls #'total-order))
+		    (i2 (includesp cl2 impls #'total-order)))
+		(when i1 (rplac cl (if i2 (copy-tree impls) impls)))
+		(when i2 (rplac cl2 impls)))))
+	  implications)
+
     ;; use implications to delete redundant third clauses
     (mapc (lambda (impl &aux (length (length (car impl))))
 	    (dotimes (i length)
@@ -302,10 +308,11 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test reduce-bool-by-clauses
   (flet ((assert-reduces-to (target exprs)
 	   (dolist (expr exprs)
-	     (assert-equal target (p2sexpr 
-				   (sort-commutative
-				    (reduce-bool-by-clauses 
-				     (sexpr2p expr))))))))
+	     (let* ((pexpr (sexpr2p expr)))
+	       (assert-equal target (p2sexpr 
+				     (sort-commutative
+				      (reduce-bool-by-clauses pexpr))))
+	       (assert-equal expr (p2sexpr pexpr))))))
     (assert-reduces-to '(and x z) 
 		       '((and (or x y) x z)
 			 (and (or x y) x z (or x y) (or x y z))))
@@ -318,8 +325,20 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-reduces-to '(or y (and (not x) z))
 		       '((or (and x y) (and (not x) z) y)))
     (assert-reduces-to '(or x y) '((or x (and (not x) y))))
-    (assert-reduces-to '(and x y) '((and x (or (not x) y))))    
-			 
+    (assert-reduces-to '(and x y) '((and x (or (not x) y))))
+    (assert-reduces-to '(or (not x) (not y))
+		       '((or (not x) 
+			  (and (or (and (not y) (not x)) (and (not y) x)) 
+			   (not y) x))
+			 (or (not x) 
+			  (and x (not y) (or (and x (not y)) 
+					     (and (not x) (not y)))))))
+    (assert-reduces-to '(or (not x) (and (not y) z))
+		       '((or (not x) (and x (not y) z))))
+    (assert-reduces-to '(or (not x) (and (not y) (f p q)))
+		       '((or (not x) (and x (not y) (f p q)))))
+    (assert-reduces-to true '((or (not x) (not y) (and x y))))
+
     (test-by-truth-tables #'reduce-bool-by-clauses)))
 
 (defun implications (clause1 clause2)
