@@ -15,4 +15,4 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(run-tests)
+;(run-tests)

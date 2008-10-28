@@ -168,9 +168,13 @@ Author: madscience@google.com (Moshe Looks) |#
      (dolist (p ,pairs)
        (dolist (x (cadr p))
 	 (assert-equal (car p) (funcall #',name x) (cadr p))))))
-(defmacro assert-for-all (f l)
+(defmacro assert-for-all (f l &rest args)
   `(mapcar (lambda (x)
-	     (assert-true (funcall ,f x)))
+	     (assert-true (funcall ,f x) x ,@args))
+	   ,l))
+(defmacro assert-for-none (f l &rest args)
+  `(mapcar (lambda (x)
+	     (assert-false (funcall ,f x) x ,@args))
 	   ,l))
 
 ;;; O(1) helpers
@@ -411,7 +415,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		  (0.0 1.0) (0.25 1.0) (0.5 1.0) (0.75 1.0) (1.0 1.0))
 		(mesh '(5 5) '(0 0) '(1.0 1.0))))
 
-(defun rplac (dst src) (rplaca dst (car src)) (rplacd dst (cdr src)))
+(defun rplac (dst src &aux (car (car src)) (cdr (cdr src)))
+  (rplaca dst car)
+  (rplacd dst cdr))
 
 (defun pad (list length &optional value &aux (list-length (length list)))
   (if (<= length list-length) 

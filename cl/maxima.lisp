@@ -120,7 +120,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-reduction maxima-reduce (expr)
   :type num
   :assumes (maxima-prepare)
-  :obviates (eval-const)
+  :obviates (eval-const sort-commutative)
   :action 
   (labels ((mreduce (mexpr) (maxima::simplify (maxima::$float mexpr)))
 	   (mung-expts (mexpr) (mung-helper mexpr) mexpr)

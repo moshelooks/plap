@@ -49,7 +49,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (type (expr-type cexpr)) context parent)
   (assert-true (consp cexpr))
   (assert-true (mark canon cexpr))
-  (assert-equalp (p2sexpr (reduct cexpr context type))
+  (assert-equalp (p2sexpr (reduct (sexpr2p (p2sexpr cexpr)) context type))
 		 (p2sexpr (canon-expr cexpr))
  		 cexpr)
   (assert-eq parent (canon-parent cexpr))
@@ -102,8 +102,8 @@ Author: madscience@google.com (Moshe Looks) |#
    %(and (or) (or (and) (and x3) (and (or) (or x1) (or x2))))
    (qcanonize %(or x3 (and x1 x2))))
   (validate-canonize
-   %(and (or) (or (and) (and (not x)) (and (or) (or x) (or y))))
-   (qcanonize %(or (not x) (and x y)))))
+   %(and (or) (or (and) (and (not z)) (and (or) (or x) (or y))))
+   (qcanonize %(or (not z) (and x y)))))
 
 (defconstant *num-canonical-ops* '(exp log sin))
 (defconstant *num-canonical-offsets* '(0 1 0))
