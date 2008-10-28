@@ -44,7 +44,7 @@ Author: madscience@google.com (Moshe Looks) |#
   `(let ((vars (collecting (dolist (x *enum-exprs-test-symbols*)
 			     (if (and (eql 0 (cdr x)) (not (const-atom-p x)))
 				 (collect (car x)))))))
-     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 2) t)
+     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 4) t)
        (unless (assert-equal (truth-table expr vars)
 			     (truth-table (funcall ,rewrite expr) vars)
 			     expr
@@ -67,9 +67,8 @@ Author: madscience@google.com (Moshe Looks) |#
 			 (pcons 'not (list subexpr)))
 		       (args (arg0 expr)))
 	       (markup expr)))
-    :order downwards)
-;    :preserves (remove-bool-duplicates eval-const bool-and-identities
-;		bool-or-identities)) fixme
+    :order downwards
+    :preserves (remove-bool-duplicates eval-const))
 (define-test push-nots
   (assert-equal  '(and (not x) (not y)) (p2sexpr (push-nots %(not (or x y)))))
   (test-by-truth-tables #'push-nots))
@@ -101,12 +100,6 @@ Author: madscience@google.com (Moshe Looks) |#
 			    (car it)
 			    (pcons (fn expr) it (markup expr)))
 			identity)))
-;; (let ((result (loop for x in (args expr)
-;; 			   if (eq x complement) return (list complement)
-;; 			   unless (eq x identity) collect x)))
-;; 	    (cond ((null result) identity)
-;; 		  ((null (cdr result)) (car result))
-;; 		  (t (pcons (fn expr) result (markup expr)))))
   :order upwards)
 (define-test bool-and-identities
   (assert-equal '(and x y) (p2sexpr (bool-and-identities %(and x true y))))
@@ -190,7 +183,6 @@ Author: madscience@google.com (Moshe Looks) |#
   (if (junctorp expr) 
       (cons (car (args expr)) (cdr (args expr)))
       (list expr)))
-
 (defun invert (expr) ; note - doesn't touch markup
   (case (afn expr)
     (and (pcons 'or (mapcar #'invert (args expr)) (markup expr)))
@@ -200,7 +192,6 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test invert
   (assert-equal %(and x (not y)) (invert %(or (not x) y)))
   (test-by-truth-tables (lambda (expr) (invert (invert expr)))))
-
 (defun shrink-by-negation (expr) 
   (case (afn expr)
     (not (arg0 expr))
@@ -231,6 +222,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (subs-to-clauses (make-hash-table :test 'equal)) ;watch out
 	 (initial-size (reduce #'+ (args expr) :key #'clause-size))
 	 core-clauses implications)
+    (print* 'gott expr)
     ;; populate the clause-map array (clauses indexed by length
     (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
 	  clause-length-pairs)
@@ -296,6 +288,12 @@ Author: madscience@google.com (Moshe Looks) |#
 	  implications)
     (setf core-clauses (delete-if-not #'car core-clauses))
 
+    (print* 'cc core-clauses (pcons (fn expr)
+	       (let ((dual (bool-dual (fn expr))))
+		 (mapcar (lambda (x) (if (singlep x) (car x) (pcons dual x)))
+			 core-clauses))
+	       (markup expr)))
+
     ;; reassemble the expr if core-clauses have shrunk
     (if (eql initial-size (reduce #'+ core-clauses :key #'length))
 	expr
@@ -340,71 +338,6 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-reduces-to true '((or (not x) (not y) (and x y))))
 
     (test-by-truth-tables #'reduce-bool-by-clauses)))
-
-(defun implications (clause1 clause2)
-  (let ((result nil))
-    (dolist (x clause1 result)
-      (dolist (y clause2)
-	(if (negatesp x y)
-	    (let ((implication 
-		   (delete-adjacent-duplicates
-		    (merge 'list (remove x clause1) (remove y clause2) 
-			   #'total-order))))
-	      (unless (var-and-negation-p implication) 
-		(push implication result))))))))
-(define-test implications
-  (assert-equal '((x y)) (implications '(x y ((not) z)) '(x y z)))
-  (assert-equal '((x y)) (implications '(x ((not) z)) '(y z)))
-  (assert-equal nil (implications '(x y ((not) z)) '(x y ((not) z))))
-  (assert-equal nil (implications '(x ((not) y) ((not) z)) '(y z))))
-
-
-;; (define-reduction reduce-or-implications (expr)
-;;   :type bool
-;;   :condition (eq 'or (car expr))
-;;   :action
-;;   (let* ((clauses (mapcar #'mkclause (cdr expr)))
-;; 	 (for-replacement (make-hash-table))
-;; 	 (for-removal
-;; 	  (collecting (map-upper-triangle-pairs
-;; 		       (lambda (c1 c2) 
-;; 			 (mapc (lambda (impl)
-;; 				 (mapc (lambda (c3)
-;; 					 (if (and (not (eq c3 c1)) 
-;; 						  (not (eq c3 c2))
-;; 						  (includesp c3 impl 
-;; 							     #'total-order))
-;; 					     (collect c3)))
-;; 				       clauses)
-;; 				 (flet
-;; 				     ((strict-check (x)
-;; 					(if (strict-includes-p x impl 
-;; 							      #'total-order)
-;; 					    (push impl (gethash 
-;; 							x for-replacement)))))
-;; 				   (strict-check c1)
-;; 				   (strict-check c2)))
-;; 			       (implications c1 c2)))
-;; 		       clauses))))
-;;     (let ((removed (if for-removal 
-;; 		       (cons (car expr) 
-;; 			     (remove-if (lambda (e) 
-;; 					  (find (mkclause e) for-removal
-;; 						:test #'equal))
-;; 					(cdr expr)))
-;; 		       expr)))
-;;       (if (eql 0 (hash-table-count for-replacement)) removed
-;; 	  (mapcar (lambda (e)
-;; 		    (aif (gethash (mkclause e) for-replacement)
-;; 			 (unmkclause (argmin #'expr-size it))
-;; 			 e))
-;; 		  removed))))
-;;   :prerequisites '(remove-superset-clauses)
-;;   :order upwards)
-;; (define-test reduce-or-implications
-;;   (test-by-truth-tables #'reduce-or-implications))
-
-
 
 ;; ;;; if the handle set centered at expr is inconsistent, remove the subtree
 ;; ;;; rooted at expr

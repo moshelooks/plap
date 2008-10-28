@@ -52,6 +52,7 @@ Author: madscience@google.com (Moshe Looks) |#
 					(clear-simp res preserves))
 				      (mark-simp res name)
 				      (setf res (funcall cleanup res)))))
+			 (print* 'rule-is name 'res-is res)
 			 res)
 		       expr))
 		 expr))))
