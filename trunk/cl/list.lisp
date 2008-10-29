@@ -17,7 +17,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (define-reduction split-identities (expr)
   :condition (and (eq (fn expr) 'split) (not (longerp (args expr) 1)))
-  :action (fn-body (arg0 expr)))
+  :action (fn-body (arg0 expr))
+  :order downwards)
 
 (define-reduction append-identities (fn args markup)
   :type (list t)

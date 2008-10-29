@@ -368,8 +368,38 @@ Author: madscience@google.com (Moshe Looks) |#
 		 `(progn ,@body))))
     (rec tags)))
 
-(defun fixed-point (fn x &key (test #'eq) &aux (y (funcall fn x)))
+;;; computes the fixed point (fn (fn (fn ... (fn x)))) under the equality
+;;; condition specified by test
+(defun fixed-point (fn x &key (test #'eql) &aux (y (funcall fn x)))
   (if (funcall test x y) x (fixed-point fn y :test test)))
+
+;;; given fns = (f1 f2 ... fN), calls fns sequentially with the invariant that
+;;; the initial condition of every fi is always a fixed point of fi-1, until
+;;; a fixed point is reached, for example:
+;;;   (cummulative-fixed-point 
+;;;    (list (lambda (x) (format t "(a ~S) " x) 
+;;;                      (if (or (> x 4) (and (> x -2) (< x 2)))  (1- x) x))
+;;;          (lambda (x) (format t "(b ~S) " x) 
+;;;                       (if (> x 2) (1- x) x))
+;;;          (lambda (x) (format t "(c ~S) " x) 
+;;;                      (if (> x 0) (1- x) x)))
+;;;    8)
+;;; gives:
+;;; (a 8) (a 7) (a 6) (a 5) (a 4) (b 4) (a 3) (b 3) (a 2) (b 2) (c 2) (a 1) \
+;;; (a 0) (a -1) (a -2) (b -2) (c -2) 
+;;; -2
+(defun cummulative-fixed-point (fns x &key (test #'eql))
+  (do ((l fns (if (funcall test x (setf x (funcall (car l) x))) (cdr l) fns)))
+      ((not l) x)))
+
+;; (defun cummulative-fixed-point (fns x &key (test #'eql) &aux (begin fns))
+;;   (flet ((call-to (end) (do ((at begin (cdr at))) ((eq at end))
+;; 			    (setf x (funcall (car at) x)))))
+;;     (do ((end (cdr fns)) (prev x x)) ((eq begin end) x)
+;;       (call-to end)
+;;       (if (eq x prev)
+;; 	  (setf begin end end (cdr end))
+;; 	  (setf begin fns)))))
 
 (defun insert-if (pred item list)
   (mapl (lambda (subl)
@@ -442,3 +472,8 @@ Author: madscience@google.com (Moshe Looks) |#
     (dorepeat repeat 
       (setf data (nconc (random-sample (/ count 4) items) data)))
   (dotimes (x count) (assert-true (< (count x data) (* repeat (/ count 3)))))))
+
+(defun atom-else-fn (fn) (lambda (x) (if (atom x) x (funcall fn x))))
+
+(defmacro atom-else (x else &aux (result (gensym)))
+  `(let ((,result ,x)) (if (atom ,result) ,result ,else)))
