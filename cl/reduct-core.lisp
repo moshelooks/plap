@@ -21,7 +21,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (mapl (lambda ,arg-names
 		  (let ((result (funcall fn ,@(mapcar (bind #'list 'car /1)
 						      arg-names))))
-		    (unless (eq result (car args))
+		    (unless (eql result (car args))
 		      (return-from ,name
 			(pcons (fn expr) 
 			       (nconc (copy-range (args expr) args)
@@ -40,13 +40,13 @@ Author: madscience@google.com (Moshe Looks) |#
     (assert-eq expr (mapargs #'identity expr))))
 
 (macrolet ((mkorder (ord-name transformer)
-	     `(defun ,ord-name (rule name expr preserves cleanup)
+	     `(defun ,ord-name (rule name expr preserves cleanup) fixme...
 		(fixed-point
 		 (lambda (expr)
 		   (if (and (consp expr) (not (simpp expr name)))
 		       (let ((res ,transformer))
 			 (when (consp res)
-			   (if (eq res expr)
+			   (if (eql res expr)
 			       (mark-simp expr name)
 			       (progn (unless (eq 'all preserves) 
 					(clear-simp res preserves))
@@ -72,9 +72,15 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((expr %(and x y z (or p d q))))
     (assert-eq expr (upwards #'identity 'identity expr nil #'identity))))
 
+(defun apply-rules (rules expr)
+  (reduce (lambda (x fn) 
+	    (if (atom x) (return-from apply-rules x) (funcall fn x)))
+	  rules :initial-value expr))
+
 (defun reduce-range (begin end expr)
   (if (or (eq begin end) (atom expr)) expr 
       (reduce-range (cdr begin) end (funcall (car begin) expr))))
+
 
 (defmacro reduce-from (fn reductions expr)
   `(progn 
@@ -86,18 +92,11 @@ Author: madscience@google.com (Moshe Looks) |#
 	   ,reductions)
      ,expr))
 
-(defparameter *reduction-registry* nil)
 (let ((type-to-reductions (make-hash-table :test 'equal))
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
       (names-to-reductions (make-hash-table)))
-  (defun ttrs () type-to-reductions) ; for debugging
-  (defun clear-all-reductions ()
-    (mapc #'clrhash (list type-to-reductions
-			  reduction-to-assumes
-			  names-to-reductions))
-    (clrdag dependencies)
-    (setf *reduction-registry* nil))
+
   ;;; important note - register-reduction does not do any handling of markup,
   ;;; which must be created/removed by the reduction function (define-reduction
   ;;; can autogenerate this code
@@ -129,38 +128,6 @@ Author: madscience@google.com (Moshe Looks) |#
 					       type-to-reductions))
 			  (mapcar #'reductions (next-most-general-types type)))
 		      :key #'copy-list :initial-value nil))))
-  (defun reduct (expr context type &aux (reductions (reductions type)))
-    (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
-    (labels
-	((reduce-subtypes (expr)
-	   (cond ((atom expr) expr)
-		 ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
-		 ((eq 'lambda (fn expr)) 
-		  (with-bound-types context (fn-args expr) (cadr type)
-		    (let ((res (reduct (fn-body expr) context 
-				       (caddr type))))
-		      (if (eq res (fn-body expr)) expr 
-			  (mklambda (fn-args expr) res (markup expr))))))
-		 (t (mapargs-with-types 
-		     (lambda (arg type2)
-		       (if (or (atom arg) (equal type type2)) arg
-			   (reduct arg context type2)))
-		     expr (arg-types expr context type))))))
-      (if (or (atom expr) (eq (car (mark simp expr)) fully-reduced)) expr
-	  (aprog1 (fixed-point (lambda (expr)
-				 (setf expr (reduce-subtypes expr))
-				 (reduce-from reduct reductions expr))
-			       expr)
-		  (push fully-reduced (mark simp it))))))
-  (defun reduciblep (expr context type)
-    (labels ((subtypesp (expr)
-	       (cond ((atom expr) nil)
-		     ((closurep (fn expr)) (some #'subtypesp (args expr)))
-		     (t (some (bind #'reduciblep /1 context /2)
-			      (args expr) (arg-types expr context type))))))
-      (or (some (lambda (rule) (not (eq (funcall rule expr) expr)))
-		(reductions type))
-	  (subtypesp expr))))
  ;;; returns the rules and their assumptions, sorted by dependency
   (defun integrate-assumptions (rule-names &aux assumptions)
     (dfs (lambda (rule)
@@ -168,6 +135,26 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (bind #'gethash /1 reduction-to-assumes)
 	 :roots (mapcar (bind #'gethash /1 names-to-reductions) rule-names))
     assumptions))
+
+(defun reduct (expr context type)
+  (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
+  (labels ((reduce-subtypes (expr)
+	     (cond 
+	       ((atom expr) expr)
+	       ((closurep (fn expr)) (mapargs #'reduce-subtypes expr))
+	       ((eq 'lambda (fn expr))
+		(with-bound-types context (fn-args expr) (cadr type)
+		  (let ((body (reduct (fn-body expr) context (caddr type))))
+		    (if (eql body (fn-body expr)) expr 
+			(mklambda (fn-args expr) body (markup expr))))))
+	       (t (mapargs-with-types (lambda (x type2)
+					(if (or (atom x) (equal type type2)) x
+					    (reduct x context type2)))
+				      expr (arg-types expr context type))))))
+    (if (or (atom expr) (eq (car (mark simp expr)) fully-reduced)) expr
+	(aprog1 (cummulative-fixed-point 
+		 (cons #'reduce-subtypes (reductions type)) expr)
+	  (push fully-reduced (mark simp it))))))
 (define-test reduct
   (with-bound-types *empty-context* '(f g) 
       '((function (num num) bool) (function (bool) num))
@@ -191,46 +178,45 @@ Author: madscience@google.com (Moshe Looks) |#
       (assert-for-none (bind #'exact-simp-p /1 'sort-commutative) num-subexprs)
       (assert-for-all (bind #'exact-simp-p /1 'maxima-reduce) num-subexprs))))
 
-
 ;; for convenience
 (defun qreduct (expr) 
   (if (atom expr) expr 
       (reduct expr *empty-context* (expr-type expr *empty-context*))))
 
+(defun reductsp (expr context type)
+  (labels ((subtypesp (expr)
+	     (cond ((atom expr) nil)
+		   ((closurep (fn expr)) (some #'subtypesp (args expr)))
+		   (t (some (bind #'reduciblep /1 context /2)
+			    (args expr) (arg-types expr context type))))))
+    (or (some (lambda (rule) (not (eql (funcall rule expr) expr)))
+	      (reductions type))
+	(subtypesp expr))))
+
 (defmacro define-reduction (name &rest dr-args)
-  (acond
-    ((assoc name *reduction-registry*)
-     (rplacd it dr-args)
-     (prog1 `(progn ,@(mapcar (lambda (args) `(define-reduction ,@args))
-			      (reverse *reduction-registry*)))
-       (clear-all-reductions)))
-    (t
-     (setf *reduction-registry* (acons name dr-args *reduction-registry*))
-     (dbind ((&rest args) &key (type t) assumes obviates (condition t) 
-	     action (order 'apply-to) preserves 
-	     &aux (assumes-calls (gensym)) 
-	     (has-decomp (ecase (length args) (3 t) (1 nil)))
-	     (expr (if has-decomp (gensym) (car args)))
-	     (ccore `(aif ,condition ,action ,expr))
-	     (call-body (if has-decomp `(dexpr ,expr ,args ,ccore) ccore))
-	     (preserves-list (if (eq preserves 'all) 'all
-				 (sort (copy-list preserves) #'string<)))
-	     (cleanup `(lambda (expr) 
-			 (reduce-from ,name ,assumes-calls expr)))
-						    
-	     (order-call `(,order (lambda (,expr) ,call-body)
-				  ',name ,expr ',preserves-list ,cleanup)))
-	 dr-args
-       (assert action () "action key required for a reduction")
-       `(let ((,assumes-calls (integrate-assumptions ',assumes)))
-	  (defun ,name (,expr)
-	    (setf ,expr (fixed-point (lambda (expr) 
-				       (reduce-from ,name ,assumes-calls expr))
-				     ,expr))
-	    ,order-call)
-	  (register-reduction ',name ',type 
-			      (lambda (,expr) (block ,name ,order-call)) 
-			      ',assumes ',obviates))))))
+  (dbind ((&rest args) &key (type t) assumes obviates (condition t)
+	  action (order 'apply-to) preserves 
+	  &aux (assumes-calls (gensym)) 
+	  (has-decomp (ecase (length args) (3 t) (1 nil)))
+	  (expr (if has-decomp (gensym) (car args)))
+	  (ccore `(aif ,condition ,action ,expr))
+	  (call-body (if has-decomp `(dexpr ,expr ,args ,ccore) ccore))
+	  (preserves-list (if (eq preserves 'all) 'all
+			      (sort (copy-list preserves) #'string<)))
+	  (cleanup `(lambda (expr) 
+		      (cummulative-fixed-point ,assumes-calls expr)))
+	  (order-call `(,order (lambda (,expr) ,call-body)
+			       ',name ,expr ',preserves-list ,cleanup)))dr-args
+    (assert action () "action key required for a reduction")
+    `(let ((,assumes-calls (integrate-assumptions ',assumes)))
+       (defun ,name (,expr)
+	 (setf ,expr (fixed-point (lambda (expr) 
+				    (reduce-from ,name ,assumes-calls expr))
+				  ,expr))
+	 ,order-call)
+       (register-reduction ',name ',type 
+			   (lambda (,expr) (block ,name ,order-call)) 
+			   ',assumes ',obviates))))))
 (define-test reduction-registry
   (assert-equal (remove-duplicates (mapcar #'car *reduction-registry*))
 		(mapcar #'car *reduction-registry*)))
