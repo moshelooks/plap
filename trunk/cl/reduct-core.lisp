@@ -90,7 +90,8 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun visit-root-only (expr name reduction preserves)
   (labels ((rec-mark (x marker) 
 	     (funcall marker x)
-	     (mapc (lambda (x) (when (consp x) (rec-mark x marker)))
+	     (mapc (lambda (x) (when (and (consp x) (not (simpp x name)))
+				 (rec-mark x marker)))
 		   (args x))))
     (if (or (atom expr) (simpp expr name)) expr
 	(aprog1 (funcall reduction expr)
@@ -105,7 +106,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	     (if (or (atom x) (simpp x name)) x
 		 (aprog1 (funcall reduction 
 				  (mapargs (bind #'cummulative-fixed-point
-						 (cons #'visit assumes))
+						 (cons #'visit assumes) /1)
 					   x))
 		   (when (consp it)
 		     (unless (or (eq 'all preserves) (eql it x))
@@ -123,9 +124,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (clear-simp it preserves))
 		     (mark-simp it name))))))
     (visit expr)))
-(define-test upwards
+(define-test visit-upwards
   (let ((expr %(and x y z (or p d q))))
-    (assert-eq expr (upwards expr 'identity #'identity nil nil))))
+    (assert-eq expr (visit-upwards expr 'identity #'identity nil nil))))
 
 (defmacro regenerate-reductions ()
   `(progn (clear-all-reductions)
@@ -165,6 +166,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		(mapcar #'car *reduction-registry*)))
 
 (defun reduct (expr context type)
+;  (print* 'reduct expr)
   (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
   (labels ((reduce-subtypes (expr)
 	     (cond 
@@ -182,7 +184,8 @@ Author: madscience@google.com (Moshe Looks) |#
     (if (or (atom expr) (eq (car (mark simp expr)) fully-reduced)) expr
 	(aprog1 (cummulative-fixed-point 
 		 (cons #'reduce-subtypes (reductions type)) expr)
-	  (push fully-reduced (mark simp it))))))
+	  (when (consp it)
+	    (push fully-reduced (mark simp it)))))))
 (define-test reduct
   (with-bound-types *empty-context* '(f g) 
       '((function (num num) bool) (function (bool) num))
