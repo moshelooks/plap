@@ -44,7 +44,7 @@ Author: madscience@google.com (Moshe Looks) |#
   `(let ((vars (collecting (dolist (x *enum-exprs-test-symbols*)
 			     (if (and (eql 0 (cdr x)) (not (const-atom-p x)))
 				 (collect (car x)))))))
-     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 2) t)
+     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 4) t)
        (unless (assert-equal (truth-table expr vars)
 			     (truth-table (funcall ,rewrite expr) vars)
 			     expr
@@ -273,8 +273,8 @@ Author: madscience@google.com (Moshe Looks) |#
 		(when i2 (rplac cl2 impls)))))
 	  implications)
     ;; use implications to delete redundant third clauses
-    (mapc (lambda (impl &aux (length (length (car impl))))
-	    (dotimes (i length)
+    (mapc (lambda (impl)
+	    (dotimes (i (min (length (car impl)) clause-max-length))
 	      (mapc (lambda (smaller) 
 		      (when (and (not (eq smaller (cadr impl)))
 				 (not (eq smaller (caddr impl)))

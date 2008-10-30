@@ -172,7 +172,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		(mapcar #'car *reduction-registry*)))
 
 (defun reduct (expr context type)
-;  (print* 'reduct expr)
+  (print* 'reduct expr)
   (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
   (labels ((reduce-subtypes (expr)
 	     (cond 
