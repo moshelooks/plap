@@ -79,7 +79,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	(random-sample n knobs)))
     
 (defun weak-kick-until (pred n knobs)
-  (print* 'wku n)
+;  (print* 'wku n)
   (weak-kick n knobs)
   (unless (funcall pred)
     (weak-kick-until pred n knobs)))
@@ -101,17 +101,14 @@ Author: madscience@google.com (Moshe Looks) |#
 				 (funcall terminationp nexpr)))
 			   simplifier canonical context type)
 	 (setf expr it)
-	 (progn (print* 'canonical canonical)
 	 (let* ((knobs (enum-knobs canonical context type))
 		(nknobs (length knobs)))
 	   (print* 'local-minimum expr nknobs)
-	   (print* 'fck context (length (keys-to-list (symbols-with-type bool context))))
 	   (weak-kick-until 
 	    (lambda () 
 	      (not (eq (setf expr (funcall simplifier 
 					   (canon-clean canonical))) 'nan)))
-	    (if (< 2 nknobs) (+ 2 (random (- nknobs 2))) nknobs) knobs)
-	   (print* 'kicked-to canonical expr))))))
+	    (if (< 2 nknobs) (+ 2 (random (- nknobs 2))) nknobs) knobs)))))
 (defun make-count-or-score-terminator (count score score-target)
   (lambda (expr) 
 ;    (print* 'nevals count)
@@ -128,12 +125,16 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun bool-hillclimb-with-target-fn 
     (target-fn nsteps &aux (vars (fn-args target-fn))
      (scorer (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
-				      vars)))
-  (with-bound-type *empty-context* vars bool
-    (hillclimb 'true *empty-context* 'bool 
-	       (bind #'reduct /1 *empty-context* bool)
-	       (make-greedy-scoring-acceptor scorer)
-	       (make-count-or-score-terminator nsteps scorer 0))))
+				      vars))
+     (result (with-bound-type *empty-context* vars bool
+	       (hillclimb 'true *empty-context* 'bool 
+			  (bind #'reduct /1 *empty-context* bool)
+			  (make-greedy-scoring-acceptor scorer)
+			  (make-count-or-score-terminator nsteps scorer 0)))))
+  (print* 'result (p2sexpr result))
+  (print* 'score (funcall scorer result)))
+     
+     
 
 ;; (defun make-num-abs-scorer 
 ;;     (target-fn context test-values &aux (args (fn-args target-fn))
