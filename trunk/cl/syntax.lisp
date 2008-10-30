@@ -87,5 +87,3 @@ args and markup must be proper lists. |#
 	       ,(read (make-concatenated-stream (make-string-input-stream "`")
 						stream)
 		      t nil t))) t)
-
-(defparameter *reduction-registry* nil)

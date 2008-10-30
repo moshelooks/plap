@@ -222,7 +222,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (subs-to-clauses (make-hash-table :test 'equal)) ;watch out
 	 (initial-size (reduce #'+ (args expr) :key #'clause-size))
 	 core-clauses implications)
-    (print* 'gott expr)
     ;; populate the clause-map array (clauses indexed by length
     (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
 	  clause-length-pairs)
@@ -265,7 +264,6 @@ Author: madscience@google.com (Moshe Looks) |#
 			    it)))
 		  cl))
 	  core-clauses)
-
     ;; when possible, shinking matching clauses for any implications found
     (mapc (lambda (i)
 	    (dbind (impls cl cl2) i
@@ -274,7 +272,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		(when i1 (rplac cl (if i2 (copy-tree impls) impls)))
 		(when i2 (rplac cl2 impls)))))
 	  implications)
-
     ;; use implications to delete redundant third clauses
     (mapc (lambda (impl &aux (length (length (car impl))))
 	    (dotimes (i length)
@@ -287,13 +284,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		    (elt clause-map i))))
 	  implications)
     (setf core-clauses (delete-if-not #'car core-clauses))
-
-    (print* 'cc core-clauses (pcons (fn expr)
-	       (let ((dual (bool-dual (fn expr))))
-		 (mapcar (lambda (x) (if (singlep x) (car x) (pcons dual x)))
-			 core-clauses))
-	       (markup expr)))
-
     ;; reassemble the expr if core-clauses have shrunk
     (if (eql initial-size (reduce #'+ core-clauses :key #'length))
 	expr

@@ -15,6 +15,7 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
+(defparameter *reduction-registry* nil)
 (let ((type-to-reductions (make-hash-table :test 'equal))
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
@@ -29,7 +30,12 @@ Author: madscience@google.com (Moshe Looks) |#
   ;;; can autogenerate this code
   (defun register-reduction (name type reduction assumes obviates)
     ;; get the actual reductions for all of the assumptions/obviations
+    (assert (every (bind #'gethash /1 names-to-reductions) assumes)
+	    () "can't find assumption ~S in ~S" 
+	    (find-if-not (bind #'gethash /1 names-to-reductions) assumes)
+	    names-to-reductions)
     (setf assumes (mapcar (bind #'gethash /1 names-to-reductions) assumes))
+
     (setf obviates (mapcar (bind #'gethash /1 names-to-reductions) obviates))
     (setf (gethash name names-to-reductions) reduction)  ;; update the map
     (dag-insert-node reduction dependencies) ;; then update dependencies
@@ -128,10 +134,6 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((expr %(and x y z (or p d q))))
     (assert-eq expr (visit-upwards expr 'identity #'identity nil nil))))
 
-(defmacro regenerate-reductions ()
-  `(progn (clear-all-reductions)
-	  ,@(mapcar (lambda (args) `(define-reduction ,@args))
-		    (reverse *reduction-registry*))))
 (defmacro generate-new-reduction
     (name (&rest args) &key (type t) assumes obviates (condition t)
      action order preserves &aux (assumes-fns (gensym))
@@ -155,12 +157,16 @@ Author: madscience@google.com (Moshe Looks) |#
        (register-reduction ',name ',type (lambda (,expr) ,(order-call expr))
 			   ',assumes ',obviates))))
 (defmacro define-reduction (name &rest rest)
-  (aif (assoc name *reduction-registry*)
-       (progn (rplacd it rest) 
-	      (regenerate-reductions))
-       (progn (setf *reduction-registry*
-		    (acons name rest *reduction-registry*))
-	      `(generate-new-reduction ,name ,@rest))))
+  `(aif (assoc ',name *reduction-registry*)
+	(let ((reductions (reverse *reduction-registry*)))
+	  (clear-all-reductions)
+	  (rplacd it ',rest)
+	  (mapc (lambda (args) 
+		  (eval `(define-reduction ,(car args) ,@(cdr args))))
+		reductions))
+	(progn (setf *reduction-registry*
+		     (acons ',name ',rest *reduction-registry*))
+	      (generate-new-reduction ,name ,@rest))))
 (define-test reduction-registry
   (assert-equal (remove-duplicates (mapcar #'car *reduction-registry*))
 		(mapcar #'car *reduction-registry*)))
