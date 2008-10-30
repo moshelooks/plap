@@ -374,16 +374,18 @@ Author: madscience@google.com (Moshe Looks) |#
   (if (funcall test x y) x (fixed-point fn y :test test)))
 
 ;;; given fns = (f1 f2 ... fN), calls fns sequentially with the invariant that
-;;; the initial condition of every fi is always a fixed point of fi-1, until
-;;; a fixed point is reached, for example:
-;;;   (cummulative-fixed-point 
-;;;    (list (lambda (x) (format t "(a ~S) " x) 
-;;;                      (if (or (> x 4) (and (> x -2) (< x 2)))  (1- x) x))
-;;;          (lambda (x) (format t "(b ~S) " x) 
-;;;                       (if (> x 2) (1- x) x))
-;;;          (lambda (x) (format t "(c ~S) " x) 
-;;;                      (if (> x 0) (1- x) x)))
-;;;    8)
+;;; the initial condition of every fi is always a fixed point of fi-1 (except
+;;; for f1, which is called with initial condition x), until a fixed point is
+;;; reached, for example:
+;;;
+;;; (cummulative-fixed-point 
+;;;  (list (lambda (x) (format t "(a ~S) " x) 
+;;;                    (if (or (> x 4) (and (> x -2) (< x 2)))  (1- x) x))
+;;;        (lambda (x) (format t "(b ~S) " x) 
+;;;                     (if (> x 2) (1- x) x))
+;;;        (lambda (x) (format t "(c ~S) " x) 
+;;;                    (if (> x 0) (1- x) x)))
+;;;  8)
 ;;; gives:
 ;;; (a 8) (a 7) (a 6) (a 5) (a 4) (b 4) (a 3) (b 3) (a 2) (b 2) (c 2) (a 1) \
 ;;; (a 0) (a -1) (a -2) (b -2) (c -2) 
