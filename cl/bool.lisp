@@ -156,7 +156,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (flet ((mung (expr) (p2sexpr (identify-contradictions expr))))
     (assert-equal 'false (mung %(and x (not x))))
     (assert-equal '(and x (not y)) (mung %(and x (not y))))
-    (assert-equal '(or false z) (mung %(or (and x (not x)) z)))
+    (assert-equal '(or z false) (mung %(or (and x (not x)) z)))
     (test-by-truth-tables #'identify-contradictions)))
 (define-test identify-tautologies
   (flet ((mung (expr) (p2sexpr (identify-tautologies expr))))
@@ -335,7 +335,8 @@ Author: madscience@google.com (Moshe Looks) |#
 		       '((or (not x) (and x (not y) z))))
     (assert-reduces-to '(or (not x) (and (not y) (f p q)))
 		       '((or (not x) (and x (not y) (f p q)))))
-    (assert-reduces-to true '((or (not x) (not y) (and x y))))
+    (assert-reduces-to '(or (not x) y (not y)) ;reduct gives true
+		       '((or (not x) (not y) (and x y))))
 
     (test-by-truth-tables #'reduce-bool-by-clauses)))
 
