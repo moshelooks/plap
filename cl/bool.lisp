@@ -44,7 +44,8 @@ Author: madscience@google.com (Moshe Looks) |#
   `(let ((vars (collecting (dolist (x *enum-exprs-test-symbols*)
 			     (if (and (eql 0 (cdr x)) (not (const-atom-p x)))
 				 (collect (car x)))))))
-     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 2) t)
+     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 4) t)
+       (strip-markup expr)
        (unless (assert-equal (truth-table expr vars)
 			     (truth-table (funcall ,rewrite expr) vars)
 			     expr
@@ -52,6 +53,11 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (return nil)))))
 
 (defun bool-dual (f) (ecase f (and 'or) (or 'and) (true false) (false true)))
+
+;; todo: numhillclimb testing
+;; large-scale bool testing (run overnight), load 100k and benchmark
+;; enf
+;; random tree sampling fixme
 
 ;;; boolean reductions
 
@@ -135,36 +141,6 @@ Author: madscience@google.com (Moshe Looks) |#
   (cond ((literalp expr) expr)
 	((and (consp expr) (singlep (args expr)) (literalp (arg0 expr))) 
 	 (arg0 expr))))
-
-(defun var-and-negation-p (clause) ; clauses must be sorted
-  (mapc (lambda (x y) 
-	  (if (negatesp x y) (return-from var-and-negation-p t)))
-	clause (cdr clause))
-  nil)
-(defun bool-identities (op)
-  (ecase op
-    (and 'bool-and-identities)
-    (or 'bool-or-identities)))
-
-;; (define-bool-dual-reductions identify-contradictions identify-tautologies 
-;;   (operator identity complement expr)
-;;   :assumes (sort-commutative)
-;;   :condition (eq operator (fn expr))
-;;   :action (if (var-and-negation-p (args expr)) complement expr)
-;;   :order upwards)
-(define-test identify-contradictions
-  (flet ((mung (expr) (p2sexpr (qreduct expr))))
-    (assert-equal 'false (mung %(and x (not x))))
-    (assert-equal '(and x (not y)) (mung %(and x (not y))))
-    (assert-equal 'z (mung %(or (and x (not x)) z)))))
-;    (test-by-truth-tables #'identify-contradictions)))
-(define-test identify-tautologies
-  (flet ((mung (expr) (p2sexpr (qreduct expr))))
-    (assert-equal 'true (mung %(or x (not x))))
-    (assert-equal '(or x (not y)) (mung %(or x (not y))))
-    (assert-equal 'z (mung %(and z (or x (not x)))))))
-(define-test bool-reduct (test-by-truth-tables 
-			  (bind #'reduct /1 *empty-context* bool)))
 
 (define-reduction remove-bool-duplicates (expr)
   :type bool
@@ -279,9 +255,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		  (elt clause-map i))))
 	implications)
   (setf core-clauses (delete-if-not #'car core-clauses))
-
-;  (print* 'cc core-clauses)
-
   ;;redo the computation if the core-clauses have shrunk
   (let ((current-size (reduce #'+ core-clauses :key #'length)))
     (if (eql initial-size current-size)
@@ -292,7 +265,6 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-reduction reduce-bool-by-clauses (expr)
   :type bool
   :assumes (sort-commutative flatten-associative remove-bool-duplicates
-;	    identify-contradictions identify-tautologies
 	    bool-and-identities bool-or-identities eval-const)
   :order upwards
   :condition (junctorp expr)
@@ -343,6 +315,19 @@ Author: madscience@google.com (Moshe Looks) |#
 		       '((or x (not y) (and (not x) y z))))
 
     (test-by-truth-tables #'reduce-bool-by-clauses)))
+
+(define-test identify-contradictions
+  (flet ((mung (expr) (p2sexpr (qreduct expr))))
+    (assert-equal 'false (mung %(and x (not x))))
+    (assert-equal '(and x (not y)) (mung %(and x (not y))))
+    (assert-equal 'z (mung %(or (and x (not x)) z)))))
+(define-test identify-tautologies
+  (flet ((mung (expr) (p2sexpr (qreduct expr))))
+    (assert-equal 'true (mung %(or x (not x))))
+    (assert-equal '(or x (not y)) (mung %(or x (not y))))
+    (assert-equal 'z (mung %(and z (or x (not x)))))))
+(define-test bool-reduct (test-by-truth-tables 
+			  (bind #'reduct /1 *empty-context* bool)))
 
 ;; ;;; if the handle set centered at expr is inconsistent, remove the subtree
 ;; ;;; rooted at expr

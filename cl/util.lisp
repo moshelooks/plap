@@ -219,8 +219,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (delete-duplicates l :test test))
 
 (defun includesp (l1 l2 cmp)
-  (assert (sortedp l1 cmp))
-  (assert (sortedp l2 cmp))
+  (assert (sortedp l1 cmp) () "includesp expects sorted args, got ~S ~S" l1 l2)
+  (assert (sortedp l2 cmp) () "includesp expects sorted args, got ~S ~S" l1 l2)
   (if (and l1 l2)
       (unless (funcall cmp (car l2) (car l1))
 	(includesp (cdr l1) 
@@ -243,9 +243,13 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun sortedp (l pred) 
   (labels ((rec-sorted (x xs)
-	     (or (null xs) (and (funcall pred x (car xs))
+	     (or (null xs) (and (not (funcall pred (car xs) x))
 				(rec-sorted (car xs) (cdr xs))))))
     (or (null l) (rec-sorted (car l) (cdr l)))))
+(define-test sortedp
+  (assert-true (sortedp '(1 1 1) #'<))
+  (assert-false (sortedp '(1 2 1 1) #'<))
+  (assert-true (sortedp '(1 1 2) #'<)))
 (defun nondestructive-sort (l pred) ; returns l if it is already sorted
   (if (sortedp l pred) l (sort (copy-list l) pred)))
 (define-test nondestructive-sort
