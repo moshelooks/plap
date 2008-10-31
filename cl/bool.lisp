@@ -146,25 +146,25 @@ Author: madscience@google.com (Moshe Looks) |#
     (and 'bool-and-identities)
     (or 'bool-or-identities)))
 
-(define-bool-dual-reductions identify-contradictions identify-tautologies 
-  (operator identity complement expr)
-  :assumes (sort-commutative)
-  :condition (eq operator (fn expr))
-  :action (if (var-and-negation-p (args expr)) complement expr)
-  :order upwards)
+;; (define-bool-dual-reductions identify-contradictions identify-tautologies 
+;;   (operator identity complement expr)
+;;   :assumes (sort-commutative)
+;;   :condition (eq operator (fn expr))
+;;   :action (if (var-and-negation-p (args expr)) complement expr)
+;;   :order upwards)
 (define-test identify-contradictions
-  (flet ((mung (expr) (p2sexpr (identify-contradictions expr))))
+  (flet ((mung (expr) (p2sexpr (qreduct expr))))
     (assert-equal 'false (mung %(and x (not x))))
     (assert-equal '(and x (not y)) (mung %(and x (not y))))
-    (assert-equal '(or z false) (mung %(or (and x (not x)) z)))
-    (test-by-truth-tables #'identify-contradictions)))
+    (assert-equal 'z (mung %(or (and x (not x)) z)))))
+;    (test-by-truth-tables #'identify-contradictions)))
 (define-test identify-tautologies
-  (flet ((mung (expr) (p2sexpr (identify-tautologies expr))))
+  (flet ((mung (expr) (p2sexpr (qreduct expr))))
     (assert-equal 'true (mung %(or x (not x))))
     (assert-equal '(or x (not y)) (mung %(or x (not y))))
-    (assert-equal 'z (p2sexpr (bool-and-identities (identify-tautologies
-						    %(and z (or x (not x)))))))
-    (test-by-truth-tables #'identify-tautologies)))
+    (assert-equal 'z (mung %(and z (or x (not x)))))))
+(define-test bool-reduct (test-by-truth-tables 
+			  (bind #'reduct /1 *empty-context* bool)))
 
 (define-reduction remove-bool-duplicates (expr)
   :type bool
@@ -202,97 +202,109 @@ Author: madscience@google.com (Moshe Looks) |#
 				     (delete neg (copy-list cl2) :test #'equal)
 				     #'total-order)
 			      :test #'equal))
-(defun clause-size (x) (if (junctorp x) (length (args x)) 1))
+(defun reduce-clauses 
+    (clauses &optional (munged nil)
+     (initial-size (reduce #'+ clauses :key #'length)) &aux 
+     core-clauses implications (clause-max-length 0)
+     (clause-length-pairs
+      (mapcar (lambda (c &aux (l (1- (length c))))
+		(setf clause-max-length (max clause-max-length l))
+		(cons c l))
+	      clauses))
+     (clause-map (make-array (1+ clause-max-length)))
+     (subs-to-clauses (make-hash-table :test 'equal))) ;watch out
+  ;; return immediately if we have a negation or tautology
+  (mapc (lambda (x y)
+	  (if (and (singlep x) (singlep y) (negatesp (car x) (car y)))
+	      (return-from reduce-clauses (values nil t))))
+	clauses (cdr clauses))
+  ;; populate the clause-map array (clauses indexed by length
+  (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
+	clause-length-pairs)
+  ;; populate core-clauses with the clauses which are not supersets of others
+  (mapc (lambda (pair)
+	  (when (dotimes (i (cdr pair) t)
+		  (mapc (lambda (smaller)
+			  (when (includesp (car pair) smaller #'total-order)
+			    (return)))
+			(elt clause-map i)))
+	    (push (car pair) core-clauses)))
+	clause-length-pairs)
+  ;; index non-negated subclauses to map to their parent clauses, and
+  ;; simultaneously identify tautology/contradictions and get rid of them
+  (setf core-clauses
+	(delete-if (lambda (cl &aux negations)
+		     (mapc (lambda (subcl)
+			     (aif (shrink-by-negation subcl)
+				  (push it negations)
+				  (push cl (gethash subcl subs-to-clauses))))
+			   cl)
+		     (when (some (lambda (subcl)
+				   (eq cl (car (gethash subcl 
+							subs-to-clauses))))
+				 negations)
+		       (push nil cl)))
+		   core-clauses))
+  ;; find clauses containing negated subclauses and see if they match 
+  ;; any non-negated subclauses of other clauses - when a match is found,
+  ;; use it to generating implications
+  (mapc (lambda (cl)
+	  (mapc (lambda (subcl &aux (neg (shrink-by-negation subcl)))
+		  (awhen (and neg (gethash neg subs-to-clauses))
+		    (mapc (lambda (cl2)
+			    (when (car cl2) ; to avoid using a tautology
+			      (push 
+			       (list (make-impls cl subcl cl2 neg) cl cl2)
+			       implications)))
+			  it)))
+		cl))
+	core-clauses)
+  ;; when possible, shinking matching clauses for any implications found
+  (mapc (lambda (i)
+	  (dbind (impls cl cl2) i
+	    (let ((i1 (strict-includes-p cl impls #'total-order))
+		  (i2 (strict-includes-p cl2 impls #'total-order)))
+	      (when i1 (rplac cl impls))
+	      (when i2 (rplac cl2 (if i1 (copy-tree impls) impls))))))
+	implications)
+  ;; use implications to delete redundant third clauses
+  (mapc (lambda (impl)
+	  (dotimes (i (min (length (car impl)) (1+ clause-max-length)))
+	    (mapc (lambda (smaller) 
+		    (when (and (not (eq smaller (cadr impl)))
+			       (not (eq smaller (caddr impl)))
+			       (includesp (car impl) smaller #'total-order))
+		      (rplaca smaller nil)
+		      (return)))
+		  (elt clause-map i))))
+	implications)
+  (setf core-clauses (delete-if-not #'car core-clauses))
+
+;  (print* 'cc core-clauses)
+
+  ;;redo the computation if the core-clauses have shrunk
+  (let ((current-size (reduce #'+ core-clauses :key #'length)))
+    (if (eql initial-size current-size)
+	(values core-clauses munged)
+	(reduce-clauses (sort core-clauses #'args-total-order) 
+			t current-size))))
 
 (define-reduction reduce-bool-by-clauses (expr)
   :type bool
   :assumes (sort-commutative flatten-associative remove-bool-duplicates
-	    identify-contradictions identify-tautologies
+;	    identify-contradictions identify-tautologies
 	    bool-and-identities bool-or-identities eval-const)
   :order upwards
   :condition (junctorp expr)
   :action 
-  (let* ((clause-max-length 0)
-	 (clause-length-pairs
-	  (mapcar (lambda (x &aux (c (mkclause x)) (l (1- (length c))))
-		   (setf clause-max-length (max clause-max-length l))
-		   (cons c l))
-		  (args expr)))
-	 (clause-map (make-array (1+ clause-max-length)))
-	 (subs-to-clauses (make-hash-table :test 'equal)) ;watch out
-	 (initial-size (reduce #'+ (args expr) :key #'clause-size))
-	 core-clauses implications)
-    ;; populate the clause-map array (clauses indexed by length
-    (mapc (lambda (pair) (push (car pair) (elt clause-map (cdr pair))))
-	  clause-length-pairs)
-    ;; populate core-clauses with the clauses which are not supersets of others
-    (mapc (lambda (pair)
-	    (when (dotimes (i (cdr pair) t)
-		    (mapc (lambda (smaller) 
-			    (when (includesp (car pair) smaller #'total-order)
-			      (return)))
-			  (elt clause-map i)))
-	      (push (car pair) core-clauses)))
-	  clause-length-pairs)
-    ;; index non-negated subclauses to map to their parent clauses, and
-    ;; simultaneously identify tautology/contradictions and get rid of them    
-    (setf core-clauses
-	  (delete-if (lambda (cl &aux negations)
-		       (mapc (lambda (subcl)
-			       (aif (shrink-by-negation subcl)
-				    (push it negations)
-				    (push cl (gethash subcl subs-to-clauses))))
-			     cl)
-		       (when (some (lambda (subcl)
-				     (eq cl (car (gethash subcl 
-							  subs-to-clauses))))
-				   negations)
-			 (push nil cl)))
-		     core-clauses))
-    
-    ;; find clauses containing negated subclauses and see if they match 
-    ;; any non-negated subclauses of other clauses - when a match is found,
-    ;; use it to generating implications
-    (mapc (lambda (cl)
-	    (mapc (lambda (subcl &aux (neg (shrink-by-negation subcl)))
-		    (awhen (and neg (gethash neg subs-to-clauses))
-		      (mapc (lambda (cl2)
-			      (when (car cl2) ; to avoid using a tautology
-				(push 
-				 (list (make-impls cl subcl cl2 neg) cl cl2)
-				 implications)))
-			    it)))
-		  cl))
-	  core-clauses)
-    ;; when possible, shinking matching clauses for any implications found
-    (mapc (lambda (i)
-	    (dbind (impls cl cl2) i
-	      (let ((i1 (includesp cl impls #'total-order))
-		    (i2 (includesp cl2 impls #'total-order)))
-		(when i1 (rplac cl (if i2 (copy-tree impls) impls)))
-		(when i2 (rplac cl2 impls)))))
-	  implications)
-    ;; use implications to delete redundant third clauses
-    (mapc (lambda (impl)
-	    (dotimes (i (min (length (car impl)) (1+ clause-max-length)))
-	      (mapc (lambda (smaller) 
-		      (when (and (not (eq smaller (cadr impl)))
-				 (not (eq smaller (caddr impl)))
-				 (includesp (car impl) smaller #'total-order))
-			(rplaca smaller nil)
-			(return)))
-		    (elt clause-map i))))
-	  implications)
-    (setf core-clauses (delete-if-not #'car core-clauses))
-    ;; reassemble the expr if core-clauses have shrunk
-    (if (eql initial-size (reduce #'+ core-clauses :key #'length))
-	expr
+  (mvbind (clauses munged) (reduce-clauses (mapcar #'mkclause (args expr)))
+    (if munged 
 	(pcons (fn expr)
 	       (let ((dual (bool-dual (fn expr))))
 		 (mapcar (lambda (x) (if (singlep x) (car x) (pcons dual x)))
-			 core-clauses))
-	       (markup expr)))))
-
+			 clauses))
+	       (markup expr))
+	expr)))
 (define-test reduce-bool-by-clauses
   (flet ((assert-reduces-to (target exprs)
 	   (dolist (expr exprs)
@@ -325,8 +337,10 @@ Author: madscience@google.com (Moshe Looks) |#
 		       '((or (not x) (and x (not y) z))))
     (assert-reduces-to '(or (not x) (and (not y) (f p q)))
 		       '((or (not x) (and x (not y) (f p q)))))
-    (assert-reduces-to '(or (not x) y (not y)) ;reduct gives true
+    (assert-reduces-to '(or) ;reduct gives true
 		       '((or (not x) (not y) (and x y))))
+    (assert-reduces-to '(or x (not y) z)
+		       '((or x (not y) (and (not x) y z))))
 
     (test-by-truth-tables #'reduce-bool-by-clauses)))
 

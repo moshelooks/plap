@@ -219,6 +219,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (delete-duplicates l :test test))
 
 (defun includesp (l1 l2 cmp)
+  (assert (sortedp l1 cmp))
+  (assert (sortedp l2 cmp))
   (if (and l1 l2)
       (unless (funcall cmp (car l2) (car l1))
 	(includesp (cdr l1) 
@@ -237,8 +239,7 @@ Author: madscience@google.com (Moshe Looks) |#
     (itest '(52) nil)))
 
 (defun strict-includes-p (l1 l2 cmp)
-  (and (eql (length l1) (length l2))
-       (includesp l1 l2 cmp)))
+  (and (includesp l1 l2 cmp) (not (eql (length l1) (length l2)))))
 
 (defun sortedp (l pred) 
   (labels ((rec-sorted (x xs)

@@ -116,7 +116,10 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun make-greedy-scoring-acceptor (score)
   (lambda (from to)
     (< (funcall score from) (funcall score to))))
-
+(defun print-when-best-wrapper (fn &aux (best most-negative-single-float))
+  (lambda (&rest args &aux (x (apply fn args)))
+    (when (> x best) (setf best x) (print* 'new-best x))
+    x))
 ;; ; vars should be sorted
 (defun make-truth-table-scorer (target-tt vars)
   (lambda (expr)
@@ -124,8 +127,9 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun bool-hillclimb-with-target-fn 
     (target-fn nsteps &aux (vars (fn-args target-fn))
-     (scorer (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
-				      vars))
+     (scorer (print-when-best-wrapper
+	      (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
+				       vars)))
      (result (with-bound-type *empty-context* vars bool
 	       (hillclimb 'true *empty-context* bool 
 			  (bind #'reduct /1 *empty-context* bool)
@@ -134,34 +138,38 @@ Author: madscience@google.com (Moshe Looks) |#
   (print* 'result (p2sexpr result))
   (print* 'score (funcall scorer result)))
 
-     
 (defun make-num-abs-scorer (input-values target-values vars)
   (lambda (expr &aux (sum 0))
-    (mapc (lambda (input target)
-	    (with-bound-values *empty-context* vars input
-	      (decf sum (abs (- (let ((res (peval expr *empty-context*)))
-				  (if (eq 'nan res)
-				      (return most-negative-single-float)
-				      res))
-				target)))))
-	  input-values target-values)) merge
+    (blockn (mapc (lambda (input target)
+		    (with-bound-values *empty-context* vars input
+		      (let ((x (peval expr *empty-context* num)))
+			(when (eq 'nan x) (return most-negative-single-float))
+			(decf sum (abs (- target x))))))
+		  input-values target-values))
+    sum))
 
-(let ((best -99999))
-
-	       (when (> res best) (setf best res) (print* 'new-best res))
-	       res)))))
-
-     (targets (mapcar (bind #'papply target-fn context /1) test-values)))
-
-(defun num-hillclimb-with-target-fn 
-    (target-fn test-values nsteps &aux (vars (fn-args target-fn))
-     (scorer (make-num-abs-scorer (mapcar #'pevaltarget-fn test-values))
+(defun num-hillclimb-with-target-values
+    (input-values target-values nsteps vars &aux
+     (scorer (print-when-best-wrapper
+	      (make-num-abs-scorer input-values target-values vars)))
      (result (with-bound-type *empty-context* vars num
 	       (hillclimb 0 *empty-context* num
 			  (bind #'reduct /1 *empty-context* num)
 			  (make-greedy-scoring-acceptor scorer)
-		 (make-count-or-score-terminator nsteps scorer -0.01)))
+		 (make-count-or-score-terminator nsteps scorer -0.01)))))
+  (print* 'result (p2sexpr result))
+  (print* 'score (funcall scorer result)))
 
+(defun num-hillclimb-with-target-fn 
+    (input-values target-fn nsteps &aux (vars (fn-args target-fn)))
+  (when (and (singlep vars) (not (consp (car input-values))))
+    (setf input-values (mapcar #'list input-values)))
+  (num-hillclimb-with-target-values
+   input-values
+   (mapcar (lambda (input) (with-bound-values *empty-context* vars input
+			     (peval (fn-body target-fn) *empty-context* num)))
+	   input-values)
+   nsteps vars))
 
 ;; ;;;;;;;;adkan
 
