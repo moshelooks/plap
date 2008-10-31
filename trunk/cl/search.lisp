@@ -88,7 +88,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (map-neighbors (lambda (expr &aux
 			  (simplified (funcall simplifier (canon-clean expr))))
 		   (when (funcall fn simplified)
-		     (print* 'improved-to simplified)
+		     (print* 'improved-to (p2sexpr simplified))
 		     (return-from find-neighbor-if simplified)))
 		 expr context type)
   nil)
@@ -103,7 +103,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (setf expr it)
 	 (let* ((knobs (enum-knobs canonical context type))
 		(nknobs (length knobs)))
-	   (print* 'local-minimum expr nknobs)
+	   (print* 'local-minimum (p2sexpr expr) nknobs)
 	   (weak-kick-until 
 	    (lambda () 
 	      (not (eq (setf expr (funcall simplifier 
@@ -133,28 +133,27 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (make-count-or-score-terminator nsteps scorer 0)))))
   (print* 'result (p2sexpr result))
   (print* 'score (funcall scorer result)))
-     
-     
 
-;; (defun make-num-abs-scorer 
-;;     (target-fn context test-values &aux (args (fn-args target-fn))
-;;      (targets (mapcar (bind #'papply target-fn context /1) test-values)))
-;; (let ((best -99999))
-;;   (lambda (expr)
-;;     (blockn
-;;      (let ((res
-;; 	    (- (reduce
-;; 		#'+ (mapcar 
-;; 		     (lambda (test target)
-;; 		       (with-bound-symbols context args test
-;; 			 (abs (- (let ((res (peval expr context)))
-;; 				   (if (eq 'nan res)
-;; 				       (return most-negative-single-float)
-;; 				       res))
-;; 				 target))))
-;; 			 test-values targets)))))
-;; 	       (when (> res best) (setf best res) (print* 'new-best res))
-;; 	       res)))))
+     
+(defun make-num-abs-scorer 
+    (target-fn context test-values &aux (args (fn-args target-fn))
+     (targets (mapcar (bind #'papply target-fn context /1) test-values)))
+(let ((best -99999))
+  (lambda (expr)
+    (blockn
+     (let ((res
+	    (- (reduce
+		#'+ (mapcar 
+		     (lambda (test target)
+		       (with-bound-values context args test
+			 (abs (- (let ((res (peval expr context)))
+				   (if (eq 'nan res)
+				       (return most-negative-single-float)
+				       res))
+				 target))))
+			 test-values targets)))))
+	       (when (> res best) (setf best res) (print* 'new-best res))
+	       res)))))
 
 ;; (defun num-hillclimb-with-target-fn 
 ;;     (target-fn test-values nsteps &aux (context (make-context))

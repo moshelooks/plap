@@ -15,16 +15,17 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defparameter *reduction-registry* nil)
+(defparameter *reduction-fns* (make-hash-table))
+(defparameter *reduction-seq* nil)
 (let ((type-to-reductions (make-hash-table :test 'equal))
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
       (names-to-reductions (make-hash-table)))
-  (defun clear-all-reductions ()
-    (mapc #'clrhash 
-	  (list type-to-reductions reduction-to-assumes names-to-reductions))
-    (clrdag dependencies)
-    (setf *reduction-registry* nil))
+  (defun clear-reductions ()
+    (mapc #'clrhash (list *reduction-fns* type-to-reductions
+			  reduction-to-assumes names-to-reductions))
+    (setf *reduction-seq* nil)
+    (clrdag dependencies))
   ;;; important note - register-reduction does not do any handling of markup,
   ;;; which must be created/removed by the reduction function (define-reduction
   ;;; can autogenerate this code
@@ -152,27 +153,49 @@ Author: madscience@google.com (Moshe Looks) |#
 	      ',preserves ,@(when (eq order 'upwards) (list assumes-fns)))))
     (assert action () "action key required for a reduction")
     `(let ((,assumes-fns (integrate-assumptions ',assumes)))
-       (defun ,name (,expr) 
-	 ,(order-call `(cummulative-fixed-point ,assumes-fns ,expr)))
        (register-reduction ',name ',type (lambda (,expr) ,(order-call expr))
-			   ',assumes ',obviates))))
+			   ',assumes ',obviates)
+       (setf (gethash ',name *reduction-fns*)
+	     (lambda (,expr) 
+	       ,(order-call `(cummulative-fixed-point ,assumes-fns ,expr)))))))
+(defmacro init-reduction (name &rest rest)
+  `(progn (push (cons ',name (lambda () (init-reduction ,name ,@rest)))
+		*reduction-seq*)
+	  (generate-new-reduction ,name ,@rest)))
 (defmacro define-reduction (name &rest rest)
-  `(aif (assoc ',name *reduction-registry*)
-	(let ((reductions (reverse *reduction-registry*)))
-	  (clear-all-reductions)
-	  (rplacd it ',rest)
-	  (mapc (lambda (args) 
-		  (eval `(define-reduction ,(car args) ,@(cdr args))))
-		reductions))
-	(progn (setf *reduction-registry*
-		     (acons ',name ',rest *reduction-registry*))
-	      (generate-new-reduction ,name ,@rest))))
-(define-test reduction-registry
-  (assert-equal (remove-duplicates (mapcar #'car *reduction-registry*))
-		(mapcar #'car *reduction-registry*)))
+  `(if (gethash ',name *reduction-fns*)
+       (progn (rplacd (assoc ',name *reduction-seq*)
+		      `(lambda () (init-reduction ,name ,@rest)))
+	      (let ((generators (nreverse (mapcar #'cdr *reduction-seq*))))
+		(clear-reductions)
+		(mapc #'funcall generators)))
+       (progn (defun ,name (expr)
+		(funcall (gethash ',name *reduction-fns*) expr))
+	      (init-reduction ,name ,@rest))))
+
+;; 	 ,generator
+;; 	(rplacd it ,lgenerator)
+;; 	    (let ((generators (nreverse (mapcar #'cdr *reduction-registry*))))
+;; 	      (clear-reductions)
+;; 	      (mapc #'funcall generators)))
+	 
+	
+       
+
+
+
+
+;; 	 `(progn
+;; 	    (rplacd it ,lgenerator)
+;; 	    (let ((generators (nreverse (mapcar #'cdr *reduction-registry*))))
+;; 	      (clear-reductions)
+;; 	      (mapc #'funcall generators)))
+	 
+;; 	 `(progn ,generator (
+
 
 (defun reduct (expr context type)
-  (print* 'reduct expr)
+;  (print* 'reduct expr)
   (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
   (labels ((reduce-subtypes (expr)
 	     (cond 

@@ -153,7 +153,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			   (loop for i from 1 to bind-max-arg-idx collect i))
 		   `(&rest ,rest-arg)) 
 	   (declare (ignore ,rest-arg))
-	   (funcall #'apply ,fn ,@args))))))
+	   (apply ,fn ,@args))))))
 (defmacro bind (fn &rest args)
   `(bindapp ,fn ,@args nil))
 
