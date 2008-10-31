@@ -127,7 +127,7 @@ Author: madscience@google.com (Moshe Looks) |#
      (scorer (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
 				      vars))
      (result (with-bound-type *empty-context* vars bool
-	       (hillclimb 'true *empty-context* 'bool 
+	       (hillclimb 'true *empty-context* bool 
 			  (bind #'reduct /1 *empty-context* bool)
 			  (make-greedy-scoring-acceptor scorer)
 			  (make-count-or-score-terminator nsteps scorer 0)))))
@@ -135,33 +135,32 @@ Author: madscience@google.com (Moshe Looks) |#
   (print* 'score (funcall scorer result)))
 
      
-(defun make-num-abs-scorer 
-    (target-fn context test-values &aux (args (fn-args target-fn))
-     (targets (mapcar (bind #'papply target-fn context /1) test-values)))
+(defun make-num-abs-scorer (input-values target-values vars)
+  (lambda (expr &aux (sum 0))
+    (mapc (lambda (input target)
+	    (with-bound-values *empty-context* vars input
+	      (decf sum (abs (- (let ((res (peval expr *empty-context*)))
+				  (if (eq 'nan res)
+				      (return most-negative-single-float)
+				      res))
+				target)))))
+	  input-values target-values)) merge
+
 (let ((best -99999))
-  (lambda (expr)
-    (blockn
-     (let ((res
-	    (- (reduce
-		#'+ (mapcar 
-		     (lambda (test target)
-		       (with-bound-values context args test
-			 (abs (- (let ((res (peval expr context)))
-				   (if (eq 'nan res)
-				       (return most-negative-single-float)
-				       res))
-				 target))))
-			 test-values targets)))))
+
 	       (when (> res best) (setf best res) (print* 'new-best res))
 	       res)))))
 
-;; (defun num-hillclimb-with-target-fn 
-;;     (target-fn test-values nsteps &aux (context (make-context))
-;;      (scorer (make-num-abs-scorer target-fn context test-values)))
-;;   (mapc (bind #'bind-type context /1 'num) (fn-args target-fn))
-;;   (hillclimb 0 context 'num #'maxima-reduce
-;; 		 (make-greedy-scoring-acceptor scorer)
-;; 		 (make-count-or-score-terminator nsteps scorer -0.01)))
+     (targets (mapcar (bind #'papply target-fn context /1) test-values)))
+
+(defun num-hillclimb-with-target-fn 
+    (target-fn test-values nsteps &aux (vars (fn-args target-fn))
+     (scorer (make-num-abs-scorer (mapcar #'pevaltarget-fn test-values))
+     (result (with-bound-type *empty-context* vars num
+	       (hillclimb 0 *empty-context* num
+			  (bind #'reduct /1 *empty-context* num)
+			  (make-greedy-scoring-acceptor scorer)
+		 (make-count-or-score-terminator nsteps scorer -0.01)))
 
 
 ;; ;;;;;;;;adkan

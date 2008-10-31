@@ -16,7 +16,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
 (defparameter *reduction-fns* (make-hash-table))
-(defparameter *reduction-seq* nil)
+(defparameter *reduction-generators* nil)
 (let ((type-to-reductions (make-hash-table :test 'equal))
       (reduction-to-assumes (make-hash-table))
       (dependencies (make-dag))
@@ -24,7 +24,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (defun clear-reductions ()
     (mapc #'clrhash (list *reduction-fns* type-to-reductions
 			  reduction-to-assumes names-to-reductions))
-    (setf *reduction-seq* nil)
+    (setf *reduction-generators* nil)
     (clrdag dependencies))
   ;;; important note - register-reduction does not do any handling of markup,
   ;;; which must be created/removed by the reduction function (define-reduction
@@ -135,7 +135,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (let ((expr %(and x y z (or p d q))))
     (assert-eq expr (visit-upwards expr 'identity #'identity nil nil))))
 
-(defmacro generate-new-reduction
+(defmacro construct-reduction
     (name (&rest args) &key (type t) assumes obviates (condition t)
      action order preserves &aux (assumes-fns (gensym))
      (has-decomp (ecase (length args) (3 t) (1 nil)))
@@ -158,41 +158,17 @@ Author: madscience@google.com (Moshe Looks) |#
        (setf (gethash ',name *reduction-fns*)
 	     (lambda (,expr) 
 	       ,(order-call `(cummulative-fixed-point ,assumes-fns ,expr)))))))
-(defmacro init-reduction (name &rest rest)
-  `(progn (push (cons ',name (lambda () (init-reduction ,name ,@rest)))
-		*reduction-seq*)
-	  (generate-new-reduction ,name ,@rest)))
+(defmacro generate-reduction (name &rest rest)
+  (push (cons name `(generate-reduction ,name ,@rest)) *reduction-generators*)
+  `(construct-reduction ,name ,@rest))
 (defmacro define-reduction (name &rest rest)
-  `(if (gethash ',name *reduction-fns*)
-       (progn (rplacd (assoc ',name *reduction-seq*)
-		      `(lambda () (init-reduction ,name ,@rest)))
-	      (let ((generators (nreverse (mapcar #'cdr *reduction-seq*))))
-		(clear-reductions)
-		(mapc #'funcall generators)))
-       (progn (defun ,name (expr)
-		(funcall (gethash ',name *reduction-fns*) expr))
-	      (init-reduction ,name ,@rest))))
-
-;; 	 ,generator
-;; 	(rplacd it ,lgenerator)
-;; 	    (let ((generators (nreverse (mapcar #'cdr *reduction-registry*))))
-;; 	      (clear-reductions)
-;; 	      (mapc #'funcall generators)))
-	 
-	
-       
-
-
-
-
-;; 	 `(progn
-;; 	    (rplacd it ,lgenerator)
-;; 	    (let ((generators (nreverse (mapcar #'cdr *reduction-registry*))))
-;; 	      (clear-reductions)
-;; 	      (mapc #'funcall generators)))
-	 
-;; 	 `(progn ,generator (
-
+  (acond ((and (boundp '*reduction-fns*) (assoc name *reduction-generators*))
+	  (rplacd it `(generate-reduction ,name ,@rest))
+	  (prog1 `(progn ,@(nreverse (mapcar #'cdr *reduction-generators*)))
+	    (clear-reductions)))
+	 (t `(progn (defun ,name (expr)
+		      (funcall (gethash ',name *reduction-fns*) expr))
+		    (generate-reduction ,name ,@rest)))))
 
 (defun reduct (expr context type)
 ;  (print* 'reduct expr)
