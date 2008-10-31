@@ -35,6 +35,11 @@ Author: madscience@google.com (Moshe Looks) |#
   (remf (cdar expr) tag)
   expr)
 
+(defun strip-markup (expr) 
+  (unless (atom expr)
+    (rplacd (car expr) nil)
+    (mapc #'strip-markup (args expr))))
+
 (defun clear-simp (expr &optional exceptions) ; exceptions must be sorted 
   (setf (mark simp expr)
 	(if exceptions
