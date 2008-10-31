@@ -22,10 +22,18 @@ represent evolved programs. |#
 (defvar true 'true)
 (defvar false 'false)
 
-;; a total ordering on all plop expressions
+;; total-cmp is a total ordering on all plop expressions
 ;; returns less, nil, or greater, with the important property that (not symbol)
 ;; is always ordered immediately after symbol
 ;; markup is ignored
+(defun args-total-cmp (l r) ; l and r are argument lists
+  (mapl (lambda (l r)
+	  (aif (total-cmp (car l) (car r))
+	       (return-from args-total-cmp it)
+	       (let ((x (consp (cdr l))) (y (consp (cdr r))))
+		 (unless (eq x y)
+		   (return-from args-total-cmp (if x 'greater 'less))))))
+	l r))
 (defun total-cmp (l r)
   (flet ((elem-cmp (l r)
 	   (if (numberp l)
@@ -43,22 +51,16 @@ represent evolved programs. |#
 	    (if (consp r)
 		(if (eq (fn r) 'not)
 		    (or (total-cmp l (arg0 r)) 'less)
-		    (or (elem-cmp (fn l) (fn r))
-			(prog () (mapl 
-				  (lambda (l r)
-				    (aif (total-cmp (car l) (car r))
-					 (return it)
-					 (let ((x (consp (cdr l))) 
-					       (y (consp (cdr r))))
-					   (unless (eq x y)
-					     (return (if x 'greater 'less))))))
-				  (args l) (args r)))))
+		    (or (elem-cmp (fn l) (fn r)) 
+			(args-total-cmp (args l) (args r))))
 		'greater))
 	(if (consp r)
 	    (if (eq (fn r) 'not) 
 		(or (total-cmp l (arg0 r)) 'less)
 		'less)
 	    (elem-cmp l r)))))
+(defun args-total-order (l r)
+  (eq (args-total-cmp l r) 'less))
 (defun total-order (l r)
   (eq (total-cmp l r) 'less))
 (define-test total-order

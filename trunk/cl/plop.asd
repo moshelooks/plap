@@ -41,5 +41,5 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "list")
 	       (:file "canonize")
 	       (:file "represent")
-;	       (:file "search")
+	       (:file "search")
 	       (:file "tests")))
