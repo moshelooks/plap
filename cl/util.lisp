@@ -484,3 +484,8 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defmacro atom-else (x else &aux (result (gensym)))
   `(let ((,result ,x)) (if (atom ,result) ,result ,else)))
+
+;;; for sbcl
+(defmacro define-constant (name value &optional doc)
+  `(defconstant ,name (if (boundp ',name) (symbol-value ',name) ,value)
+     ,@(when doc (list doc))))

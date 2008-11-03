@@ -64,6 +64,10 @@ args and markup must be proper lists. |#
 (defun mklambda (args body &optional markup)
   (list (cons 'lambda (copy-list markup)) (mklambda-list args) body))
 
+(defmethod make-load-form ((self lambda-list) &optional environment)
+   (declare (ignore environment))
+   `(make-lambda-list :argnames ',(lambda-list-argnames self)))
+
 ;;; input and output in the language
 (defun pcons (fn args &optional markup) 
   (cons (cons fn (copy-list markup)) args))
