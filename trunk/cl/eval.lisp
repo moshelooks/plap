@@ -15,8 +15,8 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defconstant *largest-exp-arg* 80.0)
-(defconstant *smallest-log-arg* 0.0001)
+(define-constant +largest-exp-arg+ 80.0)
+(define-constant +smallest-log-arg+ 0.0001)
 
 (defun convert-bool-atom (atom) (ecase atom ((t) true) ((nil) false)))
 (labels ((find-mapper (type)
@@ -46,11 +46,11 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (+ (reduce #'+ args :key eval-fn))
 		       (* (reduce #'* args :key eval-fn))
 		       (exp (let ((result (funcall eval-fn (car args))))
-			      (if (> result *largest-exp-arg*)
+			      (if (> result +largest-exp-arg+)
 				  (throw 'nan 'nan)
 				  (exp result))))
 		       (log (let ((arg (abs (funcall eval-fn (car args)))))
-			      (if (< arg *smallest-log-arg*) 
+			      (if (< arg +smallest-log-arg+) 
 				  (throw 'nan 'nan)
 				  (log arg))))
 		       (sin (sin (funcall eval-fn (car args))))
@@ -68,8 +68,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (handler-case 
 	      (catch 'nan 
 		(return-from ,name (convert-bools ,result ,type-fn)))
-	    (system::simple-floating-point-overflow ())
-	    (system::simple-arithmetic-error ())
+	    #+clisp(system::simple-floating-point-overflow ())
+	    #+clisp(system::simple-arithmetic-error ())
 	    (division-by-zero ()))
 	  'nan)))
   ;;; peval-cl behaves like peval, only bools evaluate to t/nil instead

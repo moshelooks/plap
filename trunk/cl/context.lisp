@@ -21,11 +21,11 @@ Author: madscience@google.com (Moshe Looks) |#
   (symbol-bindings (make-hash-table) :type hash-table)
   (type-map (make-hash-table) :type hash-table))
 
-(defconstant *no-value* (gensym))
+(define-constant +no-value+ (gensym))
 
 (defun valuedp (name context)
   (aand (car (gethash name (context-symbol-bindings context)))
-	(not (eq (car it) *no-value*))))
+	(not (eq (car it) +no-value+))))
 (defun typedp (name context)
   (cdr (gethash name (context-symbol-bindings context))))
 
@@ -61,7 +61,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (push value (car pair))
   (push type (cdr pair)))
 (defun bind-type (name context type)
-  (bind-value name context *no-value* type))
+  (bind-value name context +no-value+ type))
 (defun unbind-symbol (name context &aux 
 		      (pair (gethash name (context-symbol-bindings context))))
   (assert (typedp name context)

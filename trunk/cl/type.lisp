@@ -34,9 +34,9 @@ as of 10/10/08, enum and act-result types are not yet implemented
 |# 
 
 ;;; for convenience
-(defvar bool 'bool)
-(defvar num 'num)
-(defvar lambda-list 'lambda-list)
+(define-constant bool 'bool)
+(define-constant num 'num)
+(define-constant lambda-list 'lambda-list)
 
 (defun list-type-p (type) (eq (acar type) 'list))
 (defun tuple-type-p (type) (eq (acar type) 'tuple))

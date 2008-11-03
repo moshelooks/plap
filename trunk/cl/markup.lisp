@@ -15,11 +15,11 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defconstant simp 'simp) ; for simplified subexpressions
-(defconstant canon 'canon) ; for canonical form subexpressions
-(defconstant mung 'mung) ; for subexpressions that have been destuctively
+(define-constant simp 'simp) ; for simplified subexpressions
+(define-constant canon 'canon) ; for canonical form subexpressions
+(define-constant mung 'mung) ; for subexpressions that have been destuctively
 		         ; modified, possibly invalidating their markup
-(defconstant fully-reduced "")
+(define-constant fully-reduced "")
 
 (defun markup (expr) (cdar expr))
 

@@ -155,8 +155,8 @@ Author: madscience@google.com (Moshe Looks) |#
 ;					     (maxima::ratsimp
 ;					      (maxima::simplify mexpr)))
 					    :test #'equalp)))
-	       (system::simple-floating-point-overflow ())
-	       (system::simple-arithmetic-error ()))
+	       #+clisp(system::simple-floating-point-overflow ())
+	       #+clisp(system::simple-arithmetic-error ()))
 	     'nan)
 	   (all-simped-p (mexpr)
 	     (or (atom mexpr) (and (eq (cadar mexpr) 'maxima::simp)

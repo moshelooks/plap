@@ -44,7 +44,7 @@ Author: madscience@google.com (Moshe Looks) |#
   `(let ((vars (collecting (dolist (x *enum-exprs-test-symbols*)
 			     (if (and (eql 0 (cdr x)) (not (const-atom-p x)))
 				 (collect (car x)))))))
-     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 4) t)
+     (dolist (expr (enum-exprs *enum-exprs-test-symbols* 2) t)
        (strip-markup expr)
        (unless (assert-equal (truth-table expr vars)
 			     (truth-table (funcall ,rewrite expr) vars)
@@ -151,27 +151,28 @@ Author: madscience@google.com (Moshe Looks) |#
 		 (markup expr))
   :order upwards)
 (define-test remove-bool-duplicates
-  (assert-equal '(and x z) (p2sexpr (remove-bool-duplicates %(and z x x z z))))
-  (let ((expr %(and x y z)))
+  (assert-equal '(and x z) (p2sexpr (remove-bool-duplicates 
+				     (copy-tree %(and z x x z z)))))
+  (let ((expr (copy-tree %(and x y z))))
     (assert-eq expr (remove-bool-duplicates expr))))
 
 (defun mkclause (expr)
   (if (junctorp expr) 
       (cons (car (args expr)) (cdr (args expr)))
       (list expr)))
-(defun invert (expr) ; note - doesn't touch markup
+(defun invert-bool (expr) ; note - doesn't touch markup
   (case (afn expr)
-    (and (pcons 'or (mapcar #'invert (args expr)) (markup expr)))
-    (or  (pcons 'and (mapcar #'invert (args expr)) (markup expr)))
+    (and (pcons 'or (mapcar #'invert-bool (args expr)) (markup expr)))
+    (or  (pcons 'and (mapcar #'invert-bool (args expr)) (markup expr)))
     (not (arg0 expr))
     (t (pcons 'not (list expr)))))
-(define-test invert
-  (assert-equal %(and x (not y)) (invert %(or (not x) y)))
-  (test-by-truth-tables (lambda (expr) (invert (invert expr)))))
+(define-test invert-bool
+  (assert-equal %(and x (not y)) (invert-bool (copy-tree %(or (not x) y))))
+  (test-by-truth-tables (lambda (expr) (invert-bool (invert-bool expr)))))
 (defun shrink-by-negation (expr) 
   (case (afn expr)
     (not (arg0 expr))
-    (or (invert expr))))
+    (or (invert-bool expr))))
 (defun shrinkable-by-negation-p (expr) (matches (afn expr) (not or)))
 (defun make-impls (cl subcl cl2 neg)
   (delete-adjacent-duplicates (merge 'list (delete subcl (copy-list cl))
@@ -316,13 +317,11 @@ Author: madscience@google.com (Moshe Looks) |#
 
     (test-by-truth-tables #'reduce-bool-by-clauses)))
 
-(define-test identify-contradictions
-  (flet ((mung (expr) (p2sexpr (qreduct expr))))
+(define-test identify-contradictions-and-tautologies
+  (flet ((mung (expr) (p2sexpr (qreduct (copy-tree expr)))))
     (assert-equal 'false (mung %(and x (not x))))
     (assert-equal '(and x (not y)) (mung %(and x (not y))))
-    (assert-equal 'z (mung %(or (and x (not x)) z)))))
-(define-test identify-tautologies
-  (flet ((mung (expr) (p2sexpr (qreduct expr))))
+    (assert-equal 'z (mung %(or (and x (not x)) z)))
     (assert-equal 'true (mung %(or x (not x))))
     (assert-equal '(or x (not y)) (mung %(or x (not y))))
     (assert-equal 'z (mung %(and z (or x (not x)))))))

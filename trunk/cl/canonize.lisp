@@ -44,33 +44,39 @@ Author: madscience@google.com (Moshe Looks) |#
 (defdefbytype defcanonizer canonize)
 (defun qcanonize (expr) ;;;useful for testing
   (canonize expr *empty-context* (expr-type expr *empty-context*)))
-;;useful for testing; returns an unmarked version of the expr
-(defun validate-canonized (cexpr &optional
-			   (type (expr-type cexpr)) context parent)
-  (assert-true (consp cexpr))
-  (assert-true (mark canon cexpr))
-  (assert-equalp (p2sexpr (reduct (sexpr2p (p2sexpr cexpr)) context type))
-		 (p2sexpr (canon-expr cexpr))
- 		 cexpr)
-  (assert-eq parent (canon-parent cexpr))
-  (if (lambdap cexpr)
-      (with-bound-types context (fn-args cexpr) (cadr type)
-	(validate-canonized (fn-body cexpr) (caddr type) context cexpr))
-      (mapc (lambda (arg type) 
-	      (unless (atom arg) 
-		(validate-canonized arg type context cexpr)))
-	    (args cexpr) (arg-types cexpr *empty-context* type))))
-(defun validate-canonize (target expr &optional 
-			  (type (expr-type expr)) (context *empty-context*))
-  (validate-canonized expr type context)
-  (assert-equal (if (consp (acar target)) (p2sexpr target) target)
-		(p2sexpr expr)
-		target expr))
+
+;; useful for testing; returns an unmarked version of the expr
+;; note that to compile under sbcl these must be macros rather than functions,
+;; else we get the dreaded 
+;; "Objects of type FUNCTION can't be dumped into fasl files."
+;; error
+(defmacro validate-canonized (cexpr &optional
+			      (type '(expr-type cexpr)) context parent)
+  `(let* ((cexpr ,cexpr) (type ,type) (context ,context) (parent ,parent))
+     (assert-true (consp cexpr))
+     (assert-true (mark canon cexpr))
+     (assert-equalp (p2sexpr (reduct (sexpr2p (p2sexpr cexpr)) context type))
+		    (p2sexpr (canon-expr cexpr))
+		    cexpr)
+     (assert-eq parent (canon-parent cexpr))
+     (if (lambdap cexpr)
+	 (with-bound-types context (fn-args cexpr) (cadr type)
+	   (validate-canonized (fn-body cexpr) (caddr type) context cexpr))
+	 (mapc (lambda (arg type) 
+		 (unless (atom arg) 
+		   (validate-canonized arg type context cexpr)))
+	       (args cexpr) (arg-types cexpr *empty-context* type)))))
+(defmacro validate-canonize (target expr &optional (type `(expr-type expr))
+			     (context *empty-context*))
+  `(let* ((target ,target) (expr ,expr) (type ,type) (context ,context))
+     (validate-canonized expr type context)
+     (assert-equal (if (consp (acar target)) (p2sexpr target) target)
+		   (p2sexpr expr)
+		   target expr)))
 
 (defcanonizer bool (expr context &aux 
 		    (op (if (matches (ifn expr) (true or)) 'or 'and))
 		    (dual (bool-dual op)))
-
   (labels ((substructure (op expr dual)
 	     (ccons op
 		    (decompose-bool expr
@@ -105,10 +111,10 @@ Author: madscience@google.com (Moshe Looks) |#
    %(and (or) (or (and) (and (not z)) (and (or) (or x) (or y))))
    (qcanonize %(or (not z) (and x y)))))
 
-(defconstant *num-canonical-ops* '(exp log sin))
-(defconstant *num-canonical-offsets* '(0 1 0))
-(defconstant *num-canonical-values* 
-  (mapcar #'funcall *num-canonical-ops* *num-canonical-offsets*))
+(define-constant +num-canonical-ops+ '(exp log sin))
+(define-constant +num-canonical-offsets+ '(0 1 0))
+(define-constant +num-canonical-values+ 
+  (mapcar #'funcall +num-canonical-ops+ +num-canonical-offsets+))
 
 (defcanonizer num (expr context)
   (labels
@@ -119,9 +125,9 @@ Author: madscience@google.com (Moshe Looks) |#
 	 ~((* 0 (,op (+ ,offset ,@(mapcar (lambda (op offset value)
 					    ~((* 0 (,op (+ ,offset)))
 					      (0 nil (,value (,offset)))))
-					  *num-canonical-ops*
-					  *num-canonical-offsets*
-					  *num-canonical-values*))))
+					  +num-canonical-ops+
+					  +num-canonical-offsets+
+					  +num-canonical-values+))))
 	   (0 nil (,value (,offset)))))
        (dual-assemble (at op ops-terms splitter builder o ws ts &optional top)
        ~((,op ,o ,@ops-terms
@@ -148,8 +154,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (,(or at (funcall op o)))))
        (sum-of-products (expr o ws ts &optional top)
 	 (dual-assemble
-	  expr '+ (mapcar #'sub-product *num-canonical-ops*
-			  *num-canonical-offsets* *num-canonical-values*)
+	  expr '+ (mapcar #'sub-product +num-canonical-ops+
+			  +num-canonical-offsets+ +num-canonical-values+)
 	  #'split-product-of-sums #'product-of-sums o ws ts top))
        (product-of-sums (expr o ws ts &optional top)
 	 (dual-assemble 
@@ -158,8 +164,8 @@ Author: madscience@google.com (Moshe Looks) |#
 			    (unless (find op ts :key #'afn)
 			      (collect ~((+ 1 ,(sub-product op offset value))
 					 (1 nil nil)))))
-			  *num-canonical-ops* *num-canonical-offsets* 
-			  *num-canonical-values*))
+			  +num-canonical-ops+ +num-canonical-offsets+ 
+			  +num-canonical-values+))
 	  #'split-sum-of-products #'sum-of-products o ws ts top)))
     (dbind (splitter builder)
 	(if (and (eq (afn expr) '+)

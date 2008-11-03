@@ -25,11 +25,11 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test sort-commutative
   (assert-equal '((and simp (sort-commutative)) 
 		  x y z ((or simp (sort-commutative)) a b))
-		(sort-commutative %(and y (or b a) z x)))
+		(sort-commutative (copy-tree %(and y (or b a) z x))))
   (assert-equal '((foo simp (sort-commutative)) 
 		  zaa baa ((or simp (sort-commutative)) a b))
-		(sort-commutative %(foo zaa baa (or b a))))
-  (let ((expr %(and x y z)))
+		(sort-commutative (copy-tree %(foo zaa baa (or b a)))))
+  (let ((expr (copy-tree %(and x y z))))
     (assert-eq expr (sort-commutative expr))))
   
 (define-reduction flatten-associative (fn args markup)
@@ -43,7 +43,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test flatten-associative
   (assert-equal '((and simp (flatten-associative)) 
 		  x y ((or simp (flatten-associative)) q w))
-		(flatten-associative %(and x (and y (or q w))))))
+		(flatten-associative (copy-tree %(and x (and y (or q w)))))))
 
 (define-reduction eval-const (expr)
   :condition (and (purep expr)

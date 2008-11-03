@@ -19,8 +19,8 @@ represent evolved programs. |#
 (in-package :plop)
 
 ;;; for convenice - the language uses these instead of t and nil
-(defvar true 'true)
-(defvar false 'false)
+(define-constant true 'true)
+(define-constant false 'false)
 
 ;; total-cmp is a total ordering on all plop expressions
 ;; returns less, nil, or greater, with the important property that (not symbol)
