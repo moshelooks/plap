@@ -171,7 +171,6 @@ Author: madscience@google.com (Moshe Looks) |#
 		    (generate-reduction ,name ,@rest)))))
 
 (defun reduct (expr context type)
-;  (print* 'reduct expr)
   (assert (not (canonp expr)) () "can't reduct canonized expr ~S" expr)
   (labels ((reduce-subtypes (expr)
 	     (cond 

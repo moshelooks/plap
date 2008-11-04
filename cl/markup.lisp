@@ -19,7 +19,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-constant canon 'canon) ; for canonical form subexpressions
 (define-constant mung 'mung) ; for subexpressions that have been destuctively
 		         ; modified, possibly invalidating their markup
-(define-constant fully-reduced "")
+(define-constant fully-reduced (intern "")) ; so that its first in ordering
 
 (defun markup (expr) (cdar expr))
 
