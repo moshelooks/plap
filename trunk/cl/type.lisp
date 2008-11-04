@@ -206,10 +206,11 @@ as of 10/10/08, enum and act-result types are not yet implemented
 		(next-most-general-types '(tuple (tuple bool bool) num bool))))
 
 (defun lookup-atom-type (x) ; returns nil iff no type found
-  (cond ((or (eq x true) (eq x false)) bool)
-	((numberp x) num)
-	((lambda-list-p x) lambda-list)
-	((null x) '(list nil))))
+  (case x
+    ((true false) bool)
+    (nan num)
+    ((nil) '(list nil))
+    (t (cond ((numberp x) num) ((lambda-list-p x) lambda-list)))))
 (defun atom-type (x) ; error if no type found
   (assert (lookup-atom-type x) () "no type found for atom ~S" x)
   (lookup-atom-type x))

@@ -27,18 +27,14 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; blocks non-numeric expressions from being munged by maxima
 (define-reduction maxima-prepare (expr)
-    :type num
-    :order upwards
-    :action (progn (mapc (lambda (x)
-                          (unless (or (atom x) (simpp x 'maxima-prepare))
-;;     (progn (mapc (lambda (x)
-;; 		   (when (and (consp x) (or (not (simpp x 'maxima-prepare))
-;; 					    (and (mark canon expr)
-;; 						 (not (mark mung expr)))))
-			     (setf (mark 'maxima::simp x) nil)))
-			 (args expr))
-		   expr)
-    :preserves all)
+  :type num
+  :order upwards
+  :action (progn (mapc (lambda (x)
+			 (unless (or (atom x) (simpp x 'maxima-prepare))
+			   (setf (mark 'maxima::simp x) nil)))
+		       (args expr))
+		 expr)
+  :preserves all)
 
 (defun to-maxima (expr)
   (if (atom expr) expr
@@ -166,19 +162,3 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal '(sin x) (p2sexpr (maxima-reduce %(* 1 (sin (* 1 x))))))
 ;  (assert-equal %(sin x) (maxima-reduce %(* 1.0 (sin (* 1.0 x))))))
   (assert-equal 4.4 (maxima-reduce %(+ 2.0 2.4))))
-    
-
-
-;;     (to-maxima expr)
-;;     (let ((reduced (full-mreduce (copy-tree expr)))) ;fixme copy
-;;       (if (pequal expr reduced)
-;; 	  (from-maxima expr) 
-;; 	  (prog1 (from-maxima (copy-tree reduced))
-;; 	    (from-maxima expr))))))
-
-;;     (let ((mexpr (copy-tree expr)))
-;;       (to-maxima mexpr)
-;;       (let* ((reduced-mexpr (full-mreduce mexpr)))
-;; 	(if (equalp mexpr reduced-mexpr)
-;; 	    expr 
-;; 	    (from-maxima (copy-tree reduced-mexpr)))))))
