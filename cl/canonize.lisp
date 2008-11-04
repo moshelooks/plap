@@ -45,31 +45,35 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun qcanonize (expr) ;;;useful for testing
   (canonize expr *empty-context* (expr-type expr *empty-context*)))
 
-;; useful for testing; returns an unmarked version of the expr
-;; note that to compile under sbcl these must be macros rather than functions,
-;; else we get the dreaded 
-;; "Objects of type FUNCTION can't be dumped into fasl files."
-;; error
-(defmacro validate-canonized (cexpr &optional
-			      (type '(expr-type cexpr)) context parent)
-  `(let* ((cexpr ,cexpr) (type ,type) (context ,context) (parent ,parent))
-     (assert-true (consp cexpr))
-     (assert-true (mark canon cexpr))
-     (assert-equalp (p2sexpr (reduct (sexpr2p (p2sexpr cexpr)) context type))
-		    (p2sexpr (canon-expr cexpr))
-		    cexpr)
-     (assert-eq parent (canon-parent cexpr))
-     (if (lambdap cexpr)
-	 (with-bound-types context (fn-args cexpr) (cadr type)
-	   (validate-canonized (fn-body cexpr) (caddr type) context cexpr))
-	 (mapc (lambda (arg type) 
-		 (unless (atom arg) 
-		   (validate-canonized arg type context cexpr)))
-	       (args cexpr) (arg-types cexpr *empty-context* type)))))
+(defun map-subexprs-with-type-and-parent 
+    (fn expr &optional (context *empty-context*)
+     (type (expr-type expr context)) parent)
+  (funcall fn expr type parent)
+  (if (lambdap expr)
+      (with-bound-types context (fn-args expr) (cadr type)
+	(unless (atom (fn-body expr))
+	  (map-subexprs-with-type-and-parent
+	   fn (fn-body expr) context (caddr type) expr)))
+      (mapc (lambda (arg type) 
+	      (unless (atom arg)
+		(map-subexprs-with-type-and-parent fn arg context type expr)))
+	    (args expr) (arg-types expr *empty-context* type))))
+;; useful for testing - note that to compile under sbcl these must be macros
+;; rather than functions, else we get the dreaded "Objects of type FUNCTION
+;; can't be dumped into fasl files." error...
 (defmacro validate-canonize (target expr &optional (type `(expr-type expr))
 			     (context *empty-context*))
   `(let* ((target ,target) (expr ,expr) (type ,type) (context ,context))
-     (validate-canonized expr type context)
+    (map-subexprs-with-type-and-parent 
+     (lambda (cexpr type parent)
+	(assert-true (consp cexpr))
+	(assert-true (mark canon cexpr))
+	(assert-equalp (p2sexpr (reduct (sexpr2p (p2sexpr cexpr))
+					context type))
+		       (p2sexpr (canon-expr cexpr))
+		       cexpr)
+	(assert-eq parent (canon-parent cexpr)))
+     expr context type nil)
      (assert-equal (if (consp (acar target)) (p2sexpr target) target)
 		   (p2sexpr expr)
 		   target expr)))
