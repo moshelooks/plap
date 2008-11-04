@@ -131,7 +131,7 @@ represent evolved programs. |#
 		(sort (free-variables %(and (or x y) (or (not x) z) y))
 		      #'string<))
   (assert-equal nil (free-variables %(lambda (x y) (* x y))))
-  (assert-equal x q (free-variables %(cons x (lambda (x y) (* x y q))))))
+  (assert-equal '(x q) (free-variables %(cons x (lambda (x y) (* x y q))))))
 (defun lambdap (value) 
   (and (consp value) (consp (car value)) (eq (caar value) 'lambda)))
 (defun tuple-value-p (expr) (arrayp expr))
