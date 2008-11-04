@@ -188,7 +188,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		(setf clause-max-length (max clause-max-length l))
 		(cons c l))
 	      clauses))
-     (clause-map (make-array (1+ clause-max-length)))
+     (clause-map (make-array (1+ clause-max-length) :initial-element nil))
      (subs-to-clauses (make-hash-table :test 'equal))) ;watch out
   ;; return immediately if we have a negation or tautology
   (mapc (lambda (x y)
