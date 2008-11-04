@@ -120,18 +120,18 @@ represent evolved programs. |#
   (if (atom expr) 1 
       (reduce #'+ (args expr) :key #'expr-size :initial-value 1)))
 (defun arity (expr) (length (args expr)))
-(defun free-variables (expr) ;;fixme extend to non-boolean, lambda-awareness...
-  (if (consp expr)
-      (case (fn expr)
-	((and or not) (reduce (bind #'delete-adjacent-duplicates 
-				    (merge 'list /1 /2 #'string<))
-			      (args expr)
-			      :key #'free-variables)))
-      (unless (const-atom-p expr) (list expr))))
+(defun free-variables (expr &optional (context *empty-context*))
+  (cond ((atom expr) (unless (const-atom-p expr context) (list expr)))
+	((lambdap expr) (with-nil-bound-values context (fn-args expr)
+			  (free-variables (fn-body expr) context)))
+	(t (reduce (lambda (x y) (delete-duplicates (nconc x y)))
+		   (args expr) :key #'free-variables))))
 (define-test free-variables
   (assert-equal '(x y z)
-		(sort (free-variables %(and (or x y) (or (not x) z) y)) 
-		      #'string<)))
+		(sort (free-variables %(and (or x y) (or (not x) z) y))
+		      #'string<))
+  (assert-equal nil (free-variables %(lambda (x y) (* x y))))
+  (assert-equal x q (free-variables %(cons x (lambda (x y) (* x y q))))))
 (defun lambdap (value) 
   (and (consp value) (consp (car value)) (eq (caar value) 'lambda)))
 (defun tuple-value-p (expr) (arrayp expr))
