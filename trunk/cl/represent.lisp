@@ -24,7 +24,8 @@ Author: madscience@google.com (Moshe Looks) |#
     (unmark mung expr)
     (awhen (canon-parent expr) (unmung it))))
 
-;;fixme should reduce settngs for knobs before making the knobs
+;;; remember - generally one wants to call reduct on the settings before
+;;; using them to create knobs
 
 ;;; expr should generally be at's parent
 (defun make-replacer-knob (expr at &rest settings &aux (original (car at)))

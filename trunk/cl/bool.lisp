@@ -189,7 +189,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		(cons c l))
 	      clauses))
      (clause-map (make-array (1+ clause-max-length) :initial-element nil))
-     (subs-to-clauses (make-hash-table :test 'equal))) ;watch out
+     (subs-to-clauses (make-hash-table :test 'equalp))) 
   ;; return immediately if we have a negation or tautology
   (mapc (lambda (x y)
 	  (if (and (singlep x) (singlep y) (negatesp (car x) (car y)))
