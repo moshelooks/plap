@@ -30,7 +30,7 @@ types are as follows:
 Note that the type nil corresponds to the empty set (no values), whereas t 
 corresponds to the universal set (all values). The type of nil is (list nil).
 
-as of 10/10/08, enum and act-result types are not yet implemented
+as of 11/04/08, enum and act-result types are not yet implemented
 |# 
 
 ;;; for convenience
@@ -215,12 +215,35 @@ as of 10/10/08, enum and act-result types are not yet implemented
   (assert (lookup-atom-type x) () "no type found for atom ~S" x)
   (lookup-atom-type x))
 
-;fixme - it would be nice to do clever type inference to find the arguments
-;types for lambda-exprs, but this isn't strictly needed
-(defun lookup-lambda-type (args body)
-  (when (emptyp (lambda-list-argnames args)) `(function () ,(expr-type body))))
-(defun lambda-type (args body)
-  (assert (lookup-lambda-type args body) 
+;;; finds the type of of the given var induced by the expr
+(defun find-type-of (x expr &optional (context *empty-context*) 
+		     (type (lookup-expr-type expr context)))
+  (cond ((typedp x context) (gettype x context))
+	((atom expr) (if (and type (eql x expr)) type t))
+	((not (args expr)) t)
+	((if type (arg-types-p expr context) (typedp (fn expr) context))
+	 (reduce #'intersection-type  
+		 (mapcar (bind #'find-type-of x /1 context /2) 
+			 (args expr) (arg-types expr context type))))
+	(t (reduce #'intersection-type (args expr) 
+		   :key (bind #'find-type-of x /1 context)))))
+(define-test find-type-of
+  (assert-equal bool (find-type-of 'x %(and y (or x z))))
+  (assert-equal t (find-type-of 'x 42))
+  (assert-equal bool (find-type-of 'x %(if x 2 3)))
+  (assert-equal nil (find-type-of 'x %(tuple (and x y) (+ x y))))
+  (with-bound-types *empty-context* '(x) '(num)
+    (assert-equal num (find-type-of 'x %(and p q))))
+  (with-bound-types *empty-context* '(f) '((function (num) bool))
+    (assert-equal num (find-type-of 'x %(f x)))))
+
+(defun lookup-lambda-type (args body &optional (context *empty-context*)
+			   (return-type (expr-type body context)))
+  `(function ,(map 'list (bind #'find-type-of /1 body context return-type)
+		   (lambda-list-argnames args))
+	     ,return-type))
+(defun lambda-type (args body &optional (context *empty-context*))
+  (assert (lookup-lambda-type args body context)
 	  () "no type found for lambda ~S ~S" args body)
   (lookup-lambda-type args body))
 
@@ -247,15 +270,28 @@ as of 10/10/08, enum and act-result types are not yet implemented
 		     (lambda-type (car args) (cadr args))))
 	  (if ,(lambda (fn args) (union-type (funcall fn (cadr args))
 					     (funcall fn (caddr args)))))))))
-  (flet ((lookup-fn (fn args lookup)
-	   (case fn
-	     ((and or not <) bool)
-	     ((+ - * / exp log sin abs) num)
-	     (t (assert (gethash fn type-finders)
-			() "can't find a type for fn ~S" fn)
-		(funcall (gethash fn type-finders) lookup args)))))
+  (labels ((easy-lookup-fn (fn)
+	     (case fn
+	       ((and or not <) bool)
+	       ((+ - * / exp log sin abs) num)))
+	   (lookup-fn (fn args lookup)
+	     (or (easy-lookup-fn fn)
+		 (progn (assert (gethash fn type-finders)
+				() "can't find a type for fn ~S" fn)
+			(funcall (gethash fn type-finders) lookup args)))))
     (defun funcall-type (fn args) (lookup-fn fn args #'value-type))
-    (defun expr-type (expr &optional context)
+    (defun lookup-expr-type (expr context)
+      (if (consp expr)
+	  (or (easy-lookup-fn (fn expr))
+	      (awhen (gethash (fn expr) type-finders)
+		(funcall it 
+			 (lambda (subexpr)
+			   (or (lookup-expr-type subexpr context)
+			       (return-from lookup-expr-type nil)))
+			 (args expr))))
+	  (or (lookup-atom-type expr) (when (typedp expr context)
+					(gettype expr context)))))
+    (defun expr-type (expr &optional (context *empty-context*))
       (if (consp expr)
 	  (lookup-fn (fn expr) (args expr) (bind #'expr-type /1 context))
 	  (or (lookup-atom-type expr) (gettype expr context))))))
@@ -263,7 +299,7 @@ as of 10/10/08, enum and act-result types are not yet implemented
     `((bool (true false ,%(and true false) ,%(not (or true false))))
       (num  (1 4.3 ,(/ 1 3) ,(sqrt -1) ,%(+ 1 2 3) ,%(* (+ 1 0) 3)))
       (bool (,%(< 2 3)))))
-(define-test expr-type-with-bindings ;fixme instead of init-hash mkcontext
+(define-test expr-type-with-bindings
   (assert-equal bool (expr-type 'x (init-context '((x true)))))
   (assert-equal num (expr-type 'x (init-context '((x 42)))))
   (assert-equal '(list num) (expr-type %(list x) (init-context '((x 3.3)))))
@@ -309,6 +345,13 @@ as of 10/10/08, enum and act-result types are not yet implemented
 				   (tuple (list 1 2) 3)
 				   (tuple (list true true) false))
 			   *empty-context* bool)))
+
+;;; this returns true iff arg-tyes can be infered
+(defun arg-types-p (expr context &aux (fn (fn expr)))
+  (assert (or (not (typedp fn context)) 
+	      (function-type-p (gettype fn context))))
+  (or (matches fn (< list split lambda tuple if)) (closurep fn) 
+      (typedp fn context)))
 
 (defun default-expr (type)
   (ecase (icar type)
