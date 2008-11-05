@@ -136,8 +136,10 @@ Author: madscience@google.com (Moshe Looks) |#
     (cons (apply #'make-replacer-knob expr (args expr) 
 		 (numarg-settings expr context))
 	  (with-nil-bound-values context ; the terms
-	      (delete-if #'consp (mapcar (bind #'reduct /1 *empty-context* num)
-					 (ternary (split-by-op expr))))
+	      (delete-if 
+	       #'consp (mapcar (compose (bind #'reduct /1 *empty-context* num)
+					#'canon-clean)
+			       (ternary (split-by-op expr))))
 	    (mapcar (lambda (var) 
 		      (apply #'make-inserter-knob expr (args expr)
 			     (numarg-terms expr var context)))

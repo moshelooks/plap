@@ -146,6 +146,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			(when (eq 'nan x) (return most-negative-single-float))
 			(decf sum (abs (- target x))))))
 		  input-values target-values))
+    (print* 'score sum)
     sum))
 
 (defun num-hillclimb-with-target-values
@@ -156,7 +157,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (hillclimb 0 *empty-context* num
 			  (bind #'reduct /1 *empty-context* num)
 			  (make-greedy-scoring-acceptor scorer)
-		 (make-count-or-score-terminator nsteps scorer -0.01)))))
+		 (make-count-or-score-terminator nsteps scorer -0.1)))))
   (print* 'result (p2sexpr result))
   (print* 'score (funcall scorer result)))
 
