@@ -54,13 +54,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun bool-dual (f) (ecase f (and 'or) (or 'and) (true false) (false true)))
 
-;; todo: numhillclimb testing
-;; large-scale bool testing (run overnight), load 100k and benchmark
-;; enf
-;; random tree sampling fixme
-
 ;;; boolean reductions
-
 (define-reduction push-nots (expr)
     :type bool
     :condition (and (eq (fn expr) 'not)
@@ -328,6 +322,22 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-test bool-reduct (test-by-truth-tables 
 			  (bind #'reduct /1 *empty-context* bool)))
 
+
+;; (if true x y) -> x, (if false x y) -> y
+;; if pred x y -> if (not pred) y x when shrink-by-negation applies to pred
+(define-reduction if-identities (expr)
+  :condition (eq (fn expr) 'if)
+  :action (case (arg0 expr) 
+	    (true (arg1 expr))
+	    (false (arg2 expr))
+	    (t (aif (shrink-by-negation (arg0 expr))
+		    (pcons 'if (list it (arg2 expr) (arg1 expr)) (markup expr))
+		    expr)))
+  :order downwards)
+(define-test if-identities 
+  (assert-equal '(if x z y)
+		(p2sexpr (reduct %(if (not x) y z) *empty-context* num))))
+
 ;; ;;; if the handle set centered at expr is inconsistent, remove the subtree
 ;; ;;; rooted at expr
 ;; (define-reduction remove-inconsistent-handles (expr :parents parents)
@@ -360,11 +370,3 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;   :type bool
 ;;   :condition (eq 'and (car expr))
 ;; )
-
-;;; need to handle dangling ors and ands from holman's transformations
-;;; these can be propagated upwards ... this should be a cleanup function
-;;; - make cleanup any function, btw, not a reduction
-
-;; idea - what about considering for insertion minimal trees that only use n
-;; arguments? e.g. all boolean exprs with the vars, etc. these could be cached
-;; in minimal form...

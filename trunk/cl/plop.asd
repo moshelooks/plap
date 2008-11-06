@@ -15,12 +15,11 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 
 (in-package :cl-user)
-(defpackage :plop-asd
-  (:use :cl :asdf :cl-utilities :anaphora))
+(defpackage :plop-asd (:use :cl :cl-utilities :anaphora))
 (setf *print-circle* t) ; markup may contain circular references to parents
 
 (in-package :plop-asd)
-(defsystem "plop"
+(asdf:defsystem "plop"
   :serial t
   :components ((:file "packages")
                (:file "util")
@@ -41,5 +40,4 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "list")
 	       (:file "canonize")
 	       (:file "represent")
-	       (:file "search")
-	       (:file "tests")))
+	       (:file "search")))

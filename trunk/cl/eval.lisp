@@ -106,9 +106,5 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (list 4 (list %(+ 1 1 1 1) 
 			%(* 2 2)))))
 
-;; (defun pfuncall (fn context &rest args)
-;;   (assert (eq (fn fn) 'lambda))
-;;   (with-bound-symbols context (fn-args fn) args
-;;     (peval (fn-body fn) context)))
 (defun papply (fn context &rest args)
   (apply #'apply #'pfuncall fn context args)) ;just beautiful...

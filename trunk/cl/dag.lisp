@@ -12,7 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Author: madscience@google.com (Moshe Looks) |#
+Author: madscience@google.com (Moshe Looks) 
+
+A simple directed acyclic graph representation based on hash tables that
+only supports edge insertion, not removal. |#
 (in-package :plop)
 
 (defun make-dag () (make-hash-table))

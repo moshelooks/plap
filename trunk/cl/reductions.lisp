@@ -12,10 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Author: madscience@google.com (Moshe Looks) |#
-(in-package :plop)
+Author: madscience@google.com (Moshe Looks) 
 
-;;;; general-purpose reductions are defined here
+General-purpose reductions that can apply to any type are defined here |#
+(in-package :plop)
 
 (define-reduction sort-commutative (fn args markup)
   :condition (and (commutativep fn) (not (sortedp args #'total-order)))
@@ -78,21 +78,3 @@ Author: madscience@google.com (Moshe Looks) |#
 		(eval-const %(if true (list 42) nil)))
   (assert-equal '((list simp (eval-const)) 42 42)
 		(eval-const %(append (list 42) (list 42)))))
-
-;; (if true x y) -> x, (if false x y) -> y
-(define-reduction if-identities (expr)
-  :condition (eq (fn expr) 'if)
-  :action (case (arg0 expr) 
-	    (true (arg1 expr))
-	    (false (arg2 expr))
-	    (t expr))
-  :order downwards)
-
-;; (define-reduction idempotence-elimination (expr)
-;;   :condition (and (idempotentp (fn expr)) (singlep (args expr)))
-;;   :action (arg0 expr))
-;; (define-reduction zero-elem-removal (fn args markup)
-;;   :condition (and (has-zero-elem-p )))
-;; (define-reduction identity-elem-removal (
-;;   :condition (and (has-identity-elem-p fn) (member (identity-elem fn) args))
-;;   :action (if (singlep 

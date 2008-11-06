@@ -39,11 +39,6 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun ring-op-p (expr) ;true if rooted in + or * or and or or
   (matches (ifn expr) (+ * and or)))
 
-;; (define-reduction reduce-abs (expr)
-;;   :type num
-;;   :condition (matches (car expr) (*
-;;   :action
-	 
 (defun num-table (expr vars table)
   (mapcar (lambda (values)
 	    (with-bound-values *empty-context* vars values
@@ -67,6 +62,7 @@ Author: madscience@google.com (Moshe Looks) |#
 				      (ncons (mkexp (arg1 expr)))))))
 	      expr)))))
 
+;;; for testing the correctness and comprehensiveness of numerical reduct
 (defparameter *plop-root-dir* "/Users/madscience/work/plap/trunk/cl")
 (labels
     ((read-stream (fname &aux res)
@@ -98,12 +94,9 @@ Author: madscience@google.com (Moshe Looks) |#
       (format t "combo nodiv:   ~S~%" (sexprs-size combo-nodiv-sexprs))
       (format t "plop size:     ~S~%" (sexprs-size exprs))
       (unless quick
-;; 	(mapc (lambda (x y z) (if (< (expr-size x) (expr-size y))
-;; 				  (print* (expr-size x) (expr-size y) x y z)))
-;; 	      combo-nodiv-sexprs exprs raw-nodiv-sexprs)
 	(mapc (lambda (x y) 
 		(assert (equalp (p2sexpr x) (p2sexpr y)) () 
-			"maxima munged ~S to ~S" x y))
+			"reduction munged ~S to ~S" x y))
 	      orig raw-nodiv-sexprs)
 	(mapc (lambda (x y)
 		(if (= 0 (mod (incf mmm) 200)) (print* 'done mmm))
@@ -125,7 +118,3 @@ Author: madscience@google.com (Moshe Looks) |#
       nil)
     (defparameter raww raw-sexprs)
     (defparameter raww-nodiv raw-nodiv-sexprs)))
-;;     (mapcar (lambda (x) 
-;; 	      (print* 'foobash x) 
-;; 	      (reduct x *empty-context* num))
-;; 	    raw-sexprs)))

@@ -79,7 +79,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	(random-sample n knobs)))
     
 (defun weak-kick-until (pred n knobs)
-;  (print* 'wku n)
   (weak-kick n knobs)
   (unless (funcall pred)
     (weak-kick-until pred n knobs)))
@@ -146,7 +145,6 @@ Author: madscience@google.com (Moshe Looks) |#
 			(when (eq 'nan x) (return most-negative-single-float))
 			(decf sum (abs (- target x))))))
 		  input-values target-values))
-    (print* 'score sum)
     sum))
 
 (defun num-hillclimb-with-target-values
@@ -157,7 +155,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (hillclimb 0 *empty-context* num
 			  (bind #'reduct /1 *empty-context* num)
 			  (make-greedy-scoring-acceptor scorer)
-		 (make-count-or-score-terminator nsteps scorer -0.1)))))
+		 (make-count-or-score-terminator nsteps scorer -0.01)))))
   (print* 'result (p2sexpr result))
   (print* 'score (funcall scorer result)))
 
@@ -171,215 +169,3 @@ Author: madscience@google.com (Moshe Looks) |#
 			     (peval (fn-body target-fn) *empty-context* num)))
 	   input-values)
    nsteps vars))
-
-;; ;;;;;;;;adkan
-
-;; ;; (defun make-pair-scorer (pairs var)
-;; ;;   (lambda (expr)
-;; ;;     (blockn
-;; ;;       (- (reduce #'+ (mapcar (lambda (p &aux 
-;; ;; 				      (d (abs (- (peval expr 
-;; ;; 							    `((,var ,(car p))))
-;; ;; 						 (cadr p)))))
-;; ;; 			       (if (> d 1) (return (* -2 (length pairs))) d))
-;; ;; 			     pairs))))))
-
-;; ;; (defun num-hillclimb-with-target-pairs (target-pairs nsteps)
-;; ;;   (let ((vars '(x))
-;; ;; 	(scorer (make-pair-scorer target-pairs 'x)))
-;; ;;     (hillclimb (canonize 0) vars (make-greedy-scoring-acceptor scorer)
-;; ;; 	       (make-count-or-score-terminator nsteps scorer -0.01))))
-				 
-
-;; ;; (
-;; ;; 	 (
-;; ;; (bind #'try-changes #'filter
-;; ;;   (let ((funset (
-;; ;;   (while (not terminationp)
-;; ;;     (
-  
-
-
-;; ;; (defgeneric update (model expr score))
-;; ;; (defgeneric set-exemplar (model expr score))
-;; ;; (defgeneric acceptsp (model expr score))
-;; ;; (defgeneric sample (model))
-
-;; ;; (defclass greedy-hillclimber ()
-;; ;;   (best best-score))
-;; ;; (defmethod update ((model greedy-hillclimber) expr score)
-;; ;;   (declare (ignore model))
-;; ;;   (declare (ignore expr))
-;; ;;   (declare (ignore score)))
-;; ;; (defmethod set-exemplar ((model greedy-hillclimber) expr score)
-;; ;;   (setf (slot-value model 'best) expr)
-;; ;;   (setf (slot-value model 'best-score) score))
-;; ;; (defmethod acceptsp ((model greedy-hillclimber) expr score)
-;; ;;   (declare (ignore expr))
-;; ;;   (> score (slot-value model 'best-score)))
-;; ;; (defmethod sample ((model greedy-hillclimber))
-;; ;;   (let ((locus (uniform-sample (mapl-loci #'identity best))))
-;; ;;     (if (matches (car locus) (and or))
-;; ;; ;;   (labels ((sample-from (expr) 
-;; ;; ;; 	     (let ((len (length expr)))
-;; ;; ;; 	       (if (eq 
-;; ;; ;; ) we need access to free variables and types, etc. etc.
-
-		   
-;; ;; (defun basic-search (model scorer terminationp acceptsp)
-;; ;;   (let ((effort 0)
-;; ;; 	(exemplar (exemplar model))
-;; ;;     (while (not (funcall terminationp model effort))
-;; ;;       (let ((change (peturb model)))
-;; ;; 	(if acceptsp 
-;; ;;     (try-improvement model scorer)))
-
-		   
-
-;; ;; (defun basic-search (model scorer terminationp acceptsp)
-;; ;;   (let ((effort 0)
-;; ;; 	(exemplar (exemplar model))
-;; ;;     (while (not (funcall terminationp model effort))
-;; ;;       (let ((change (peturb model)))
-;; ;; 	(if acceptsp 
-;; ;;     (try-improvement model scorer)))
-
-;; ;; setf
-
-
-
-;; ;; (defun try-improvement ((model greedy-hillclimber) scorer)
-;; ;;   (
-
-
-;; ;;       (let* ((candidate (sample model))
-;; ;; 	     (candidate-score (funcall score candidate)))
-;; ;; 	(if (acceptsp model candidate candidate-score)
-;; ;; 	    (return (search model score terminationp candidate 
-;; ;; 			  :expr-score candidate-score)))
-;; ;; 	(update model candidate candidate-score)))))
-
-;; ;; (defun model-based-search (model score terminationp expr &key expr-score)
-;; ;;   (let ((expr-score (or expr-score (funcall score expr))))
-;; ;;     (update model expr expr-score)
-;; ;;     (if (funcall terminationp model) model)
-;; ;;     (set-exemplar model expr expr-score)
-;; ;;     (do* ((candidate (sample model) (sample model))
-;; ;; 	  (candidate-score (funcall score candidate) 
-;; ;; 			   (funcall score candidate)))
-;; ;; 	 ((funcall terminationp model) model)
-;; ;;       (if (acceptsp model candidate candidate-score)
-;; ;; 	  (return (search model score terminationp candidate 
-;; ;; 			  :expr-score candidate-score))
-;; ;; 	  (update model candidate candidate-score)))))
-
-
-;; ;; (defmacro define-enumerator (name arguments &body body)
-;; ;;   (let ((top (gensym))
-;; ;; 	(callback (gensym)))
-;; ;;     `(defun ,name (,callback ,@arguments)
-;; ;;        (block ,top 
-
-;; ;; (defun enum-exprs (expr type context ctrl &key root parents))
-
-;; ;; (define-enumerator bool-neighborhood (ctrl context expr &key parents)
-;; ;;   (if (not (consp expr))
-;; ;;       (enum-exprs 'bool context ctrl)
-;; ;;       (case (car expr)
-;; ;; 	((and or)
-;; ;; 	 (enum-exprs (lambda (subexpr) 
-
-;; ;; 'bool context 
-;; ;; 		     (mkctrl ctrl :distance (distance context))
-;; ;; 		     :root expr)
-;; ;; 	 (bool-neighborhood 
-	 
-      
-      
-;; ;;   (case (car
-
-	  
-;; ;; 	  (set-examplar candidate model)
-;; ;; 	(context (mkcontext :location expr :
-;; ;;     (aif (greedy-draw neighborhood
-;; ;;     (generate (lambda (neighbor)
-;; ;; 	     (
-;; ;;     (aif (funcall neighborhood sol)
-;; ;; 	 (if (< best it) (search
-       
-
-
-;; ;; analagous to define-reduction have a define-knob-creator
-
-;; ;; is it important to allof functions that generate reductions?
-
-;; ;; (defun kick (program find-move)
-;; ;;   (mvbind (siblings locus move) (funcall find-move program nil)
-;; ;;     (
-
-;; ;; (let (())
-;; ;;   (define-knob-creator subtree-inserter (root siblings locus)
-;; ;;     :nondeterministic t
-;; ;;     :condition (progn
-;; ;; 		 (setf (cdr locus) (cons (rand-tree) (cdr locus)))
-;; ;; 		 (let ((result (eq (normalize-and-reduce root) root)))
-;; ;; 		   (setf (cdr locus) (cddr locus))
-;; ;; 		   result))
-;; ;;     :arity
-				
-;; ;; 	    normalize-and-reduce 		 
-		       
-;; ;; 		      (
-
-
-;; ;; (defun loci (fn expr &key (type (expr-type expr)) parents)
-;; ;;   (flet ((boolrec (&optional type)
-;; ;; 	   (mapc (bindapp #'loci fn /1 :parents (cons expr parents)
-;; ;; 			  (if type (list :type type)))
-;; ;; 		 (cdr expr))))
-;; ;;     (ecase type
-;; ;;       (bool
-;; ;;        (decompose-bool expr
-;; ;; 	 (literal)
-;; ;; 	 (junctor (funcall fn expr parents)
-;; ;; 		  (boolrec 'bool))
-;; ;; 	 (t (boolrec)))))))
-;; ;; (define-test loci-bool
-;; ;;   (assert-equal '(((and (or x) (or y)))
-;; ;; 		  ((or x) (and (or x) (or y)))
-;; ;; 		  ((or y) (and (or x) (or y))))
-;; ;; 		(collecting (loci (lambda (expr parents) 
-;; ;; 					 (collect (cons expr parents)))
-;; ;; 				       '(and (or x) (or y))))))
-
-
-;; ;; ;accepts-locus-p
-;; ;; (defun validate (expr bindings)
-;; ;;   (ecase (expr-type expr)
-;; ;;     (bool
-;; ;;      (if (literalp expr)
-;; ;; 	 (assert (or (matches expr (true false))
-;; ;; 		     (gethash (litvariable expr) (gethash 'bool bindings)))
-;; ;; 		 () "no binding for variable ~S" (litvariable expr))
-;; ;; 	 (progn (assert (junctorp expr) () "~S is not a juctor-expr" expr)
-;; ;; 		(mapc (bind #'validate /1 bindings) (cdr expr)))))
-;; ;;     (num
-;; ;;      t)))
-
-;; ;; (defun map-neighbors-at (fn expr context type)
-;; ;;   (mapc (lambda (knob)
-;; ;; 	  (map nil (lambda (setting) 
-;; ;; 		     (funcall setting)
-;; ;; 		     (funcall fn expr))
-;; ;; 	       (subseq knob 1))
-;; ;; 	  (funcall (elt knob 0)))
-;; ;; 	(knobs-at expr context type))
-;; ;;   expr)
-
-;; ;; (defun map-neighbors (fn expr context type &aux (fn (bind fn expr)))
-;; ;;   (labels ((rec (subexpr type) 
-;; ;; 	     (when (consp subexpr)
-;; ;; 	       (map-neighbors-at fn subexpr context type)
-;; ;; 	       (mapc #'rec (args subexpr) (arg-types subexpr context type)))))
-;; ;;      (rec expr type))
-;; ;;   nil)

@@ -14,10 +14,10 @@ limitations under the License.
 
 Author: madscience@google.com (Moshe Looks) |#
 
+(in-package :maxima)
 ;;; to avoid trying to factor expressions that produce pathological behavior
 ;;; when one tries to factor them (e.g. -0.2+x^0.70086)
 ;;; in the future it would be nice to do a more sophisticated check
-(in-package :maxima)
 (defun factor-if-small (expr) expr)
 (setf $ratprint nil) ; to prevent maxima from spewing out warnings
 (setf errorsw t)     ; and error messages
@@ -160,5 +160,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	  (from-maxima reduced)))))
 (define-test maxima-reduce
   (assert-equal '(sin x) (p2sexpr (maxima-reduce %(* 1 (sin (* 1 x))))))
-;  (assert-equal %(sin x) (maxima-reduce %(* 1.0 (sin (* 1.0 x))))))
+; the below won't work because maxima doesn't get rid of floats by default -
+; maybe at some point we should make it?
+; (assert-equal %(sin x) (maxima-reduce %(* 1.0 (sin (* 1.0 x))))))
   (assert-equal 4.4 (maxima-reduce %(+ 2.0 2.4))))
