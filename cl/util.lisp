@@ -15,7 +15,6 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-;(proclaim '(optimize debug safety debug)
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
 ;(declaim (optimize (speed 3) (safety 0) (debug 0)))
 
@@ -51,7 +50,6 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun acar (x) (and (consp x) (car x)))
 (defun icar (x) (if (consp x) (car x) x))
-(defun ncons (x) (cons x nil))
 
 (defmacro collector () '(lambda (x) (collect x)))
 
@@ -90,7 +88,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ;;; the last element
 (defun interleave (elem l &optional (copier #'identity))
   (reduce (lambda (x sofar) (cons (funcall copier elem) (cons x sofar)))
-	  l :from-end t :initial-value (ncons elem)))
+	  l :from-end t :initial-value (list elem)))
 
 (defmacro bind-collectors (collectors collectors-body &body body)
   `(mvbind ,collectors (with-collectors ,collectors ,collectors-body)
@@ -128,7 +126,7 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal 3 (split (lambda (a b c d) (values a b c d))
 			 (vector nil 3) (vector nil 'z))))
 
-;;; generalized argument-binding construct
+;;; generalized argument-binding construct that works like boost::bind
 (defmacro bindapp (fn &rest args) ; takes arguments /1 ... /9
   (let ((zero (char-int #\0)))
     (labels ((char-to-int (c) (- (char-int c) zero))
@@ -212,7 +210,7 @@ Author: madscience@google.com (Moshe Looks) |#
 							(collect (list x y)))
 						      '(1 2 3 4)))))
 
-;;; efficiently removes adjacent eql pairs in O(n)
+;;; efficiently removes/delete adjacent matching pairs - O(n)
 (flet ((adjacent-duplicate (l test &aux (prev l))
 	 (dolist (item (cdr l))
 	   (if (funcall test item (car prev)) 
@@ -432,15 +430,6 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun cummulative-fixed-point (fns x &key (test #'eql))
   (do ((l fns (if (funcall test x (setf x (funcall (car l) x))) (cdr l) fns)))
       ((not l) x)))
-
-;; (defun cummulative-fixed-point (fns x &key (test #'eql) &aux (begin fns))
-;;   (flet ((call-to (end) (do ((at begin (cdr at))) ((eq at end))
-;; 			    (setf x (funcall (car at) x)))))
-;;     (do ((end (cdr fns)) (prev x x)) ((eq begin end) x)
-;;       (call-to end)
-;;       (if (eq x prev)
-;; 	  (setf begin end end (cdr end))
-;; 	  (setf begin fns)))))
 
 (defun insert-if (pred item list)
   (mapl (lambda (subl)

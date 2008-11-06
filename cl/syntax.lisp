@@ -18,7 +18,7 @@ This defines the syntax for the language used to represent evolved programs.
 
 Expressions in the language are either lisp atoms or function
 applications. Function applications are ((fn . markup) . args) where args are
-the arguments to the function fn, and markup is arbitrary metadata. Note that
+the arguments to the function fn, and markup is an alist of metadata. Note that
 args and markup must be proper lists. |#
 (in-package :plop)
 

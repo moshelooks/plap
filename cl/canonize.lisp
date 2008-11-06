@@ -274,18 +274,14 @@ Author: madscience@google.com (Moshe Looks) |#
   (validate-canonize (pcons 'tuple (list %(and (or) (or)) (qcanonize 42)))
 		     (qcanonize %(tuple true 42))))
 
-
-;;fixme - what should normal form for list types with conditionals look like?
-;;do any of the conditionals get chomped?? does representation-building handle
-;;this?
-
-
 ;; list is a list of (list type)s
 (defun structure-list (expr list elem context type)
   (flet ((sub-structure (x) 
 	   (ccons 'if (list true (canonize-args x context type) nil) x)))
     (ccons 'append 
-	   (interleave elem (mapcar #'sub-structure list) #'copy-canon)
+	   (if expr
+	       (interleave elem (mapcar #'sub-structure list) #'copy-canon)
+	       (list elem (copy-canon elem)))
 	   expr)))
 (defcanonizer list (expr context type &aux (subtype (cadr type))
 		    (default (default-expr subtype)))

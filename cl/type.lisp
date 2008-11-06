@@ -12,11 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Author: madscience@google.com (Moshe Looks) |#
-(in-package :plop)
+Author: madscience@google.com (Moshe Looks)
 
-#|
-types are as follows:
+Types are as follows:
  * nil
  * bool
  * num
@@ -30,8 +28,8 @@ types are as follows:
 Note that the type nil corresponds to the empty set (no values), whereas t 
 corresponds to the universal set (all values). The type of nil is (list nil).
 
-as of 11/04/08, enum and act-result types are not yet implemented
-|# 
+as of 11/04/08, enum and act-result types are not yet implemented |# 
+(in-package :plop)
 
 ;;; for convenience
 (define-constant bool 'bool)
