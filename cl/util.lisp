@@ -512,3 +512,10 @@ Author: madscience@google.com (Moshe Looks) |#
 (defmacro define-constant (name value &optional doc)
   `(defconstant ,name (if (boundp ',name) (symbol-value ',name) ,value)
      ,@(when doc (list doc))))
+
+(defun max-element (l cmp &key (key #'identity) &aux (max-elem (car l)) 
+		    (max (and l (funcall key max-elem))))
+  (mapc (lambda (x &aux (y (funcall key x)))
+	  (when (funcall cmp max y) (setf max-elem x max y)))
+	(cdr l))
+  max-elem)
