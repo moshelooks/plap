@@ -120,6 +120,18 @@ Author: madscience@google.com (Moshe Looks) |#
 (define-constant +num-canonical-values+ 
   (mapcar #'funcall +num-canonical-ops+ +num-canonical-offsets+))
 
+#| Numerical canonization is ... complicated. First let's consider the simpler
+case of nested products-of-sums-of-products-of..., disallowing log, exp, and
+sin. This is analagous to the canonization of Boolean
+formulae (conjunctions-of-disjunctions-of-conjunctions-of....) - the main
+difference is that every variable that appears has both and additive *and* and
+multiplicative constant associated with it. When these are not present in the
+source formula there zero and one used as appropriate.
+
+So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
+                                                    (* 1 (+ 0 y))))
+
+|#
 (defcanonizer num (expr context)
   (labels
       ;; -> (* 0 (op (+ offset (* 0 (exp (+ 0)))
@@ -134,6 +146,7 @@ Author: madscience@google.com (Moshe Looks) |#
 					  +num-canonical-values+))))
 	   (0 nil (,value (,offset)))))
        (dual-assemble (at op ops-terms splitter builder o ws ts &optional top)
+	 (print* 'o-is o)
        ~((,op ,o ,@ops-terms
 	      ,@(cond 
 		   ((or top (longerp ws 1))
@@ -150,11 +163,13 @@ Author: madscience@google.com (Moshe Looks) |#
 					(list at))
 				    ws ts))))
 		   (ws (let ((dual (dual-num-op op)))
+			 (print* 'ws-arg ws ts)
 			 (list ~((,dual ,(car ws)
 					,(canonize-args (car ts) context 'num))
 				 (,(if (eq (car ws) (identity-elem dual))
 				       (car ts)
-				       (pcons dual (append ws ts))))))))))
+				       (pcons dual (append ws ts))))))))
+		   (t (progn (print 'meep) nil))))
 	 (,(or at (funcall op o)))))
        (sum-of-products (expr o ws ts &optional top)
 	 (dual-assemble

@@ -19,8 +19,9 @@ Author: madscience@google.com (Moshe Looks) |#
   (:use #:cl
 	#:lisp-unit
 	#:cl-utilities
-;	#:statistics
-	#:anaphora))
-;  (:export #:reduce))
-
-;#:type-union #:fun-type #:atom-type #:tree-type #:eval-tree))
+	#:anaphora)
+  (:export #:run-tests #:reduct #:qreduct 
+	   #:bool-hillclimb-with-target-truth-table
+	   #:bool-hillclimb-with-target-fn
+	   #:num-hillclimb-with-target-values 
+	   #:num-hillclimb-with-target-fn))

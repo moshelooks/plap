@@ -85,7 +85,7 @@ Author: madscience@google.com (Moshe Looks) |#
 ;; cons in canonical form - doesn't work for lambdas
 (defun ccons (fn args expr)
   (assert (not (eq fn 'lambda)))
-  (aprog1 (pcons fn args (list canon (ncons expr)))
+  (aprog1 (pcons fn args (list canon (list expr)))
     (mapc (lambda (arg) (when (consp arg)
 			  (if (mark canon arg)
 			      (set-canon-parent arg it)
@@ -94,7 +94,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defun ccons-lambda (args body expr)
   (aprog1 (pcons 'lambda (list (mklambda-list args) body)
-		 (list canon (ncons expr)))
+		 (list canon (list expr)))
     (mapc (lambda (arg) (when (consp arg)
 			  (if (mark canon arg)
 			      (set-canon-parent arg it)

@@ -132,7 +132,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defknobs num (expr context)
   (when (ring-op-p expr)
-    (assert (numberp (arg0 expr)))
+    (assert (numberp (arg0 expr)) () "expected numeric first arg for ~S" expr)
     (cons (apply #'make-replacer-knob expr (args expr) 
 		 (numarg-settings expr context))
 	  (with-nil-bound-values context ; the terms
@@ -151,20 +151,21 @@ Author: madscience@google.com (Moshe Looks) |#
 
 (defknobs list (expr context type)
   (when (eqfn expr 'if)
-    (assert (or (eq (arg0 expr) 'true) (eq (arg0 expr) 'false)))
-    (cons (apply #'make-replacer-knob expr (args expr) (bool-dual (arg0 expr))
-		 (mapcan (lambda (var) (list var (pcons 'not (list var))))
-			 (keys-to-list (symbols-with-type bool context))))
-	  nil)))
-;; 	  (when (or (atom (arg1 expr)) (atom (arg2 expr)))
-;; 	    (let ((xs (keys-to-list (symbols-with-type type context))))
-;; 	      (flet ((mkknob (arglist)
-;; 		       (apply #'make-replacer-knob arglist
-;; 			      (aif (car arglist) (remove it xs) xs))))
-;; 		(collecting (when (atom (arg1 expr))
-;; 			      (collect (mkknob (cdr (args expr)))))
-;; 			    (when (atom (arg2 expr))
-;; 			      (collect (mkknob (cddr (args expr))))))))))))
+    (nconc 
+     (when (matches (arg0 expr) (true false))
+       (list (apply #'make-replacer-knob expr 
+		    (args expr) (bool-dual (arg0 expr))
+		    (mapcan (lambda (var) (list var (pcons 'not (list var))))
+			    (keys-to-list (symbols-with-type bool context))))))
+     (when (or (atom (arg1 expr)) (atom (arg2 expr)))
+       (let ((xs (keys-to-list (symbols-with-type type context))))
+	 (flet ((mkknob (arglist)
+		  (apply #'make-replacer-knob expr arglist
+			 (aif (car arglist) (remove it xs) xs))))
+	   (collecting (when (atom (arg1 expr))
+			 (collect (mkknob (cdr (args expr)))))
+		       (when (atom (arg2 expr))
+			 (collect (mkknob (cddr (args expr))))))))))))
 
 (defknobs functions (expr context type)
   (declare (ignore expr context type))

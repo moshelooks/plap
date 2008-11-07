@@ -50,8 +50,8 @@ Author: madscience@google.com (Moshe Looks) |#
 		       (markup expr))))
 	 (log (return-from to-maxima 
 		(pcons 'maxima::%log 
-		       (ncons (pcons 'maxima::mabs 
-				     (ncons (to-maxima (arg0 expr)))))
+		       (list (pcons 'maxima::mabs 
+				     (list (to-maxima (arg0 expr)))))
 		       (markup expr))))
 	 (t it))
        (mapcar #'to-maxima (args expr))
@@ -66,7 +66,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	 (maxima::mexpt (assert (or (eql (cadr expr) 2.718281828459045)
 				    (eq (cadr expr) 'maxima::$%e)))
 			(return-from from-maxima
-			  (pcons 'exp (ncons (from-maxima (caddr expr))))))
+			  (pcons 'exp (list (from-maxima (caddr expr))))))
 	 (maxima::mplus '+)
 	 (maxima::mtimes '*)
 	 (maxima::%sin 'sin)
@@ -129,14 +129,14 @@ Author: madscience@google.com (Moshe Looks) |#
 			  (not (or (eq (cadr mexpr) 'maxima::$%e)
 				   (eql (cadr mexpr) 2.718281828459045))))
 		 (setf munged t)
-		 (setf (caddr mexpr) (list (ncons 'maxima::mtimes)
+		 (setf (caddr mexpr) (list (list 'maxima::mtimes)
 					   (caddr mexpr)
-					   (list (ncons 'maxima::%log)
-						 (list (ncons 'maxima::mabs)
+					   (list (list 'maxima::%log)
+						 (list (list 'maxima::mabs)
 						       (cadr mexpr)))))
 		 (setf (cadr mexpr) 'maxima::$%e))
 	       (when munged
-		 (rplaca mexpr (ncons (caar mexpr))))) ;nix simp flag
+		 (rplaca mexpr (list (caar mexpr))))) ;nix simp flag
 	     munged)
 	   (full-mreduce (mexpr)
 	     (handler-case (catch* (maxima::raterr 

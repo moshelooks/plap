@@ -80,7 +80,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		      (return-from ,name
 			(pcons (fn expr) 
 			       (nconc (copy-range (args expr) args)
-				      (ncons result)
+				      (list result)
 				      (mapcar fn 
 					      ,@(mapcar
 						 (bind #'list 'cdr /1)
