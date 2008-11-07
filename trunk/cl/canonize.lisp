@@ -115,7 +115,7 @@ Author: madscience@google.com (Moshe Looks) |#
    %(and (or) (or (and) (and (not z)) (and (or) (or x) (or y))))
    (qcanonize %(or (not z) (and x y)))))
 
-(define-constant +num-canonical-ops+ nil);'(exp log sin))
+(define-constant +num-canonical-ops+ '(sin));'(exp log sin))
 (define-constant +num-canonical-offsets+ '(0 1 0))
 (define-constant +num-canonical-values+ 
   (mapcar #'funcall +num-canonical-ops+ +num-canonical-offsets+))
@@ -132,25 +132,53 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
                                                     (* 1 (+ 0 y))))
 
 |#
+(define-constant +num-canonical-plus-args+
+    (mapcar 
+     (lambda (op offset value) ~((* 0 (,op (+ ,offset)))
+				 (0 nil (,value (,offset)))))
+     +num-canonical-ops+ +num-canonical-offsets+ +num-canonical-values+))
+(define-constant +num-canonical-times-args+
+    (mapcar 
+     (lambda (op offset value &aux (complement (- 1 value)))
+       ~((+ ,complement (,op (+ ,offset)))
+	 (0 nil (,value (,offset)))))
+     +num-canonical-ops+ +num-canonical-offsets+ +num-canonical-values+))
+
 (defcanonizer num (expr context)
- (labels ((nccons (op args at)
-	    (unless (numberp (car args)) 
-	      (push (identity-elem (if args op (num-dual op))) args))
-	    (ccons op args at))
-	  (substructure (op expr dual)
-	    (nccons op 
-		    (cond ((ring-op-p (afn expr)) (structure dual (args expr)))
-			  ((numberp expr) (list expr))
-			  (t (list (canonize-args expr context 'num))))
-		    expr))
-	  (structure (op args &aux (dual (num-dual op)))
-	    (cons (nccons op nil (identity-elem dual))
-		  (mapcar (bind #'substructure op /1 dual) args))))
+  (labels ((fn-of (term) 
+	     (when (consp term)
+	       (let ((sub (cadr (args term))))
+		 (and (consp sub) (fn sub)))))
+	   (fn-matches-p (term terms)
+	     (find (fn-of term) terms :key #'fn-of))
+	   (nccons (op args at)
+	     (print* 'nccons op args)
+	     (if (numberp (cadr args))
+		 (push (pop (cdr args)) args)
+		 (unless (numberp (car args))
+		   (push (identity-elem (if args op (num-dual op))) args)))
+	     (rplacd args (append (ecase op 
+				    (+ +num-canonical-plus-args+)
+				    (* (remove-if 
+					(bind #'fn-matches-p /1 (cdr args))
+					+num-canonical-times-args+)))
+				  (cdr args)))
+	     (print* 'res (cons op args))
+	     (ccons op args at))
+	   (substructure (op expr dual &optional top)
+	     (if (and (not top) (numberp expr))
+		 expr
+		 (nccons op (if (ring-op-p (afn expr))
+				(structure dual (args expr))
+				(list (canonize-args expr context 'num)))
+			 expr)))
+	   (structure (op args &aux (dual (num-dual op)))
+	     (mapcar (bind #'substructure op /1 dual) args)))
     (let* ((op (if (eq (ifn expr) '+) '+ '*))
 	   (dual (num-dual op)))
       (nccons dual
 	      (list (nccons op nil (identity-elem dual))
-		    (substructure op expr dual))
+		    (substructure op expr dual t))
 	      expr))))
 
 
