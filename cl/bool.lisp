@@ -15,7 +15,7 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop)
 
-(defun truth-table (expr &optional (vs (free-variables expr))
+(defun truth-table (expr &optional (vs (sort (free-variables expr) #'string<))
 		    &aux (context (make-context)))
   (collecting
     (labels ((enum-bindings (vs)

@@ -34,7 +34,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (ecase (fn expr) (* (pcons '+ (list 1 term))) (+ term))))
     (mapcar #'builder (list e1 (- e1) (- e2) e2))))
 
-(defun dual-num-op (f) (ecase f (* '+) (+ '*)))
+(defun num-dual (f) (ecase f (* '+) (+ '*) (1 0) (0 1)))
 
 (defun ring-op-p (expr) ;true if rooted in + or * or and or or
   (matches (ifn expr) (+ * and or)))

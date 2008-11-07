@@ -78,9 +78,7 @@ Author: madscience@google.com (Moshe Looks) |#
 		   (p2sexpr expr)
 		   target expr)))
 
-(defcanonizer bool (expr context &aux 
-		    (op (if (matches (ifn expr) (true or)) 'or 'and))
-		    (dual (bool-dual op)))
+(defcanonizer bool (expr context)
   (labels ((substructure (op expr dual)
 	     (ccons op
 		    (decompose-bool expr
@@ -94,10 +92,12 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (structure (op args &aux (dual (bool-dual op)))
 	     (cons (ccons op nil (identity-elem dual))
 		   (mapcar (bind #'substructure op /1 dual) args))))
-    (ccons dual 
-	   (list (ccons op nil (identity-elem dual)) 
-		 (substructure op expr dual))
-	   expr)))
+    (let* ((op (if (matches (ifn expr) (true or)) 'or 'and))
+	   (dual (bool-dual op)))
+      (ccons dual 
+	     (list (ccons op nil (identity-elem dual)) 
+		   (substructure op expr dual))
+	     expr))))
 (define-test canonize-bool
   (validate-canonize %(or (and) (and)) (qcanonize false))
   (validate-canonize %(and (or) (or)) (qcanonize true))
@@ -115,7 +115,7 @@ Author: madscience@google.com (Moshe Looks) |#
    %(and (or) (or (and) (and (not z)) (and (or) (or x) (or y))))
    (qcanonize %(or (not z) (and x y)))))
 
-(define-constant +num-canonical-ops+ '(exp log sin))
+(define-constant +num-canonical-ops+ nil);'(exp log sin))
 (define-constant +num-canonical-offsets+ '(0 1 0))
 (define-constant +num-canonical-values+ 
   (mapcar #'funcall +num-canonical-ops+ +num-canonical-offsets+))
@@ -133,66 +133,102 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
 
 |#
 (defcanonizer num (expr context)
-  (labels
-      ;; -> (* 0 (op (+ offset (* 0 (exp (+ 0)))
-      ;;                       (* 0 (log (+ 1)))
-      ;;                       (* 0 (sin (+ 0))))))
-      ((sub-product (op offset value)
-	 ~((* 0 (,op (+ ,offset ,@(mapcar (lambda (op offset value)
-					    ~((* 0 (,op (+ ,offset)))
-					      (0 nil (,value (,offset)))))
-					  +num-canonical-ops+
-					  +num-canonical-offsets+
-					  +num-canonical-values+))))
-	   (0 nil (,value (,offset)))))
-       (dual-assemble (at op ops-terms splitter builder o ws ts &optional top)
-	 (print* 'o-is o)
-       ~((,op ,o ,@ops-terms
-	      ,@(cond 
-		   ((or top (longerp ws 1))
-		    (cons (funcall builder nil (identity-elem op) nil nil)
-			  (when ws
-			    (mapcar (lambda (at weight term)
-				      (mvbind (o ws ts) (funcall splitter term)
-					(declare (ignore o))
-					(funcall builder at weight ws ts)))
-				    (if (eq (afn at) op)
-					(if (numberp (arg0 at))
-					    (cdr (args at))
-					    (args at))
-					(list at))
-				    ws ts))))
-		   (ws (let ((dual (dual-num-op op)))
-			 (print* 'ws-arg ws ts)
-			 (list ~((,dual ,(car ws)
-					,(canonize-args (car ts) context 'num))
-				 (,(if (eq (car ws) (identity-elem dual))
-				       (car ts)
-				       (pcons dual (append ws ts))))))))
-		   (t (progn (print 'meep) nil))))
-	 (,(or at (funcall op o)))))
-       (sum-of-products (expr o ws ts &optional top)
-	 (dual-assemble
-	  expr '+ (mapcar #'sub-product +num-canonical-ops+
-			  +num-canonical-offsets+ +num-canonical-values+)
-	  #'split-product-of-sums #'product-of-sums o ws ts top))
-       (product-of-sums (expr o ws ts &optional top)
-	 (dual-assemble 
-	  expr '* (collecting
-		    (mapc (lambda (op offset value)
-			    (unless (find op ts :key #'afn)
-			      (collect ~((+ 1 ,(sub-product op offset value))
-					 (1 nil nil)))))
-			  +num-canonical-ops+ +num-canonical-offsets+ 
-			  +num-canonical-values+))
-	  #'split-sum-of-products #'sum-of-products o ws ts top)))
-    (dbind (splitter builder)
-	(if (and (eq (afn expr) '+)
-		 (longerp (args expr) (if (numberp (arg0 expr)) 2 1)))
-	    `(,#'split-product-of-sums ,#'product-of-sums)
-	    `(,#'split-sum-of-products ,#'sum-of-products))
-      (mvbind (o ws ts) (funcall splitter expr)
-	(funcall builder expr o ws ts t)))))
+ (labels ((nccons (op args at)
+	    (unless (numberp (car args)) 
+	      (push (identity-elem (if args op (num-dual op))) args))
+	    (ccons op args at))
+	  (substructure (op expr dual)
+	    (nccons op 
+		    (cond ((ring-op-p (afn expr)) (structure dual (args expr)))
+			  ((numberp expr) (list expr))
+			  (t (list (canonize-args expr context 'num))))
+		    expr))
+	  (structure (op args &aux (dual (num-dual op)))
+	    (cons (nccons op nil (identity-elem dual))
+		  (mapcar (bind #'substructure op /1 dual) args))))
+    (let* ((op (if (eq (ifn expr) '+) '+ '*))
+	   (dual (num-dual op)))
+      (nccons dual
+	      (list (nccons op nil (identity-elem dual))
+		    (substructure op expr dual))
+	      expr))))
+
+
+;; (defcanonizer num (expr context)
+;;   (labels
+;;       ;; -> (* 0 (op (+ offset (* 0 (exp (+ 0)))
+;;       ;;                       (* 0 (log (+ 1)))
+;;       ;;                       (* 0 (sin (+ 0))))))
+;;       ((sub-product (op offset value)
+;; 	 ~((* 0 (,op (+ ,offset ,@(mapcar (lambda (op offset value)
+;; 					    ~((* 0 (,op (+ ,offset)))
+;; 					      (0 nil (,value (,offset)))))
+;; 					  +num-canonical-ops+
+;; 					  +num-canonical-offsets+
+;; 					  +num-canonical-values+))))
+;; 	   (0 nil (,value (,offset)))))
+;;      (dual-assemble (at op ops-terms splitter builder o ws ts &optional top)
+;; 	 (print* 'o-is o 'ws-are ws 'ts-are ts 'top-is top)
+;; 	 (assert (eql (length ws) (length ts)))
+;;        ~((,op ,o ,@ops-terms 
+;; 	      ,@(when (or top (and ws (cdr ws)))
+;; 		  (list (funcall builder nil (identity-elem op) nil nil)))
+;; 	      ,@(mapcar (lambda (at weight term)
+;; 			  (mvbind (o ws ts) (funcall splitter term)
+;; 	    (assert (equalp o (identity-elem (dual-num-op op)))y)
+;; 			    (funcall builder at weight ws ts)))
+;; 			(if (eq (afn at) op)
+;; 			    (if (numberp (arg0 at)) (cdr (args at)) (args at))
+;; 			    (list at))
+;; 			ws ts))
+			  
+			
+;; ;; 	      ,@(cond 
+;; ;; 		   ((or top (longerp ws 1)) 
+		    
+;; ;; 		    (cons (funcall builder nil (identity-elem op) nil nil)
+;; ;; 			  (when ws
+;; ;; 			    (mapcar (lambda (at weight term)
+;; ;; 				      (mvbind (o ws ts) (funcall splitter term)
+;; ;; 					(declare (ignore o))
+;; ;; 					(funcall builder at weight ws ts)))
+;; ;; 				    (if (eq (afn at) op)
+;; ;; 					(if (numberp (arg0 at))
+;; ;; 					    (cdr (args at))
+;; ;; 					    (args at))
+;; ;; 					(list at))
+;; ;; 				    ws ts))))
+;; ;; 		   (ws (let ((dual (dual-num-op op)))
+;; ;; 			 (print* 'ws-arg ws ts)
+;; ;; 			 (list ~((,dual ,(car ws)
+;; ;; 					,(canonize-args (car ts) context 'num))
+;; ;; 				 (,(if (eq (car ws) (identity-elem dual))
+;; ;; 				       (car ts)
+;; ;; 				       (pcons dual (append ws ts))))))))
+;; ;; 		   (t (progn (print 'meep) nil))))
+;; 	 (,(or at (funcall op o)))))
+;;        (sum-of-products (expr o ws ts &optional top)
+;; 	 (dual-assemble
+;; 	  expr '+ (mapcar #'sub-product +num-canonical-ops+
+;; 			  +num-canonical-offsets+ +num-canonical-values+)
+;; 	  #'split-product-of-sums #'product-of-sums o ws ts top))
+;;        (product-of-sums (expr o ws ts &optional top)
+;; 	 (dual-assemble 
+;; 	  expr '* (collecting
+;; 		    (mapc (lambda (op offset value)
+;; 			    (unless (find op ts :key #'afn)
+;; 			      (collect ~((+ 1 ,(sub-product op offset value))
+;; 					 (1 nil nil)))))
+;; 			  +num-canonical-ops+ +num-canonical-offsets+ 
+;; 			  +num-canonical-values+))
+;; 	  #'split-sum-of-products #'sum-of-products o ws ts top)))
+;;     (dbind (splitter builder)
+;; 	(if (and (eq (afn expr) '+)
+;; 		 (longerp (args expr) (if (numberp (arg0 expr)) 2 1)))
+;; 	    `(,#'split-product-of-sums ,#'product-of-sums)
+;; 	    `(,#'split-sum-of-products ,#'sum-of-products))
+;;       (mvbind (o ws ts) (funcall splitter expr)
+;; 	(funcall builder expr o ws ts t)))))
 
 (define-test canonize-num
   (let* ((exp-block '(* 0 (exp (+ 0
