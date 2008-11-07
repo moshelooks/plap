@@ -83,17 +83,18 @@ Author: madscience@google.com (Moshe Looks) |#
   (unless (funcall pred)
     (weak-kick-until pred n knobs)))
 
-(defun hillclimb (expr context type simplifier acceptsp terminationp)
+(defun hillclimb (expr context type simplifier acceptsp terminationp 
+		  &aux maxima)
   (labels
       ((find-improvement (canonical &aux (best expr))
 	 (map-neighbors
 	  (lambda (nexpr &aux
 		   (simplified (funcall simplifier (canon-clean nexpr))))
-	    (when (funcall terminationp simplified)
-	      (return-from hillclimb simplified))
 	    (when (funcall acceptsp best simplified)
 	      (setf best simplified)
-	      (print* 'improved-to (p2sexpr simplified))))
+	      (print* 'improved-to (p2sexpr simplified)))
+	    (when (funcall terminationp simplified)
+	      (return-from hillclimb (push best maxima))))
 	  canonical context type)
 	 (unless  (eq best expr) best)))
     (do ((canonical (canonize expr context type) (canonize expr context type)))
@@ -102,7 +103,8 @@ Author: madscience@google.com (Moshe Looks) |#
 	   (setf expr it)
 	   (let* ((knobs (enum-knobs canonical context type))
 		  (nknobs (length knobs)))
-	     (print* 'local-minimum (p2sexpr expr) nknobs)
+	     (push expr maxima)
+	     (print* 'local-maximum (p2sexpr expr) nknobs)
 	     (weak-kick-until 
 	      (lambda () 
 		(not (eq (setf expr (funcall simplifier 
@@ -110,7 +112,7 @@ Author: madscience@google.com (Moshe Looks) |#
 	      (if (< 2 nknobs) (+ 2 (random (- nknobs 2))) nknobs) knobs))))))
 (defun make-count-or-score-terminator (count score score-target)
   (lambda (expr) 
-    (if (eql 0 (mod count 500)) (print* 'nevals count))
+    (if (eql 0 (mod count 500)) (print* 'evals 'left count))
     (or (> 0 (decf count)) (>= (funcall score expr) score-target))))
 (defun make-greedy-scoring-acceptor (score)
   (lambda (from to)
@@ -118,7 +120,7 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun print-when-best-wrapper (fn &aux (best most-negative-single-float))
   (lambda (&rest args &aux (x (apply fn args)))
     (when (> x best) (setf best x) (print* 'new-best x))
-    x))
+    best))
 ;; ; vars should be sorted
 (defun make-truth-table-scorer (target-tt vars)
   (lambda (expr)
@@ -128,27 +130,18 @@ Author: madscience@google.com (Moshe Looks) |#
     (target-tt nsteps vars &aux
      (scorer (print-when-best-wrapper 
 	      (make-truth-table-scorer target-tt vars)))
-     (result (with-bound-type *empty-context* vars bool
-	       (hillclimb 'true *empty-context* bool 
+     (maxima (with-bound-type *empty-context* vars bool
+	       (hillclimb true *empty-context* bool 
 			  (bind #'reduct /1 *empty-context* bool)
 			  (make-greedy-scoring-acceptor scorer)
 			  (make-count-or-score-terminator nsteps scorer 0)))))
-  (print* 'result (p2sexpr result))
-  (print* 'score (funcall scorer result))
-  result)
+  (aprog1 (max-element maxima #'< :key scorer) ;extracts the best
+    (print* 'final 'best 'score (funcall scorer it))))
 
-(defun bool-hillclimb-with-target-fn 
-    (target-fn nsteps &aux (vars (fn-args target-fn))
-     (scorer (print-when-best-wrapper
-	      (make-truth-table-scorer (truth-table (fn-body target-fn) vars)
-				       vars)))
-     (result (with-bound-type *empty-context* vars bool
-	       (hillclimb 'true *empty-context* bool 
-			  (bind #'reduct /1 *empty-context* bool)
-			  (make-greedy-scoring-acceptor scorer)
-			  (make-count-or-score-terminator nsteps scorer 0)))))
-  (print* 'result (p2sexpr result))
-  (print* 'score (funcall scorer result)))
+(defun bool-hillclimb-with-target-fn (target-fn nsteps 
+				      &aux (vars (fn-args target-fn)))
+  (bool-hillclimb-with-target-truth-table
+   (truth-table (fn-body target-fn) vars) nsteps vars))
 
 (defun make-num-abs-scorer (input-values target-values vars)
   (lambda (expr &aux (sum 0))
@@ -158,7 +151,7 @@ Author: madscience@google.com (Moshe Looks) |#
 			(when (eq 'nan x) (return most-negative-single-float))
 			(decf sum (abs (- target x))))))
 		  input-values target-values)
-	    (- sum (* 0.01 (log (expr-size expr) 2.0))))))
+	    (- sum (* 0.001 (log (expr-size expr) 2.0))))))
 
 (defun num-hillclimb-with-target-values (input-vals target-vals nsteps vars)
   (when (and (singlep vars) (not (consp (car input-vals))))
@@ -166,15 +159,14 @@ Author: madscience@google.com (Moshe Looks) |#
   (let* 
       ((scorer (print-when-best-wrapper
 	      (make-num-abs-scorer input-vals target-vals vars)))
-       (result (with-bound-type *empty-context* vars num
+       (maxima (with-bound-type *empty-context* vars num
   	         (hillclimb 0 *empty-context* num
 			    (bind #'reduct /1 *empty-context* num)
 			    (make-greedy-scoring-acceptor scorer)
 			    (make-count-or-score-terminator 
 			     nsteps scorer -0.01)))))
-    (print* 'result (p2sexpr result))
-    (print* 'score (funcall scorer result))
-    result))
+    (aprog1 (max-element maxima #'< :key scorer) ;extracts the best
+      (print* 'final 'best 'score (funcall scorer it)))))
 
 (defun num-hillclimb-with-target-fn 
     (input-vals target-fn nsteps &aux (vars (fn-args target-fn)))
