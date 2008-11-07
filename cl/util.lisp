@@ -510,7 +510,10 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; for sbcl
 (defmacro define-constant (name value &optional doc)
-  `(defconstant ,name (if (boundp ',name) (symbol-value ',name) ,value)
+  `(defconstant ,name 
+     (if (and (boundp ',name) (equalp (symbol-value ',name) ,value))
+	 (symbol-value ',name)
+	 ,value)
      ,@(when doc (list doc))))
 
 (defun max-element (l cmp &key (key #'identity) &aux (max-elem (car l)) 
