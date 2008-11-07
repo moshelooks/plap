@@ -113,12 +113,20 @@ Author: madscience@google.com (Moshe Looks) |#
 	     ((*) x3 ((exp) ((*) -1.0 ((log) x3)))))))
       (mapc #'test exprs))))
 
+(defun mung1s (mexpr)
+  (labels ((mung (x) (when (consp x) 
+		       (when (eql (cadr x) 1.0) 
+			 (setf (cadr x) 1)
+			 (rplacd (car x) nil))
+		       (mapc #'mung (cdr x)))))
+    (mung mexpr) mexpr))
+
 (define-reduction maxima-reduce (expr)
   :type num
   :assumes (maxima-prepare)
   :obviates (eval-const sort-commutative)
   :action 
-  (labels ((mreduce (mexpr) (maxima::simplify (maxima::$float mexpr)))
+  (labels ((mreduce (mexpr) (maxima::simplify (mung1s (maxima::$float mexpr))))
 	   (mung-expts (mexpr) (mung-helper mexpr) mexpr)
 	   (mung-helper (mexpr &aux (munged nil))
 	     (when (consp mexpr)

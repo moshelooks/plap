@@ -28,7 +28,6 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;; cons with args in canonical form
 (defun canonize-args (expr context type)
-;  (print* 'ca expr context type)
   (if (atom expr) expr
       (ccons (fn expr)
 	     (mapcar (bind #'canonize /1 context /2)
@@ -39,7 +38,6 @@ Author: madscience@google.com (Moshe Looks) |#
 (defun copy-canon (expr)
   (if (atom expr) expr
       (ccons (fn expr) (mapcar #'copy-canon (args expr)) (canon-expr expr))))
-
 
 (defdefbytype defcanonizer canonize)
 (defun qcanonize (expr) ;;;useful for testing
@@ -115,7 +113,10 @@ Author: madscience@google.com (Moshe Looks) |#
    %(and (or) (or (and) (and (not z)) (and (or) (or x) (or y))))
    (qcanonize %(or (not z) (and x y)))))
 
-(define-constant +num-canonical-ops+ '(sin));'(exp log sin))
+;;; careful when redefining these - sbcl doesn't alow this at all, and
+;;; clisp will crash when redefining +num-canonical-plus-args+ & times-args+
+;;; below, because it doesn't respect its own circular print flag
+(define-constant +num-canonical-ops+ '(exp log sin))
 (define-constant +num-canonical-offsets+ '(0 1 0))
 (define-constant +num-canonical-values+ 
   (mapcar #'funcall +num-canonical-ops+ +num-canonical-offsets+))
@@ -141,7 +142,7 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
     (mapcar 
      (lambda (op offset value &aux (complement (- 1 value)))
        ~((+ ,complement (,op (+ ,offset)))
-	 (0 nil (,value (,offset)))))
+	 (1 nil (,value (,offset)))))
      +num-canonical-ops+ +num-canonical-offsets+ +num-canonical-values+))
 
 (defcanonizer num (expr context)
@@ -152,18 +153,15 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
 	   (fn-matches-p (term terms)
 	     (find (fn-of term) terms :key #'fn-of))
 	   (nccons (op args at)
-	     (print* 'nccons op args)
 	     (if (numberp (cadr args))
 		 (push (pop (cdr args)) args)
 		 (unless (numberp (car args))
 		   (push (identity-elem (if args op (num-dual op))) args)))
-	     (rplacd args (append (ecase op 
-				    (+ +num-canonical-plus-args+)
-				    (* (remove-if 
-					(bind #'fn-matches-p /1 (cdr args))
-					+num-canonical-times-args+)))
-				  (cdr args)))
-	     (print* 'res (cons op args))
+	     (rplacd args (nconc (mapcar #'copy-canon
+					 (ecase op 
+					   (+ +num-canonical-plus-args+)
+					   (* +num-canonical-times-args+)))
+				 (cdr args)))
 	     (ccons op args at))
 	   (substructure (op expr dual &optional top)
 	     (if (and (not top) (numberp expr))
