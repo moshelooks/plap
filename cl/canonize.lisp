@@ -163,8 +163,8 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
 					   (* +num-canonical-times-args+)))
 				 (cdr args)))
 	     (ccons op args at))
-	   (substructure (op expr dual &optional top)
-	     (if (and (not top) (numberp expr))
+	   (substructure (op expr dual)
+	     (if (numberp expr)
 		 expr
 		 (nccons op (if (ring-op-p (afn expr))
 				(structure dual (args expr))
@@ -176,88 +176,12 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
 	   (dual (num-dual op)))
       (nccons dual
 	      (list (nccons op nil (identity-elem dual))
-		    (substructure op expr dual t))
+		    (substructure op expr dual))
 	      expr))))
 
 
-;; (defcanonizer num (expr context)
-;;   (labels
-;;       ;; -> (* 0 (op (+ offset (* 0 (exp (+ 0)))
-;;       ;;                       (* 0 (log (+ 1)))
-;;       ;;                       (* 0 (sin (+ 0))))))
-;;       ((sub-product (op offset value)
-;; 	 ~((* 0 (,op (+ ,offset ,@(mapcar (lambda (op offset value)
-;; 					    ~((* 0 (,op (+ ,offset)))
-;; 					      (0 nil (,value (,offset)))))
-;; 					  +num-canonical-ops+
-;; 					  +num-canonical-offsets+
-;; 					  +num-canonical-values+))))
-;; 	   (0 nil (,value (,offset)))))
-;;      (dual-assemble (at op ops-terms splitter builder o ws ts &optional top)
-;; 	 (print* 'o-is o 'ws-are ws 'ts-are ts 'top-is top)
-;; 	 (assert (eql (length ws) (length ts)))
-;;        ~((,op ,o ,@ops-terms 
-;; 	      ,@(when (or top (and ws (cdr ws)))
-;; 		  (list (funcall builder nil (identity-elem op) nil nil)))
-;; 	      ,@(mapcar (lambda (at weight term)
-;; 			  (mvbind (o ws ts) (funcall splitter term)
-;; 	    (assert (equalp o (identity-elem (dual-num-op op)))y)
-;; 			    (funcall builder at weight ws ts)))
-;; 			(if (eq (afn at) op)
-;; 			    (if (numberp (arg0 at)) (cdr (args at)) (args at))
-;; 			    (list at))
-;; 			ws ts))
-			  
-			
-;; ;; 	      ,@(cond 
-;; ;; 		   ((or top (longerp ws 1)) 
-		    
-;; ;; 		    (cons (funcall builder nil (identity-elem op) nil nil)
-;; ;; 			  (when ws
-;; ;; 			    (mapcar (lambda (at weight term)
-;; ;; 				      (mvbind (o ws ts) (funcall splitter term)
-;; ;; 					(declare (ignore o))
-;; ;; 					(funcall builder at weight ws ts)))
-;; ;; 				    (if (eq (afn at) op)
-;; ;; 					(if (numberp (arg0 at))
-;; ;; 					    (cdr (args at))
-;; ;; 					    (args at))
-;; ;; 					(list at))
-;; ;; 				    ws ts))))
-;; ;; 		   (ws (let ((dual (dual-num-op op)))
-;; ;; 			 (print* 'ws-arg ws ts)
-;; ;; 			 (list ~((,dual ,(car ws)
-;; ;; 					,(canonize-args (car ts) context 'num))
-;; ;; 				 (,(if (eq (car ws) (identity-elem dual))
-;; ;; 				       (car ts)
-;; ;; 				       (pcons dual (append ws ts))))))))
-;; ;; 		   (t (progn (print 'meep) nil))))
-;; 	 (,(or at (funcall op o)))))
-;;        (sum-of-products (expr o ws ts &optional top)
-;; 	 (dual-assemble
-;; 	  expr '+ (mapcar #'sub-product +num-canonical-ops+
-;; 			  +num-canonical-offsets+ +num-canonical-values+)
-;; 	  #'split-product-of-sums #'product-of-sums o ws ts top))
-;;        (product-of-sums (expr o ws ts &optional top)
-;; 	 (dual-assemble 
-;; 	  expr '* (collecting
-;; 		    (mapc (lambda (op offset value)
-;; 			    (unless (find op ts :key #'afn)
-;; 			      (collect ~((+ 1 ,(sub-product op offset value))
-;; 					 (1 nil nil)))))
-;; 			  +num-canonical-ops+ +num-canonical-offsets+ 
-;; 			  +num-canonical-values+))
-;; 	  #'split-sum-of-products #'sum-of-products o ws ts top)))
-;;     (dbind (splitter builder)
-;; 	(if (and (eq (afn expr) '+)
-;; 		 (longerp (args expr) (if (numberp (arg0 expr)) 2 1)))
-;; 	    `(,#'split-product-of-sums ,#'product-of-sums)
-;; 	    `(,#'split-sum-of-products ,#'sum-of-products))
-;;       (mvbind (o ws ts) (funcall splitter expr)
-;; 	(funcall builder expr o ws ts t)))))
 
-(define-test canonize-num
-  (let* ((exp-block '(* 0 (exp (+ 0
+(exp-block '(* 0 (exp (+ 0
 				(* 0 (exp (+ 0)))
 				(* 0 (log (+ 1)))
 				(* 0 (sin (+ 0)))))))
@@ -274,37 +198,39 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
 			 (+ 1 ,exp-block)
 			 (+ 1 ,log-block)
 			 (+ 1 ,sin-block))))
-    (validate-canonize `(+ 0 ,@add-blocks ,mult-block)
-		       (qcanonize 0))
-    (validate-canonize `(+ 2 ,@add-blocks ,mult-block)
-		       (qcanonize 2))
-    (validate-canonize `(or (and)
-			    (and (< (+ 2 ,@add-blocks ,mult-block) 
-				    (+ 0 ,@add-blocks ,mult-block
-				       (* 1 ,@(cddr mult-block) (+ 0 x))))))
+
+
+(define-test canonize-num
+  (let* ((exp+ '(* 0 (exp (+ 0))))
+	 (log+ '(* 0 (log (+ 1))))
+	 (sin+ '(* 0 (sin (+ 0))))
+	 (exp* '(+ 0 (exp (+ 0))))
+	 (log* '(+ 1 (log (+ 1))))
+	 (sin* '(+ 1 (sin (+ 0))))
+	 (+s `(,exp+ ,log+ ,sin+))
+	 (*s `(,exp* ,log* ,sin*))
+	 (+block `(* 0 ,@*s))
+	 (*block `(+ 1 ,@+s))
+	 (cx `(+ 0 ,@+s ,+block (* 1 ,@*s x)))) ; the canonical form of x
+    (validate-canonize `(+ 0 ,@+s ,+block) (qcanonize 0))
+    (validate-canonize `(+ 2 ,@+s ,+block) (qcanonize 2))
+    (validate-canonize cx (canonize 'x *empty-context* num))
+
+    (validate-canonize `(or (and) (and (< (+ 2 ,@+s ,+block) ,cx)))
 		       (canonize %(< 2 x) (init-context '((x 0))) bool)
 		       bool (init-context '((x 0))))
-    (validate-canonize `(+ 0 ,@add-blocks ,mult-block
-			   (* 1 ,@(cddr mult-block) (+ 0 x)))
-		       (canonize 'x *empty-context* num))
-    (validate-canonize 
-     `(+ 0 ,@add-blocks ,mult-block
-	 (* 1 (+ 1 ,exp-block) (+ 1 ,log-block)
-	    (+ 0 (sin (+ 0 ,@add-blocks ,mult-block
-			 (* 1 ,@(cddr mult-block) (+ 0 x)))))))
-     (qcanonize %(sin x)))
-    (validate-canonize `(+ 0 ,@add-blocks ,mult-block
-			   (* 1 
-			      ,@(cddr mult-block) 
-			      (+ 1 ,@add-blocks)
-			      (+ 0 ,@add-blocks (* 1 x))
-			      (+ 0 ,@add-blocks (* 1 y))))
+
+    (validate-canonize `(+ 0 ,@+s ,+block (* 1 ,@*s (sin ,cx)))
+		       (qcanonize %(sin x)))
+
+    (validate-canonize `(+ 0 ,@+s ,+block
+			   (* 1 ,@*s (+ 0 ,@+s x) (+ 0 ,@+s y)))
 		       (qcanonize %(* x y)))
-    (validate-canonize `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
-			   (+ 0 ,@add-blocks ,mult-block
-			      (* 1 ,@(cddr mult-block) (+ 0 x))
-			      (* 1 ,@(cddr mult-block) (+ 0 y))))
-		       (qcanonize %(+ x y)))
+
+    (validate-canonize `(* 1 ,@*s ,*block
+			   (+ 0 ,@+s ,+block (* 1 ,@*s x) (* 1 ,@*s y)))
+		       (qcanonize %(+ x y)))))
+
     (validate-canonize `(+ 1 ,@add-blocks ,mult-block
 			   (* 1 ,@(cddr mult-block) (+ 0 x)))
 		       (qcanonize %(+ 1 x)))

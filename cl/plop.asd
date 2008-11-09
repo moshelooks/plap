@@ -33,7 +33,6 @@ Author: madscience@google.com (Moshe Looks) |#
 	       (:file "enum")
 	       (:file "reduct-core")
 	       (:file "reductions")
-;	       (:file "sampling")
 	       (:file "bool")
 	       (:file "num")
 	       (:file "maxima")

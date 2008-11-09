@@ -338,6 +338,10 @@ Author: madscience@google.com (Moshe Looks) |#
   (assert-equal '(if x z y)
 		(p2sexpr (reduct %(if (not x) y z) *empty-context* num))))
 
+;;; below are reductions for Holman's ENF (elegant normal form)
+;;; probably not all of them will be needed - some are implied by reductions
+;;; defined above....
+
 ;; ;;; if the handle set centered at expr is inconsistent, remove the subtree
 ;; ;;; rooted at expr
 ;; (define-reduction remove-inconsistent-handles (expr :parents parents)

@@ -113,12 +113,17 @@ Author: madscience@google.com (Moshe Looks) |#
 	     ((*) x3 ((exp) ((*) -1.0 ((log) x3)))))))
       (mapc #'test exprs))))
 
-(defun mung1s (mexpr)
-  (labels ((mung (x) (when (consp x) 
-		       (when (eql (cadr x) 1.0) 
-			 (setf (cadr x) 1)
-			 (rplacd (car x) nil))
-		       (mapc #'mung (cdr x)))))
+(defun mung1s (mexpr) ; for whatever reason maxima won't simplify 1.0*x -> x
+  (labels ((mung (x &aux munged)
+	     (when (consp x)
+	       (if (eql (cadr x) 1.0)
+		   (progn (mapc #'mung (cdr x))
+			  (setf (cadr x) 1)
+			  (setf munged t))
+		   (mapc (lambda (arg) (when (mung arg) (setf munged t)))
+			 (cdr x)))
+	       (when munged (rplacd (car x) nil))
+	       munged)))
     (mung mexpr) mexpr))
 
 (define-reduction maxima-reduce (expr)
