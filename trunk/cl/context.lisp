@@ -21,7 +21,8 @@ Author: madscience@google.com (Moshe Looks) |#
   (symbol-bindings (make-hash-table) :type hash-table)
   (type-map (make-hash-table) :type hash-table))
 
-(define-constant +no-value+ (gensym))
+(defconstant +no-value+ 
+  (if (boundp '+no-value+) (symbol-value '+no-value+) (gensym)))
 
 (defun valuedp (name context)
   (aand (car (gethash name (context-symbol-bindings context)))

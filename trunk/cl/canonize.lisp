@@ -15,17 +15,6 @@ limitations under the License.
 Author: madscience@google.com (Moshe Looks) |#
 (in-package :plop) 
 
-;; for convenience in constructing canonized expressions
-(defun canonize-from-template (template values)
-  (if (or (atom template) (consp (car template)))
-      (progn (assert (not values) () "for template ~S got invalid values ~S"
-		     template values)
-	     template)
-      (ccons (car template)
-	     (mapcar #'canonize-from-template (cdr template) 
-		     (pad (cdr values) (length template)))
-	     (car values))))
-
 ;; cons with args in canonical form
 (defun canonize-args (expr context type)
   (if (atom expr) expr
@@ -72,9 +61,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		       cexpr)
 	(assert-eq parent (canon-parent cexpr)))
      expr context type nil)
-     (assert-equal (if (consp (acar target)) (p2sexpr target) target)
-		   (p2sexpr expr)
-		   target expr)))
+     (assert-equalp (if (consp (acar target)) (p2sexpr target) target)
+		    (p2sexpr expr)
+		    target expr)))
 
 (defcanonizer bool (expr context)
   (labels ((substructure (op expr dual)
@@ -113,46 +102,52 @@ Author: madscience@google.com (Moshe Looks) |#
    %(and (or) (or (and) (and (not z)) (and (or) (or x) (or y))))
    (qcanonize %(or (not z) (and x y)))))
 
-;;; careful when redefining these - sbcl doesn't alow this at all, and
-;;; clisp will crash when redefining +num-canonical-plus-args+ & times-args+
-;;; below, because it doesn't respect its own circular print flag
+;;; careful when redefining these - sbcl doesn't alow this at all, and clisp
+;;; will crash when redefining +num-canonical-plus-args+ & times-args+ below,
+;;; because it doesn't respect its own circular print flag (I should file a bug
+;;; report on this at some point, but if someone wants to beat me to the punch,
+;;; I wouldn't mind ;->) - it seems to be somewhat safer to make these two
+;;; parameters rather than constants...
 (define-constant +num-canonical-ops+ '(exp log sin))
 (define-constant +num-canonical-offsets+ '(0 1 0))
 (define-constant +num-canonical-values+ 
   (mapcar #'funcall +num-canonical-ops+ +num-canonical-offsets+))
-
-#| Numerical canonization is ... complicated. First let's consider the simpler
-case of nested products-of-sums-of-products-of..., disallowing log, exp, and
-sin. This is analagous to the canonization of Boolean
-formulae (conjunctions-of-disjunctions-of-conjunctions-of....) - the main
-difference is that every variable that appears has both and additive *and* and
-multiplicative constant associated with it. When these are not present in the
-source formula there zero and one used as appropriate.
-
-So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
-                                                    (* 1 (+ 0 y))))
-
-|#
-(define-constant +num-canonical-plus-args+
+(defparameter +num-canonical-plus-args+
     (mapcar 
      (lambda (op offset value) ~((* 0 (,op (+ ,offset)))
 				 (0 nil (,value (,offset)))))
      +num-canonical-ops+ +num-canonical-offsets+ +num-canonical-values+))
-(define-constant +num-canonical-times-args+
+(defparameter +num-canonical-times-args+
     (mapcar 
      (lambda (op offset value &aux (complement (- 1 value)))
        ~((+ ,complement (,op (+ ,offset)))
 	 (1 nil (,value (,offset)))))
      +num-canonical-ops+ +num-canonical-offsets+ +num-canonical-values+))
 
+#| Numerical canonization is ... complicated. First let's consider the simpler
+case of nested products-of-sums-of-products-of..., disallowing log, exp, and
+sin. This is analagous to the canonization of Boolean
+formulae (conjunctions-of-disjunctions-of-conjunctions-of....) - the main
+difference is that clauses may be weighted with additive and multiplicative
+constants, which should not themselves be treated as clauses. When these are
+not present in the source formula, zero and one inserted as appropriate.
+
+So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 x) (* 1 y))) .
+
+When we add log exp and sin, they may appear as children of any + or *, but are
+by default "turned off", by adding/multiplying them by the appropriate
+numerical constants. So the full canonical form for (+ c x y) is:
+
+(* 1 (+ 0 (exp (+ 0))) (+ 1 (log (+ 1)))(+ 1 (sin (+ 0)))
+     (+ 1 (* 0 (exp (+ 0))) (* 0 (log (+ 1))) (* 0 (sin (+ 0))))
+     (+ c (* 0 (exp (+ 0))) (* 0 (log (+ 1))) (* 0 (sin (+ 0)))
+	  (* 0 (+ 0 (exp (+ 0))) (+ 1 (log (+ 1))) (+ 1 (sin (+ 0))))
+          (* 1 (+ 0 (exp (+ 0))) (+ 1 (log (+ 1))) (+ 1 (sin (+ 0))) x)
+          (* 1 (+ 0 (exp (+ 0))) (+ 1 (log (+ 1))) (+ 1 (sin (+ 0))) y)))
+
+|#
 (defcanonizer num (expr context)
-  (labels ((fn-of (term) 
-	     (when (consp term)
-	       (let ((sub (cadr (args term))))
-		 (and (consp sub) (fn sub)))))
-	   (fn-matches-p (term terms)
-	     (find (fn-of term) terms :key #'fn-of))
-	   (nccons (op args at)
+  (labels ((nccons (op args at)
 	     (if (numberp (cadr args))
 		 (push (pop (cdr args)) args)
 		 (unless (numberp (car args))
@@ -166,39 +161,19 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
 	   (substructure (op expr dual)
 	     (if (numberp expr)
 		 expr
-		 (nccons op (if (ring-op-p (afn expr))
+		 (nccons op (if (ring-op-p expr) ;not (linear-term-p expr))
 				(structure dual (args expr))
 				(list (canonize-args expr context 'num)))
 			 expr)))
 	   (structure (op args &aux (dual (num-dual op)))
-	     (mapcar (bind #'substructure op /1 dual) args)))
+	     (cons (nccons op nil (identity-elem dual))
+		   (mapcar (bind #'substructure op /1 dual) args))))
     (let* ((op (if (eq (ifn expr) '+) '+ '*))
 	   (dual (num-dual op)))
       (nccons dual
 	      (list (nccons op nil (identity-elem dual))
 		    (substructure op expr dual))
 	      expr))))
-
-
-
-(exp-block '(* 0 (exp (+ 0
-				(* 0 (exp (+ 0)))
-				(* 0 (log (+ 1)))
-				(* 0 (sin (+ 0)))))))
-	 (log-block '(* 0 (log (+ 1
-				(* 0 (exp (+ 0)))
-				(* 0 (log (+ 1)))
-				(* 0 (sin (+ 0)))))))
-	 (sin-block '(* 0 (sin (+ 0
-				(* 0 (exp (+ 0)))
-				(* 0 (log (+ 1)))
-				(* 0 (sin (+ 0)))))))
-	 (add-blocks `(,exp-block ,log-block ,sin-block))
-	 (mult-block `(* 0
-			 (+ 1 ,exp-block)
-			 (+ 1 ,log-block)
-			 (+ 1 ,sin-block))))
-
 
 (define-test canonize-num
   (let* ((exp+ '(* 0 (exp (+ 0))))
@@ -215,52 +190,47 @@ So, for example, (+ c x y) -> (* 1 (+ 1) (+ c (* 0) (* 1 (+ 0 x))
     (validate-canonize `(+ 0 ,@+s ,+block) (qcanonize 0))
     (validate-canonize `(+ 2 ,@+s ,+block) (qcanonize 2))
     (validate-canonize cx (canonize 'x *empty-context* num))
-
     (validate-canonize `(or (and) (and (< (+ 2 ,@+s ,+block) ,cx)))
 		       (canonize %(< 2 x) (init-context '((x 0))) bool)
 		       bool (init-context '((x 0))))
-
     (validate-canonize `(+ 0 ,@+s ,+block (* 1 ,@*s (sin ,cx)))
 		       (qcanonize %(sin x)))
-
     (validate-canonize `(+ 0 ,@+s ,+block
-			   (* 1 ,@*s (+ 0 ,@+s x) (+ 0 ,@+s y)))
+			   (* 1 ,@*s ,*block (+ 0 ,@+s x) (+ 0 ,@+s y)))
 		       (qcanonize %(* x y)))
-
     (validate-canonize `(* 1 ,@*s ,*block
 			   (+ 0 ,@+s ,+block (* 1 ,@*s x) (* 1 ,@*s y)))
-		       (qcanonize %(+ x y)))))
-
-    (validate-canonize `(+ 1 ,@add-blocks ,mult-block
-			   (* 1 ,@(cddr mult-block) (+ 0 x)))
-		       (qcanonize %(+ 1 x)))
-    (validate-canonize `(* 1 ,@(cddr mult-block) (+ 1 ,@add-blocks)
-			   (+ 1 ,@add-blocks ,mult-block
-			      (* 1 ,@(cddr mult-block) (+ 0 x))
-			      (* 1 ,@(cddr mult-block) (+ 0 y))))
-		       (qcanonize %(+ 1 x y)))
-    (let ((lhs `(+ 0 ,@add-blocks ,mult-block
-		   (* 1 ,@(cddr mult-block) 
-		      (+ 0 (split 
-			    (lambda (? ?)
-			      (split 
-			       (lambda ()
-				 (+ 0 ,@add-blocks ,mult-block
-				    (* 1 ,@(cddr mult-block) 
-				       (+ 0 (f (or (and) (and ?))
-					       (append 
-						(if false 
-						    (list (or (and) (and)))
-						    nil)
-						(if true ? nil)
-						(if false
-						    (list (or (and) (and)))
-						    nil)))))))))
-			    (tuple ,(p2sexpr (canonize 'l *empty-context*
-						       '(list bool)))
-				   ,(p2sexpr (qcanonize true))))))))
+		       (qcanonize %(+ x y)))
+    (validate-canonize `(* 1 ,@*s ,*block
+			   (+ 4 ,@+s ,+block (* 1 ,@*s x)))
+		       (qcanonize %(+ 4 x)))
+    (validate-canonize `(+ 0 ,@+s ,+block
+			   (* 4 ,@*s ,*block (+ 0 ,@+s x)))
+		       (qcanonize %(* 4 x)))
+    (validate-canonize `(* 1 ,@*s ,*block (+ 1 ,@+s ,+block 
+					     (* 2 ,@*s ,*block (+ 0 ,@+s x))
+					     (* 1 ,@*s y)))
+		       (qcanonize %(+ 1 (* 2 x) y)))
+    (let ((lhs `(+ 0 ,@+s ,+block
+		   (* 1 ,@*s (split 
+			      (lambda (? ?)
+				(split 
+				 (lambda ()
+				   (+ 0 ,@+s ,+block
+				      (* 1 ,@*s (f (or (and) (and ?))
+						   (append 
+						    (if false 
+							(list (or (and) (and)))
+							nil)
+						    (if true ? nil)
+						    (if false
+							(list (or (and) (and)))
+							nil))))))))
+			      (tuple ,(p2sexpr (canonize 'l *empty-context*
+							 '(list bool)))
+				     ,(p2sexpr (qcanonize true)))))))
 	  (rhs (p2sexpr
-		(with-bound-types *empty-context* '(l f) 
+		(with-bound-types *empty-context* '(l f)
 		    '((list bool) (function (bool (list bool)) num))
 		  (canonize %(split f (tuple l true)) *empty-context* 'num)))))
       (assert-true (tree-matches lhs rhs) lhs rhs))))

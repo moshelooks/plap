@@ -84,6 +84,17 @@ args and markup must be proper lists. |#
  #\% (lambda (stream char)
        (declare (ignore char))
        (list 'quote (sexpr2p (read stream t nil t)))) t)
+
+;; for convenience in constructing canonized expressions
+(defun canonize-from-template (template values)
+  (if (or (atom template) (consp (car template)))
+      (progn (assert (not values) () "for template ~S got invalid values ~S"
+		     template values)
+	     template)
+      (ccons (car template)
+	     (mapcar #'canonize-from-template (cdr template) 
+		     (pad (cdr values) (length template)))
+	     (car values))))
 (set-macro-character
  #\~ (lambda (stream char)
        (declare (ignore char))

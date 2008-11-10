@@ -70,6 +70,8 @@ Author: madscience@google.com (Moshe Looks) |#
       (and (not (null l2)) (same-length-p (cdr l1) (cdr l2)))))
 (defun longerp (list n)
   (and list (or (eql n 0) (longerp (cdr list) (1- n)))))
+(defun eql-length-p (list n)
+  (if list (eql-length-p (cdr list) (1- n)) (eql n 0)))
 ;;; a stalk is a list with a single child (the cadr)
 (defun stalkp (l) (and (consp l) (consp (cdr l)) (not (cddr l))))
 (defun reduce-until (v f l)
@@ -380,7 +382,7 @@ Author: madscience@google.com (Moshe Looks) |#
 
 ;;; uses '? for any atom, '* for any subtree
 (defun tree-matches (pattern tree)
-  (flet ((atom-matches (pattern atom) (or (eq atom pattern) (eq atom '?))))
+  (flet ((atom-matches (pattern atom) (or (equalp atom pattern) (eq atom '?))))
     (or (eq pattern '*) (if (atom tree)
 			    (atom-matches tree pattern)
 			    (and (consp pattern)
