@@ -46,10 +46,10 @@ Author: madscience@google.com (Moshe Looks) |#
 				 (collect (car x)))))))
      (dolist (expr (enum-exprs *enum-exprs-test-symbols* 2) t)
        (strip-markup expr)
-       (unless (assert-equal (truth-table expr vars)
-			     (truth-table (funcall ,rewrite expr) vars)
-			     expr
-			     (funcall ,rewrite expr))
+       (unless (assert-equal 
+		(truth-table expr vars)
+		(truth-table (funcall ,rewrite (copy-tree expr)) vars)
+		expr (funcall ,rewrite (copy-tree expr)))
 	 (return nil)))))
 
 (defun bool-dual (f) (ecase f (and 'or) (or 'and) (true false) (false true)))
@@ -70,7 +70,8 @@ Author: madscience@google.com (Moshe Looks) |#
     :order downwards
     :preserves (remove-bool-duplicates eval-const))
 (define-test push-nots
-  (assert-equal  '(and (not x) (not y)) (p2sexpr (push-nots %(not (or x y)))))
+  (assert-equal  '(and (not p) (not q)) 
+		 (p2sexpr (push-nots (copy-tree %(not (or p q))))))
   (test-by-truth-tables #'push-nots))
 
 (defmacro define-bool-dual-reductions (and-name or-name
@@ -335,8 +336,9 @@ Author: madscience@google.com (Moshe Looks) |#
 		    expr)))
   :order downwards)
 (define-test if-identities 
-  (assert-equal '(if x z y)
-		(p2sexpr (reduct %(if (not x) y z) *empty-context* num))))
+  (assert-equal 
+   '(if x z y)
+   (p2sexpr (reduct (copy-tree %(if (not x) y z)) *empty-context* num))))
 
 ;;; below are reductions for Holman's ENF (elegant normal form)
 ;;; probably not all of them will be needed - some are implied by reductions
